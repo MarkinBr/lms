@@ -1,5 +1,33 @@
-# Documentation files are source content - no ignores needed for this change set
+```
+# Dependencies
+vendor/
 
-# The added files (AUDITORIA_E_PLANO.md, RESUMO_EXECUTIVO.md) are documentation markdown files
-# which should be tracked in version control as source content.
-# No build artifacts, dependencies, or temporary files detected in changes.
+# Build artifacts
+public/build/
+bootstrap/cache/
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+
+# Environment
+.env
+.env.local
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+```
