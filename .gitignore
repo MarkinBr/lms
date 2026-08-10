@@ -1,33 +1,42 @@
-```
+```php
+# Compiled and build artifacts
+*.o
+*.obj
+*.out
+
 # Dependencies
 vendor/
+composer.lock
 
-# Build artifacts
-public/build/
-bootstrap/cache/
-storage/logs/
-storage/framework/cache/
-storage/framework/sessions/
-storage/framework/views/
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# IDE
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS
+# Laravel-specific
+bootstrap/cache/
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+public/storage/
+
+# Database
+*.sqlite
+*.db
+
+# OS generated files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
 ```
