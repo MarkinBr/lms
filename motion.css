@@ -1,0 +1,120 @@
+/* =========================================================================
+   CETSADP · motion.css
+   Camada aditiva sobre main.css — não redefine .reveal, complementa.
+   Baseado em kylezantos/design-motion-principles (ver docs/MOTION_GUIDELINES.md)
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   1. prefers-reduced-motion — OBRIGATÓRIO, cobre .reveal, .anim (hero) e
+      tudo daqui pra baixo. Preserva o estado final (layout não quebra).
+   ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   2. Ajuste de zona para o .reveal existente (main.css linha ~386).
+      Uso: adicione a classe extra no mesmo elemento, ex.:
+        <div class="reveal reveal--painel">
+      Não altera o comportamento padrão (site público) — só reduz a duração
+      em telas de uso frequente (secretaria/aluno), conforme o Frequency
+      Gate da skill de motion (ver docs/MOTION_GUIDELINES.md).
+   ------------------------------------------------------------------------- */
+.reveal--painel {
+  transition-duration: 0.15s !important;
+  transform: translateY(10px);
+}
+
+/* Leve "materialização" (blur) opcional para o site público, onde o motion
+   pode ser mais expressivo. Combine com .reveal: <div class="reveal reveal--materializa"> */
+.reveal--materializa {
+  filter: blur(4px);
+  transition: opacity .5s ease, transform .5s cubic-bezier(.22,.72,.25,1), filter .5s ease;
+}
+.reveal--materializa.in {
+  filter: blur(0);
+}
+
+/* -------------------------------------------------------------------------
+   3. Skeleton (estado de carregamento) — pronto para uso em qualquer
+      conteúdo que venha de uma requisição assíncrona (painel admin, listas
+      do portal do aluno, resultado de formulário). Ver README abaixo.
+   ------------------------------------------------------------------------- */
+.cs-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--line, #e8e1d2);
+  border-radius: 8px;
+  color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+}
+.cs-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: cs-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes cs-shimmer {
+  100% { transform: translateX(100%); }
+}
+/* Formatos comuns prontos, para não recalcular altura toda vez */
+.cs-skeleton--linha   { height: 1em; margin-block: .35em; }
+.cs-skeleton--titulo  { height: 1.6em; margin-block: .4em; width: 60%; }
+.cs-skeleton--card    { height: 220px; border-radius: 14px; }
+.cs-skeleton--avatar  { width: 42px; height: 42px; border-radius: 50%; }
+
+/* -------------------------------------------------------------------------
+   4. Estado de loading em botão/ação — para qualquer submit assíncrono.
+      Uso: motion.js expõe window.CSMotion.setButtonLoading(btn, bool)
+   ------------------------------------------------------------------------- */
+.cs-btn-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: .85;
+}
+.cs-btn-loading .cs-btn-loading__label {
+  visibility: hidden;
+}
+.cs-btn-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  animation: cs-spin .6s linear infinite;
+}
+@keyframes cs-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* -------------------------------------------------------------------------
+   README rápido
+   -------------------------------------------------------------------------
+   Skeleton:
+     <div class="cs-skeleton cs-skeleton--card" aria-hidden="true"></div>
+     Troque pelo conteúdo real via JS assim que a requisição responder
+     (não deixe os dois no DOM ao mesmo tempo).
+
+   Botão com loading:
+     <button class="btn btn-gold" id="btnEnviar">
+       <span class="cs-btn-loading__label">Enviar</span>
+     </button>
+     window.CSMotion.setButtonLoading(document.getElementById('btnEnviar'), true)
+   ------------------------------------------------------------------------- */
