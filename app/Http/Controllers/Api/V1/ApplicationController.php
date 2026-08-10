@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
-use Illuminate\Http\Request;
+use App\Models\CourseModality;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -71,7 +72,7 @@ class ApplicationController extends Controller
             'naturalidade_cidade' => 'nullable|string|max:100',
             'naturalidade_estado' => 'nullable|string|max:2',
             'escolaridade' => 'required|string|max:100',
-            
+
             // Endereço
             'cep' => 'required|string|max:10',
             'logradouro' => 'required|string|max:255',
@@ -80,23 +81,40 @@ class ApplicationController extends Controller
             'bairro' => 'required|string|max:100',
             'cidade' => 'required|string|max:100',
             'estado' => 'required|string|max:2',
-            
+
             // Curso
-            'curso_id' => 'required|exists:courses,id',
-            'course_modality_id' => 'required|exists:course_modalities,id',
-            
+            'curso_id' => 'required|integer|exists:cursos,id',
+            'course_modality_id' => 'required|integer|exists:course_modalities,id',
+
             // Documentos (opcionais no momento da inscrição)
             'documentos' => 'nullable|array',
-            'documentos.*.type' => 'required|in:photo,id_document,cpf,residence_certificate,school_history,other',
-            'documentos.*.file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240', // 10MB
+            'documentos.*.tipo' => 'required|in:'.implode(',', Application::DOCUMENT_TYPES),
+            'documentos.*.arquivo' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ], [
             'cpf.unique' => 'Já existe uma inscrição com este CPF.',
             'email.unique' => 'Este e-mail já está em uso.',
             'data_nascimento.before' => 'Data de nascimento deve ser no passado.',
         ]);
 
+        $modalidade = CourseModality::query()->find($validated['course_modality_id']);
+
+        if (! $modalidade || $modalidade->curso_id !== (int) $validated['curso_id']) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'Dados inválidos',
+                    'details' => [
+                        'course_modality_id' => [
+                            'A modalidade selecionada não pertence ao curso informado.',
+                        ],
+                    ],
+                ],
+            ], 422);
+        }
+
         // Gera protocolo único
-        $protocol = 'INSC-' . strtoupper(Str::random(8)) . '-' . now()->format('Ymd');
+        $protocol = 'INSC-'.strtoupper(Str::random(8)).'-'.now()->format('Ymd');
 
         // Cria a inscrição
         $application = Application::create([
@@ -127,18 +145,19 @@ class ApplicationController extends Controller
         ]);
 
         // Processa documentos se enviados
-        if (!empty($validated['documents'])) {
-            foreach ($validated['documents'] as $docData) {
-                $file = $docData['file'];
-                $filename = $this->storeDocument($file, $application->id, $docData['type']);
-                
+        if (! empty($validated['documentos'])) {
+            foreach ($validated['documentos'] as $docData) {
+                $file = $docData['arquivo'];
+                $filename = $this->storeDocument($file, $application->id, $docData['tipo']);
+
                 ApplicationDocument::create([
                     'application_id' => $application->id,
-                    'type' => $docData['type'],
-                    'filename' => $filename,
-                    'original_name' => $file->getClientOriginalName(),
+                    'tipo' => $docData['tipo'],
+                    'nome_armazenado' => basename($filename),
+                    'nome_original' => $file->getClientOriginalName(),
                     'mime_type' => $file->getClientMimeType(),
-                    'size' => $file->getSize(),
+                    'tamanho' => $file->getSize(),
+                    'caminho_arquivo' => $filename,
                 ]);
             }
         }
@@ -151,7 +170,7 @@ class ApplicationController extends Controller
             'success' => true,
             'message' => 'Inscrição realizada com sucesso! Você receberá um e-mail de confirmação.',
             'data' => [
-                'application' => $application->load('course'),
+                'application' => $application->load(['curso', 'courseModality']),
                 'protocol' => $protocol,
             ],
         ], 201);
@@ -162,7 +181,7 @@ class ApplicationController extends Controller
      */
     public function show(Application $application): JsonResponse
     {
-        $application->load(['course', 'documents']);
+        $application->load(['curso', 'courseModality', 'documents']);
 
         return response()->json([
             'success' => true,
@@ -175,7 +194,7 @@ class ApplicationController extends Controller
      */
     public function showByProtocol(string $protocol): JsonResponse
     {
-        $application = Application::with(['course', 'documents'])
+        $application = Application::with(['curso', 'courseModality', 'documents'])
             ->where('protocol', $protocol)
             ->firstOrFail();
 
@@ -238,34 +257,35 @@ class ApplicationController extends Controller
         }
 
         // Só permite upload se estiver pendente ou em análise
-        if (!in_array($application->status, ['pending', 'under_review'])) {
+        if ($application->status !== Application::STATUS_EM_ANALISE) {
             throw ValidationException::withMessages([
                 'application' => 'Não é possível enviar documentos para inscrições finalizadas.',
             ]);
         }
 
         $validated = $request->validate([
-            'type' => 'required|in:photo,id_document,cpf,residence_certificate,school_history,other',
-            'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'tipo' => 'required|in:'.implode(',', Application::DOCUMENT_TYPES),
+            'arquivo' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
-        $file = $validated['file'];
-        $filename = $this->storeDocument($file, $application->id, $validated['type']);
+        $file = $validated['arquivo'];
+        $filename = $this->storeDocument($file, $application->id, $validated['tipo']);
 
         $document = ApplicationDocument::create([
             'application_id' => $application->id,
-            'type' => $validated['type'],
-            'filename' => $filename,
-            'original_name' => $file->getClientOriginalName(),
+            'tipo' => $validated['tipo'],
+            'nome_armazenado' => basename($filename),
+            'nome_original' => $file->getClientOriginalName(),
             'mime_type' => $file->getClientMimeType(),
-            'size' => $file->getSize(),
+            'tamanho' => $file->getSize(),
+            'caminho_arquivo' => $filename,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Documento enviado com sucesso.',
             'data' => $document,
-        ]);
+        ], 201);
     }
 
     /**
@@ -284,15 +304,15 @@ class ApplicationController extends Controller
     /**
      * Armazena documento no storage
      */
-    private function storeDocument($file, int $applicationId, string $type): string
+    private function storeDocument($file, string $applicationId, string $type): string
     {
         $folder = "applications/{$applicationId}";
         $extension = $file->getClientOriginalExtension();
-        $filename = "{$type}_" . Str::uuid() . ".{$extension}";
+        $filename = "{$type}_".Str::uuid().".{$extension}";
 
         // Usa S3/R2 em produção, local em desenvolvimento
         $disk = config('filesystems.cloud_disk', 'public');
-        
+
         $path = $file->storeAs($folder, $filename, $disk);
 
         return $path;
