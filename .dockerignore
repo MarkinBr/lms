@@ -1,0 +1,52 @@
+# ============================================================
+# CETSADP LMS v9.3.6 — Docker Ignore
+# Evita copiar arquivos desnecessários para a imagem Docker
+# ============================================================
+
+# Controle de versão
+.git
+.gitignore
+.gitattributes
+
+# Ambiente local
+.env
+.env.backup
+.env.local
+
+# Dependências (serão instaladas no build)
+node_modules
+vendor
+
+# Testes (não necessários em produção)
+tests
+phpunit.xml
+.phpunit.result.cache
+
+# IDE e editor
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Build artifacts
+.npm
+.cache
+
+# Documentação de desenvolvimento
+*.md
+!README.md
+
+# Backups locais
+backups/*.sql.gz
+backups/*.tar.gz
+
+# Logs (serão criados pelo container)
+storage/logs/*.log
+
+# Windows scripts
+*.bat
+
+# OS files
+.DS_Store
+Thumbs.db

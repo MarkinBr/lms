@@ -1,0 +1,200 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Carbon\Carbon;
+
+class Mensalidade extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'matricula_id',
+        'valor',
+        'data_vencimento',
+        'transacao_id',
+        'metodo_pagamento',
+        'comprovante',
+        'link_pagamento',
+        'pix_copia_cola',
+        'pix_qr_base64',
+        'link_boleto',
+        'linha_digitavel',
+        'status',
+        'data_pagamento',
+        'observacao',
+    ];
+
+    protected $casts = [
+        'data_vencimento' => 'date',
+        'data_pagamento' => 'date',
+        'valor' => 'decimal:2',
+    ];
+
+    protected static function booted()
+    {
+        // Ao salvar, atualiza automaticamente mensalidades vencidas
+        static::saving(function ($mensalidade) {
+            if ($mensalidade->status !== 'Pago' && 
+                $mensalidade->status !== 'Cancelado' &&
+                $mensalidade->data_vencimento < now()->startOfDay()) {
+                $mensalidade->status = 'Atrasado';
+            }
+        });
+    }
+
+    // ============ RELACIONAMENTOS ============
+
+    public function matricula(): BelongsTo
+    {
+        return $this->belongsTo(Matricula::class);
+    }
+
+    // ============ ACESSORES ============
+
+    public function getAlunoNomeAttribute(): string
+    {
+        return $this->matricula->aluno->nome ?? 'N/A';
+    }
+
+    public function getTurmaNomeAttribute(): string
+    {
+        return $this->matricula->turma->nome ?? 'N/A';
+    }
+
+    public function getValorFormatadoAttribute(): string
+    {
+        return 'R$ ' . number_format($this->valor, 2, ',', '.');
+    }
+
+    public function getDiasAtrasoAttribute(): int
+    {
+        if ($this->status === 'Pago' || $this->data_vencimento >= now()->startOfDay()) {
+            return 0;
+        }
+        
+        return $this->data_vencimento->diffInDays(now()->startOfDay());
+    }
+
+    // ============ ESCOPOS ============
+
+    public function scopePendentes($query)
+    {
+        return $query->where('status', 'Pendente');
+    }
+
+    public function scopePagas($query)
+    {
+        return $query->where('status', 'Pago');
+    }
+
+    public function scopeAtrasadas($query)
+    {
+        return $query->where('status', 'Atrasado');
+    }
+
+    public function scopeVencidas($query)
+    {
+        return $query->where('data_vencimento', '<', now()->startOfDay())
+                     ->where('status', '!=', 'Pago');
+    }
+
+    public function scopeDoMes($query, $mes = null, $ano = null)
+    {
+        $mes = $mes ?? now()->month;
+        $ano = $ano ?? now()->year;
+        
+        return $query->whereYear('data_vencimento', $ano)
+                     ->whereMonth('data_vencimento', $mes);
+    }
+
+    public function scopePorAluno($query, $alunoId)
+    {
+        return $query->whereHas('matricula', function($q) use ($alunoId) {
+            $q->where('aluno_id', $alunoId);
+        });
+    }
+
+    public function scopePorTurma($query, $turmaId)
+    {
+        return $query->whereHas('matricula', function($q) use ($turmaId) {
+            $q->where('turma_id', $turmaId);
+        });
+    }
+
+    // ============ MÉTODOS ÚTEIS ============
+
+    public function estaPaga(): bool
+    {
+        return $this->status === 'Pago';
+    }
+
+    public function estaAtrasada(): bool
+    {
+        return $this->status === 'Atrasado' || 
+               ($this->status !== 'Pago' && $this->data_vencimento < now()->startOfDay());
+    }
+
+    public function temPagamentoGerado(): bool
+    {
+        return !empty($this->transacao_id);
+    }
+
+    public function podeGerarPagamento(): bool
+    {
+        return !$this->temPagamentoGerado() && $this->status !== 'Pago' && $this->status !== 'Cancelado';
+    }
+
+    public function podeCancelar(): bool
+    {
+        return $this->temPagamentoGerado() && $this->status !== 'Pago' && $this->status !== 'Cancelado';
+    }
+
+    /**
+     * Marca mensalidade como paga
+     */
+    public function marcarComoPaga(?Carbon $dataPagamento = null): void
+    {
+        $this->update([
+            'status' => 'Pago',
+            'data_pagamento' => $dataPagamento ?? now(),
+        ]);
+    }
+
+    /**
+     * Cancela a mensalidade
+     */
+    public function cancelar(?string $motivo = null): void
+    {
+        $this->update([
+            'status' => 'Cancelado',
+            'observacao' => $motivo ?? $this->observacao,
+        ]);
+    }
+
+    /**
+     * Calcula multa e juros por atraso (2% multa + 1% juros ao mês)
+     */
+    public function calcularValorComMulta(): float
+    {
+        if (!$this->estaAtrasada() || $this->estaPaga()) {
+            return (float) $this->valor;
+        }
+
+        $diasAtraso = $this->dias_atraso;
+        $multa = $this->valor * 0.02; // 2% de multa
+        $jurosDiario = ($this->valor * 0.01) / 30; // 1% ao mês dividido por 30 dias
+        $juros = $jurosDiario * $diasAtraso;
+
+        return (float) ($this->valor + $multa + $juros);
+    }
+
+    public function getValorComMultaFormatadoAttribute(): string
+    {
+        $valor = $this->calcularValorComMulta();
+        return 'R$ ' . number_format($valor, 2, ',', '.');
+    }
+}

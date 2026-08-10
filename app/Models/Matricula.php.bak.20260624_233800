@@ -1,0 +1,94 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne; // Importante adicionar
+
+class Matricula extends Model
+{
+    use HasFactory;
+
+    // Liberando todos os campos para evitar bloqueio no mass assignment
+    protected $fillable = ['user_id', 'curso_id', 'turma_id', 'data_matricula', 'dia_vencimento', 'status', 'numero_matricula', 'data_validade', 'observacoes', 'data_conclusao'];
+
+    protected $casts = [
+        'data_matricula' => 'date',
+        'data_validade' => 'date',
+        'data_conclusao' => 'date', // Adicionado caso precise futuramente
+    ];
+
+    /**
+     * Relacionamento: As mensalidades desta matrícula.
+     */
+    public function mensalidades(): HasMany
+    {
+        return $this->hasMany(Mensalidade::class);
+    }
+
+    /**
+     * Relacionamento: O Aluno (User) dono da matrícula.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relacionamento: Declarações emitidas para esta matrícula.
+     */
+    public function declaracoes(): HasMany
+    {
+        return $this->hasMany(Declaracao::class);
+    }
+
+    /**
+     * Alias para manter compatibilidade com ->aluno
+     */
+    public function aluno(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Relacionamento: O Curso vinculado.
+     */
+    public function curso(): BelongsTo
+    {
+        return $this->belongsTo(Curso::class);
+    }
+
+    /**
+     * Relacionamento: A Turma vinculada.
+     */
+    public function turma(): BelongsTo
+    {
+        return $this->belongsTo(Turma::class);
+    }
+
+    /**
+     * CORREÇÃO: Relacionamento do Certificado.
+     * Necessário para o CertificadosController funcionar.
+     */
+    public function certificado(): HasOne
+    {
+        return $this->hasOne(Certificado::class);
+    }
+
+    // --- SCOPES (Filtros rápidos) ---
+
+    public function scopeAtivas($query)
+    {
+        return $query->where('status', 'ativo')
+                     ->orWhere('status', 'ativa'); // Prevenção contra inconsistência de string
+    }
+
+    public function scopeExpiradas($query)
+    {
+        return $query->where('status', 'expirado')
+            ->orWhere('data_validade', '<', now());
+    }
+}

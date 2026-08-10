@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Observers;
+
+use App\Models\Mensalidade;
+use App\Models\MovimentacaoFinanceira;
+use App\Models\Conta;
+use App\Models\CategoriaFinanceira;
+
+class MensalidadeObserver
+{
+    /**
+     * Handle the Mensalidade "updated" event.
+     */
+    public function updated(Mensalidade $mensalidade): void
+    {
+        // Se a mensalidade foi marcada como PAGA e ainda não tem movimentação financeira vinculada
+        if ($mensalidade->status === 'Pago' && $mensalidade->data_pagamento) {
+            // Verificar se já existe uma movimentação para esta mensalidade
+            $movimentacaoExistente = MovimentacaoFinanceira::where('mensalidade_id', $mensalidade->id)->first();
+
+            if (!$movimentacaoExistente) {
+                $this->registrarEntrada($mensalidade);
+            } else {
+                // Se já existe, atualizar se houve mudança nos dados
+                $this->atualizarEntrada($movimentacaoExistente, $mensalidade);
+            }
+        }
+
+        // Se a mensalidade foi CANCELADA, cancelar a movimentação
+        if ($mensalidade->status === 'Cancelado') {
+            $movimentacao = MovimentacaoFinanceira::where('mensalidade_id', $mensalidade->id)->first();
+            if ($movimentacao && $movimentacao->status !== 'cancelado') {
+                $dadosAnteriores = $movimentacao->toArray();
+                $movimentacao->update(['status' => 'cancelado']);
+                $movimentacao->registrarAuditoria('cancelamento', $dadosAnteriores, 'Mensalidade cancelada');
+            }
+        }
+    }
+
+    private function registrarEntrada(Mensalidade $mensalidade): void
+    {
+        // Determinar a conta baseada no método de pagamento
+        $conta = $this->determinarConta($mensalidade->metodo_pagamento);
+        
+        // Buscar categoria "Mensalidades"
+        $categoria = CategoriaFinanceira::where('nome', 'Mensalidades')->first();
+
+        $movimentacao = MovimentacaoFinanceira::create([
+            'tipo' => 'entrada',
+            'conta_id' => $conta->id,
+            'categoria_id' => $categoria?->id,
+            'mensalidade_id' => $mensalidade->id,
+            'descricao' => "Pagamento de mensalidade - {$mensalidade->matricula->user->name} - {$mensalidade->matricula->curso->titulo}",
+            'valor' => $mensalidade->valor,
+            'data_movimentacao' => $mensalidade->data_pagamento,
+            'status' => 'efetivado',
+            'pagador' => $mensalidade->matricula->user->name,
+            'observacoes' => $mensalidade->observacao,
+            'criado_por' => auth()->id() ?? 1, // Sistema
+        ]);
+
+        $movimentacao->registrarAuditoria('criacao', null, 'Criado automaticamente pelo sistema ao registrar pagamento de mensalidade');
+    }
+
+    private function atualizarEntrada(MovimentacaoFinanceira $movimentacao, Mensalidade $mensalidade): void
+    {
+        $dadosAnteriores = $movimentacao->toArray();
+        
+        $conta = $this->determinarConta($mensalidade->metodo_pagamento);
+        
+        $movimentacao->update([
+            'conta_id' => $conta->id,
+            'valor' => $mensalidade->valor,
+            'data_movimentacao' => $mensalidade->data_pagamento,
+            'observacoes' => $mensalidade->observacao,
+            'alterado_por' => auth()->id() ?? 1,
+            'data_alteracao' => now(),
+        ]);
+
+        $movimentacao->registrarAuditoria('edicao', $dadosAnteriores, 'Atualizado automaticamente após alteração na mensalidade');
+    }
+
+    private function determinarConta(?string $metodoPagamento): Conta
+    {
+        $nomeConta = '';
+        $tipoConta = '';
+
+        // 1. Normalizar o método de pagamento (caso venha nulo)
+        $metodo = $metodoPagamento ?? 'dinheiro';
+
+        // 2. Definir qual conta estamos procurando
+        if (in_array($metodo, ['pix', 'mercadopago', 'boleto', 'bolbradesco', 'cartao_credito', 'cartao_debito', 'transferencia'])) {
+            $nomeConta = 'Mercado Pago';
+            $tipoConta = 'Banco';
+        } else {
+            $nomeConta = 'Caixa Secretaria';
+            $tipoConta = 'Caixa';
+        }
+
+        // 3. Tentar encontrar a conta existente (pelo nome exato)
+        $conta = Conta::where('nome', $nomeConta)->first();
+
+        // 4. Se não existir, criar uma nova
+        if (!$conta) {
+            $conta = Conta::create([
+                'nome' => $nomeConta,
+                'tipo' => $tipoConta,
+                'saldo_inicial' => 0,
+                'ativa' => true,
+            ]);
+        }
+
+        return $conta;
+    }
+}

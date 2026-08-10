@@ -1,0 +1,222 @@
+@media (max-width: 768px) {
+    
+    /* Aumenta área de toque nos botões */
+    .fi-btn {
+        min-height: 44px !important;
+        padding: 12px 16px !important;
+        font-size: 16px !important;
+    }
+
+    /* Inputs maiores para facilitar digitação */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    textarea,
+    select {
+        font-size: 16px !important; /* Evita zoom automático no iOS */
+        min-height: 44px !important;
+        padding: 12px !important;
+    }
+
+    /* Seções colapsáveis mais espaçadas */
+    .fi-section {
+        margin-bottom: 1rem !important;
+    }
+
+    /* Grid responsivo - força 1 coluna em mobile */
+    .fi-fo-field-wrp-label {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* 📸 CAPTURA DE FOTO - MOBILE OTIMIZADO */
+.fi-fo-file-upload {
+    width: 100% !important;
+}
+
+/* Botão de upload maior e mais visível */
+.fi-fo-file-upload-btn {
+    min-height: 120px !important;
+    font-size: 18px !important;
+    border: 2px dashed #3b82f6 !important;
+    background: #eff6ff !important;
+}
+
+/* Preview de foto circular maior */
+.fi-fo-file-upload-avatar {
+    width: 150px !important;
+    height: 150px !important;
+    margin: 0 auto !important;
+}
+
+/* 📄 UPLOAD DE DOCUMENTOS - MOBILE */
+@media (max-width: 768px) {
+    /* Grid de documentos em 1 coluna */
+    .fi-fo-file-upload-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Thumbnails de documentos maiores */
+    .fi-fo-file-upload-item {
+        min-height: 100px !important;
+    }
+}
+
+/* 🎨 MELHORIAS VISUAIS */
+.fi-section-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+    padding: 16px !important;
+    border-radius: 8px !important;
+    margin-bottom: 16px !important;
+}
+
+.fi-section-header-heading {
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+.fi-section-description {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 📱 CAMPO DE TELEFONE COM WHATSAPP */
+input[name="telefone"],
+input[name="responsavel_telefone"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2325D366'%3E%3Cpath d='M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 24px;
+    padding-right: 44px !important;
+}
+
+/* 🎯 HELPERS INFORMATIVOS */
+.fi-fo-field-wrp-hint {
+    background: #fef3c7 !important;
+    padding: 12px !important;
+    border-radius: 6px !important;
+    border-left: 4px solid #f59e0b !important;
+    margin-top: 8px !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+}
+
+/* ✅ TOGGLE SWITCHES MAIORES */
+.fi-toggle {
+    min-width: 60px !important;
+    min-height: 32px !important;
+}
+
+/* 📋 PLACEHOLDER COM INFORMAÇÕES */
+.fi-fo-placeholder {
+    background: #f0f9ff !important;
+    border: 2px solid #0ea5e9 !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    margin: 12px 0 !important;
+}
+
+/* 🎨 BADGES E CONTADORES */
+.fi-badge {
+    font-size: 14px !important;
+    padding: 6px 12px !important;
+    border-radius: 12px !important;
+}
+
+/* 📱 MENU MOBILE */
+@media (max-width: 768px) {
+    .fi-sidebar {
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s ease !important;
+    }
+
+    .fi-sidebar.open {
+        transform: translateX(0) !important;
+    }
+}
+
+/* 🔍 MELHOR VISIBILIDADE DOS INPUTS */
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+}
+
+/* ⚡ ANIMAÇÕES SUAVES */
+.fi-section,
+.fi-fo-field-wrp {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 📱 OTIMIZAÇÃO PARA CAPTURA DE CÂMERA */
+input[type="file"][accept*="image"] {
+    cursor: pointer !important;
+}
+
+/* iOS Safari - Força abertura da câmera */
+@supports (-webkit-touch-callout: none) {
+    input[type="file"][accept*="image"] {
+        -webkit-appearance: none;
+    }
+}
+
+/* 🎯 BOTÕES DE AÇÃO DESTACADOS */
+.fi-ac-btn-action {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.3s ease !important;
+}
+
+.fi-ac-btn-action:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 📋 TABELA RESPONSIVA */
+@media (max-width: 768px) {
+    .fi-ta {
+        overflow-x: auto !important;
+    }
+
+    .fi-ta-table {
+        min-width: 600px !important;
+    }
+}
+
+/* ✨ LOADING STATES */
+.fi-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.fi-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 3px solid #3b82f6;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
