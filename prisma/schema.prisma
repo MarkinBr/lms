@@ -1,0 +1,1248 @@
+// CETSADP - Prisma Schema
+// Centro Educacional, Teológico e Social da IEAD em Paracambi
+// PostgreSQL + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  SECRETARY
+  TEACHER
+  STUDENT
+  CANDIDATE
+}
+
+enum ApplicationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  ENROLLED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  INACTIVE
+  GRADUATED
+  DROPPED_OUT
+  SUSPENDED
+}
+
+enum ClassStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  JUSTIFIED
+}
+
+enum DocumentType {
+  RG
+  CPF
+  PROOF_OF_RESIDENCE
+  PHOTO
+  SCHOOL_HISTORY
+  CERTIFICATE
+  DECLARATION
+  OTHER
+}
+
+enum DocumentRequestStatus {
+  PENDING
+  PROCESSING
+  READY
+  DELIVERED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  PIX
+  BOLETO
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  CONFIRMED
+}
+
+enum MessageType {
+  EMAIL
+  WHATSAPP
+  SMS
+  INTERNAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NewsCategory {
+  GENERAL
+  ACADEMIC
+  EVENT
+  RELIGIOUS
+  COMMUNITY
+}
+
+enum EventStatus {
+  PLANNED
+  PUBLISHED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum FileType {
+  DOCUMENT
+  IMAGE
+  VIDEO
+  AUDIO
+  SPREADSHEET
+  PRESENTATION
+  PDF
+  ARCHIVE
+}
+
+enum AuditAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+  EXPORT
+  IMPORT
+}
+
+// ============================================
+// CORE MODULES
+// ============================================
+
+/// Usuário do sistema
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // bcrypt hash
+  firstName String
+  lastName  String
+  phone     String?
+  photoUrl  String?
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  
+  roles      UserRole[] @relation("UserRoles")
+  profile    Profile?
+  applications Application[]
+  student    Student?
+  teacher    Teacher?
+  
+  messagesSent      Message[]      @relation("MessageSender")
+  messagesReceived  Message[]      @relation("MessageRecipient")
+  notifications     Notification[]
+  forumThreads      ForumThread[]
+  forumPosts        ForumPost[]
+  supportTickets    SupportTicket[] @relation("TicketOwner")
+  assignedTickets   SupportTicket[] @relation("TicketAssignee")
+  auditLogs         AuditLog[]
+  refreshTokens     RefreshToken[]
+  createdFiles      File[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email])
+  @@index([isActive])
+}
+
+/// Perfil detalhado do usuário
+model Profile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  birthDate     DateTime?
+  cpf           String?  @unique
+  rg            String?
+  rgIssuer      String?
+  gender        String?
+  maritalStatus String?
+  nationality   String?  @default("Brasileira")
+  naturality    String?  // Cidade/Estado de nascimento
+  
+  address       String?
+  addressNumber String?
+  complement    String?
+  neighborhood  String?
+  city          String?
+  state         String?
+  zipCode       String?
+  country       String?  @default("Brasil")
+  
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([cpf])
+}
+
+/// Papel de acesso (RBAC)
+model Role {
+  id          String   @id @default(uuid())
+  name        UserRole @unique
+  description String?
+  
+  permissions Permission[] @relation("RolePermissions")
+  users       UserRole[]   @relation("UserRoles")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Permissão granular
+model Permission {
+  id         String   @id @default(uuid())
+  resource   String   // ex: "students", "courses", "financial"
+  action     String   // ex: "create", "read", "update", "delete"
+  name       String   @unique // ex: "students:create"
+  
+  roles      Permission[] @relation("RolePermissions")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([resource, action])
+  @@index([resource])
+}
+
+/// Token de refresh para JWT rotation
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  deviceId  String?
+  ipAddress String?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================
+// APPLICATION & ENROLLMENT MODULES
+// ============================================
+
+/// Candidatura/Inscrição
+model Application {
+  id              String           @id @default(uuid())
+  candidateName   String
+  candidateEmail  String
+  candidatePhone  String
+  cpf             String
+  rg              String?
+  birthDate       DateTime
+  gender          String?
+  maritalStatus   String?
+  nationality     String?
+  naturality      String?
+  
+  address         String?
+  addressNumber   String?
+  complement      String?
+  neighborhood    String?
+  city            String?
+  state           String?
+  zipCode         String?
+  
+  courseId        String
+  course          Course           @relation(fields: [courseId], references: [id])
+  modality        String           // Presencial, Online, Híbrido
+  
+  status          ApplicationStatus @default(PENDING_REVIEW)
+  rejectionReason String?
+  
+  documents       ApplicationDocument[]
+  user            User?            @relation(fields: [userId], references: [id])
+  userId          String?
+  
+  notes           String?          // Observações da secretaria
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([cpf, status])
+  @@index([status])
+  @@index([courseId])
+  @@index([createdAt])
+}
+
+/// Documentos da inscrição
+model ApplicationDocument {
+  id            String     @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  type          DocumentType
+  fileUrl       String
+  fileName      String
+  fileSize      Int        // bytes
+  mimeType      String
+  
+  verified      Boolean    @default(false)
+  verifiedBy    String?
+  verifiedAt    DateTime?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([applicationId])
+}
+
+/// Aluno matriculado
+model Student {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  
+  registrationNumber String? @unique // Número de matrícula institucional
+  
+  enrollments Enrollment[]
+  invoices    Invoice[]
+  payments    Payment[]
+  submissions Submission[]
+  grades      Grade[]
+  attendances Attendance[]
+  documentRequests DocumentRequest[]
+  documents   Document[]
+  certificates Certificate[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+/// Matrícula do aluno em curso
+model Enrollment {
+  id          String          @id @default(uuid())
+  studentId   String
+  student     Student         @relation(fields: [studentId], references: [id])
+  courseId    String
+  course      Course          @relation(fields: [courseId], references: [id])
+  semesterId  String
+  semester    Semester        @relation(fields: [semesterId], references: [id])
+  
+  status      EnrollmentStatus @default(ACTIVE)
+  enrolledAt  DateTime         @default(now())
+  graduatedAt DateTime?
+  
+  classEnrollments ClassEnrollment[]
+  academicRecords  AcademicRecord[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([studentId, courseId, semesterId])
+  @@index([studentId])
+  @@index([courseId])
+  @@index([status])
+}
+
+// ============================================
+// ACADEMIC MODULES
+// ============================================
+
+/// Curso oferecido
+model Course {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  fullDescription String? @db.Text
+  
+  durationYears  Int     @default(0)
+  durationMonths Int     @default(0)
+  
+  isPublished Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
+  
+  modalities  CourseModality[]
+  subjects    Subject[]
+  enrollments Enrollment[]
+  
+  financialPlan CourseFinancialPlan?
+  certificateTemplate CertificateTemplate?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([isPublished])
+  @@index([isFeatured])
+}
+
+/// Modalidade de curso
+model CourseModality {
+  id        String   @id @default(uuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  name      String   // Presencial, Online, Híbrido
+  isActive  Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([courseId, name])
+}
+
+/// Plano financeiro do curso
+model CourseFinancialPlan {
+  id              String   @id @default(uuid())
+  courseId        String   @unique
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  totalValue      Decimal  @db.Decimal(10, 2)
+  installments    Int      // número de parcelas
+  installmentValue Decimal @db.Decimal(10, 2)
+  dueDay          Int      // dia do vencimento (1-31)
+  
+  finePercentage   Decimal @default(0) @db.Decimal(5, 2) // multa por atraso
+  dailyInterest    Decimal @default(0) @db.Decimal(5, 2) // juros ao dia
+  
+  discountAnticipation Decimal @default(0) @db.Decimal(5, 2) // desconto por antecipação
+  discountSibling    Decimal @default(0) @db.Decimal(5, 2) // desconto para irmãos
+  discountMultipleCourses Decimal @default(0) @db.Decimal(5, 2)
+  
+  isActive Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Disciplina/Matéria
+model Subject {
+  id          String   @id @default(uuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  name        String
+  code        String?
+  description String?
+  workload    Int      // carga horária em horas
+  semester    Int      // semestre recomendado
+  
+  prerequisites String[] @default([]) // IDs de disciplinas pré-requisito
+  
+  assessmentWeights Json? // {"activity": 0.3, "assessment": 0.4, "thesis": 0.3}
+  
+  classes     Class[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([courseId, code])
+  @@index([courseId])
+}
+
+/// Período letivo (Semestre)
+model Semester {
+  id        String   @id @default(uuid())
+  name      String   // ex: "2025.1"
+  startDate DateTime
+  endDate   DateTime
+  
+  isActive  Boolean  @default(false)
+  
+  enrollments Enrollment[]
+  classes     Class[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([name])
+  @@index([startDate, endDate])
+}
+
+/// Turma específica
+model Class {
+  id          String     @id @default(uuid())
+  subjectId   String
+  subject     Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId   String?
+  teacher     Teacher?   @relation(fields: [teacherId], references: [id])
+  semesterId  String
+  semester    Semester   @relation(fields: [semesterId], references: [id])
+  
+  name        String?    // nome da turma (ex: "Turma A")
+  schedule    Json?      // {"monday": "19:00-21:00", "wednesday": "19:00-21:00"}
+  location    String?    // sala/local
+  
+  status      ClassStatus @default(PLANNED)
+  maxStudents Int?
+  
+  enrollments   ClassEnrollment[]
+  lessons       Lesson[]
+  activities    Activity[]
+  assessments   Assessment[]
+  thesis        Thesis?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([semesterId])
+  @@index([status])
+}
+
+/// Professor
+model Teacher {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  
+  bio       String?  @db.Text
+  specialties String[]
+  
+  classes   Class[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Aluno matriculado em turma
+model ClassEnrollment {
+  id        String   @id @default(uuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  enrollmentId String
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  
+  status    EnrollmentStatus @default(ACTIVE)
+  joinedAt  DateTime         @default(now())
+  
+  attendances Attendance[]
+  
+  @@unique([classId, enrollmentId])
+  @@index([classId])
+  @@index([enrollmentId])
+}
+
+/// Aula
+model Lesson {
+  id        String   @id @default(uuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  
+  date      DateTime
+  content   String?  @db.Text
+  topic     String
+  
+  materials Material[]
+  attendances Attendance[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([classId])
+  @@index([date])
+}
+
+/// Material de aula
+model Material {
+  id        String   @id @default(uuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  title     String
+  description String?
+  fileUrl   String
+  fileName  String
+  fileSize  Int
+  mimeType  String
+  fileType  FileType
+  
+  createdAt DateTime @default(now())
+  
+  @@index([lessonId])
+}
+
+/// Atividade/Tarefa
+model Activity {
+  id          String   @id @default(uuid())
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?  @db.Text
+  dueDate     DateTime
+  maxScore    Decimal  @db.Decimal(5, 2)
+  weight      Decimal  @default(1.0) @db.Decimal(5, 2)
+  
+  allowLateSubmission Boolean @default(true)
+  
+  submissions Submission[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([classId])
+  @@index([dueDate])
+}
+
+/// Submissão de atividade
+model Submission {
+  id          String   @id @default(uuid())
+  activityId  String
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  
+  fileUrl     String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  
+  submissionText String? @db.Text
+  submittedAt DateTime @default(now())
+  isLate      Boolean  @default(false)
+  
+  grade       Grade?
+  
+  @@unique([activityId, studentId])
+  @@index([activityId])
+  @@index([studentId])
+}
+
+/// Avaliação/Prova
+model Assessment {
+  id          String   @id @default(uuid())
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?  @db.Text
+  date        DateTime
+  maxScore    Decimal  @db.Decimal(5, 2)
+  weight      Decimal  @db.Decimal(5, 2)
+  
+  type        String   // PROVA, TRABALHO, PARTICIPACAO, etc.
+  
+  grades      Grade[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([classId])
+  @@index([date])
+}
+
+/// Nota
+model Grade {
+  id            String   @id @default(uuid())
+  assessmentId  String?
+  assessment    Assessment? @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  submissionId  String?   @unique
+  submission    Submission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id])
+  
+  score         Decimal  @db.Decimal(5, 2)
+  feedback      String?  @db.Text
+  
+  gradedAt      DateTime @default(now())
+  gradedBy      String   // userId do professor
+  
+  isRecovery    Boolean  @default(false)
+  originalGradeId String? // referência para nota original em caso de recuperação
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([studentId])
+  @@index([assessmentId])
+}
+
+/// Frequência
+model Attendance {
+  id              String         @id @default(uuid())
+  lessonId        String
+  lesson          Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  classEnrollmentId String
+  classEnrollment ClassEnrollment @relation(fields: [classEnrollmentId], references: [id], onDelete: Cascade)
+  
+  status          AttendanceStatus @default(PRESENT)
+  justification   String?          @db.Text
+  justificationDocument String?
+  
+  recordedAt      DateTime         @default(now())
+  recordedBy      String           // userId
+  
+  @@unique([lessonId, classEnrollmentId])
+  @@index([lessonId])
+  @@index([classEnrollmentId])
+}
+
+/// TCC (Trabalho de Conclusão de Curso)
+model Thesis {
+  id          String   @id @default(uuid())
+  classId     String   @unique
+  class       Class    @relation(fields: [classId], references: [id])
+  
+  topic       String
+  description String?  @db.Text
+  advisorId   String?  // orientador
+  advisor     Teacher? @relation(fields: [advisorId], references: [id])
+  
+  submissionDeadline DateTime?
+  defenseDate   DateTime?
+  
+  fileUrl       String?
+  fileName      String?
+  fileSize      Int?
+  mimeType      String?
+  
+  status        String   @default("PLANNED") // PLANNED, ASSIGNED, SUBMITTED, UNDER_REVIEW, DEFENDED, GRADED
+  
+  grade         Decimal? @db.Decimal(5, 2)
+  feedback      String?  @db.Text
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Histórico acadêmico por disciplina
+model AcademicRecord {
+  id            String   @id @default(uuid())
+  enrollmentId  String
+  enrollment    Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  subjectId     String
+  // subject não fazemos relação direta pois pode mudar
+  
+  subjectName   String
+  finalGrade    Decimal? @db.Decimal(5, 2)
+  frequency     Decimal? @db.Decimal(5, 2) // percentual
+  
+  status        String   // APPROVED, REPROVED_GRADE, REPROVED_ATTENDANCE, IN_PROGRESS
+  
+  completedAt   DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([enrollmentId, subjectId])
+  @@index([enrollmentId])
+}
+
+// ============================================
+// FINANCIAL MODULES
+// ============================================
+
+/// Fatura/Cobrança
+model Invoice {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  courseId    String
+  // course mantemos denormalizado para histórico
+  
+  referenceMonth DateTime // mês de referência da cobrança
+  dueDate     DateTime
+  issueDate   DateTime @default(now())
+  
+  items       Json     // [{"description": "Mensalidade", "value": 50.00}, ...]
+  
+  totalValue  Decimal  @db.Decimal(10, 2)
+  discountValue Decimal @default(0) @db.Decimal(10, 2)
+  fineValue   Decimal  @default(0) @db.Decimal(10, 2)
+  interestValue Decimal @default(0) @db.Decimal(10, 2)
+  finalValue  Decimal  @db.Decimal(10, 2)
+  
+  status      InvoiceStatus @default(OPEN)
+  
+  payments    Payment[]
+  
+  notes       String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([studentId])
+  @@index([courseId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+/// Pagamento
+model Payment {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  
+  amount      Decimal  @db.Decimal(10, 2)
+  paymentDate DateTime
+  method      PaymentMethod
+  
+  receiptUrl  String?  // comprovante enviado pelo aluno
+  receiptVerified Boolean @default(false)
+  verifiedBy  String?
+  verifiedAt  DateTime?
+  
+  status      PaymentStatus @default(PENDING_REVIEW)
+  rejectionReason String?
+  
+  notes       String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([invoiceId])
+  @@index([paymentDate])
+}
+
+// ============================================
+// DOCUMENTS & CERTIFICATES MODULES
+// ============================================
+
+/// Solicitação de documento
+model DocumentRequest {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  
+  documentType DocumentType
+  quantity    Int      @default(1)
+  reason      String   @db.Text
+  urgency     String   @default("NORMAL") // NORMAL, URGENT
+  
+  status      DocumentRequestStatus @default(PENDING)
+  
+  requestedDocument Document?
+  
+  notes       String?
+  processedBy String?
+  processedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([studentId])
+  @@index([status])
+}
+
+/// Documento emitido
+model Document {
+  id              String   @id @default(uuid())
+  requestRequestId String?  @unique
+  requestRequest    DocumentRequest? @relation(fields: [requestRequestId], references: [id])
+  
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id])
+  
+  type            DocumentType
+  fileUrl         String
+  fileName        String
+  fileSize        Int
+  mimeType        String
+  
+  issuedAt        DateTime @default(now())
+  issuedBy        String   // userId
+  
+  isValid         Boolean  @default(true)
+  
+  @@index([studentId])
+  @@index([type])
+}
+
+/// Certificado
+model Certificate {
+  id            String   @id @default(uuid())
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id])
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id])
+  
+  validationCode String   @unique
+  qrCodeData     String?  // URL ou dados do QR Code
+  
+  issueDate     DateTime @default(now())
+  issuedBy      String   // userId
+  
+  fileUrl       String
+  fileName      String
+  fileSize      Int
+  mimeType      String  @default("application/pdf")
+  
+  graduateName  String
+  courseName    String
+  completionDate DateTime
+  
+  isValid       Boolean  @default(true)
+  cancelledAt   DateTime?
+  cancelledBy   String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([validationCode])
+  @@index([studentId])
+  @@index([courseId])
+}
+
+/// Template de certificado
+model CertificateTemplate {
+  id        String   @id @default(uuid())
+  courseId  String   @unique
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  templateHtml String @db.Text
+  variables   Json?  // campos dinâmicos do template
+  
+  isActive    Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// COMMUNICATION MODULES
+// ============================================
+
+/// Mensagem interna
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id])
+  recipientId String
+  recipient   User     @relation("MessageRecipient", fields: [recipientId], references: [id])
+  
+  subject     String
+  body        String   @db.Text
+  
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  
+  archivedBySender Boolean @default(false)
+  archivedByRecipient Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([isRead])
+}
+
+/// Notificação do sistema
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type      String   // INVOICE_DUE, NEW_MESSAGE, GRADE_PUBLISHED, etc.
+  title     String
+  message   String   @db.Text
+  
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  
+  link      String?  // link relacionado à notificação
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+/// Tópico do fórum
+model ForumThread {
+  id        String   @id @default(uuid())
+  classId   String?
+  // class   Class?   @relation(fields: [classId], references: [id]) // opcional
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  
+  title     String
+  content   String   @db.Text
+  
+  isPinned  Boolean  @default(false)
+  isLocked  Boolean  @default(false)
+  
+  posts     ForumPost[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([classId])
+  @@index([authorId])
+}
+
+/// Postagem no fórum
+model ForumPost {
+  id        String   @id @default(uuid())
+  threadId  String
+  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  
+  content   String   @db.Text
+  
+  parentId  String?
+  parent    ForumPost? @relation("ForumReplies", fields: [parentId], references: [id])
+  replies   ForumPost[] @relation("ForumReplies")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([threadId])
+  @@index([authorId])
+}
+
+/// Ticket de suporte
+model SupportTicket {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     User     @relation("TicketOwner", fields: [studentId], references: [id])
+  
+  subject     String
+  description String   @db.Text
+  
+  category    String?
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus @default(OPEN)
+  
+  assignedToId String?
+  assignedTo   User?    @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  
+  messages    SupportTicketMessage[]
+  
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([studentId])
+  @@index([status])
+  @@index([priority])
+}
+
+/// Mensagem do ticket
+model SupportTicketMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  senderId  String
+  // sender  User     @relation(fields: [senderId], references: [id])
+  
+  message   String   @db.Text
+  fileUrl   String?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([ticketId])
+}
+
+// ============================================
+// CONTENT MODULES
+// ============================================
+
+/// Notícia
+model News {
+  id        String   @id @default(uuid())
+  title     String
+  slug      String   @unique
+  content   String   @db.Text
+  excerpt   String?
+  
+  categoryId NewsCategory @default(GENERAL)
+  
+  imageUrl  String?
+  imageCaption String?
+  
+  authorId  String
+  // author  User     @relation(fields: [authorId], references: [id])
+  
+  isPublished Boolean @default(false)
+  publishedAt DateTime?
+  
+  views     Int      @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([isPublished])
+  @@index([publishedAt])
+  @@index([categoryId])
+}
+
+/// Evento
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String   @db.Text
+  
+  startDate   DateTime
+  endDate     DateTime?
+  
+  location    String?
+  address     String?
+  
+  imageUrl    String?
+  
+  status      EventStatus @default(PLANNED)
+  
+  organizerId String?
+  // organizer User?    @relation(fields: [organizerId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([startDate])
+  @@index([status])
+}
+
+/// Mensagem de contato (site público)
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String   @db.Text
+  
+  isResponded Boolean @default(false)
+  response    String? @db.Text
+  respondedAt DateTime?
+  respondedBy String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([isResponded])
+  @@index([createdAt])
+}
+
+// ============================================
+// FILES & SYSTEM MODULES
+// ============================================
+
+/// Arquivo armazenado
+model File {
+  id          String   @id @default(uuid())
+  ownerId     String?
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  
+  originalName String
+  storedName   String  // nome único no storage
+  fileUrl      String
+  mimeType     String
+  fileSize     Int     // bytes
+  fileType     FileType
+  
+  storageProvider String @default("LOCAL") // LOCAL, S3, R2
+  bucket        String?
+  key           String?
+  
+  isPublic    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([ownerId])
+  @@index([fileType])
+}
+
+/// Log de auditoria
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  action      AuditAction
+  resource    String   // entidade afetada
+  resourceId  String?
+  
+  oldValue    Json?    // dados anteriores (para UPDATE/DELETE)
+  newValue    Json?    // novos dados (para CREATE/UPDATE)
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  details     String?  @db.Text
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+}
+
+/// Configurações do sistema
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   @db.Text
+  type        String   @default("STRING") // STRING, NUMBER, BOOLEAN, JSON
+  
+  description String?
+  
+  updatedBy   String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([key])
+}
