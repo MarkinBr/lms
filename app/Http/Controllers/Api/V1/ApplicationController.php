@@ -82,8 +82,8 @@ class ApplicationController extends Controller
             'estado' => 'required|string|max:2',
             
             // Curso
-            'curso_id' => 'required|exists:courses,id',
-            'course_modality_id' => 'required|exists:course_modalities,id',
+            'curso_id' => 'required|exists:cursos,id',
+            'course_modality_id' => 'nullable|uuid|exists:course_modalities,id',
             
             // Documentos (opcionais no momento da inscrição)
             'documentos' => 'nullable|array',
