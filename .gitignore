@@ -1,4 +1,3 @@
-```
 # Dependencies
 vendor/
 
@@ -30,5 +29,16 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-```
+
+# Dados locais, dumps e backups (nunca versionar)
+/cetsadp_lms
+*.sqlite
+*.sqlite3
+*.sql
+/backups/*
+!/backups/.gitkeep
+
+# Pacotes de revisão e arquivos compactados gerados localmente
+*.zip
+*.tar.gz
 node_modules
