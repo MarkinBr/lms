@@ -115,4 +115,10 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    'contact' => [
+        'destination' => env('MAIL_CONTACT_DESTINATION', 'contato@cetsadp.com.br'),
+        'from_address' => env('MAIL_CONTACT_FROM_ADDRESS', 'contato@cetsadp.com.br'),
+        'from_name' => env('MAIL_CONTACT_FROM_NAME', 'CETSADP'),
+    ],
+
 ];

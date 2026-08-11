@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\PaginaInicial;
+use App\Mail\ContatoRecebidoMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class SiteController extends Controller
 {
@@ -52,13 +54,15 @@ class SiteController extends Controller
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'email' => 'required|email',
-            'mensagem' => 'required|string',
+            'telefone' => 'nullable|string|max:30',
+            'assunto' => 'required|string|max:120',
+            'mensagem' => 'required|string|max:5000',
+            'consentimento' => 'accepted',
         ]);
 
-        // Aqui você pode enviar email, salvar no banco, etc.
-        // Mail::to('contato@cetsadp.com.br')->send(new ContatoMail($validated));
+        Mail::to(config('mail.contact.destination'))->send(new ContatoRecebidoMail($validated));
 
-        return back()->with('success', 'Mensagem enviada com sucesso!');
+        return response()->json(['success' => true, 'message' => 'Mensagem enviada com sucesso!']);
     }
 
     public function newsletter(Request $request)
