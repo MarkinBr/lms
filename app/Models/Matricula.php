@@ -12,10 +12,27 @@ class Matricula extends Model
 {
     use HasFactory;
 
+    /**
+     * Status canônicos utilizados pelo fluxo de aprovação/matrícula.
+     * Valores em minúsculas para bater com os scopes existentes (LOWER()).
+     */
+    public const STATUS_ATIVA = 'ativa';
+    public const STATUS_TRANCADA = 'trancada';
+    public const STATUS_CONCLUIDA = 'concluida';
+    public const STATUS_CANCELADA = 'cancelada';
+
     protected $fillable = [
-        'user_id', 'curso_id', 'turma_id', 'data_matricula',
-        'dia_vencimento', 'status', 'numero_matricula',
-        'data_validade', 'observacoes', 'data_conclusao',
+        'user_id',
+        'curso_id',
+        'application_id', // vínculo com a inscrição de origem
+        'turma_id',
+        'data_matricula',
+        'dia_vencimento',
+        'status',
+        'numero_matricula',
+        'data_validade',
+        'observacoes',
+        'data_conclusao',
     ];
 
     protected $casts = [
@@ -47,6 +64,14 @@ class Matricula extends Model
     public function turma(): BelongsTo
     {
         return $this->belongsTo(Turma::class);
+    }
+
+    /**
+     * Inscrição (Application) que originou esta matrícula.
+     */
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(Application::class, 'application_id');
     }
 
     public function certificado(): HasOne
