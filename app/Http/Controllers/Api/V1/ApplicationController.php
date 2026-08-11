@@ -68,7 +68,7 @@ class ApplicationController extends Controller
             'data_nascimento' => 'required|date|before:today',
             'sexo' => 'required|in:M,F,Outro',
             'estado_civil' => 'nullable|string|max:50',
-            'nacionalidade' => 'nullable|string|max:100|default:Brasileira',
+            'nacionalidade' => 'nullable|string|max:100',
             'naturalidade_cidade' => 'nullable|string|max:100',
             'naturalidade_estado' => 'nullable|string|max:2',
             'escolaridade' => 'required|string|max:100',

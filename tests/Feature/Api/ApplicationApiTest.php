@@ -31,6 +31,7 @@ class ApplicationApiTest extends TestCase
             'cpf' => '12345678901',
             'data_nascimento' => '1990-01-15',
             'sexo' => 'F',
+            'nacionalidade' => 'Brasileira',
             'escolaridade' => 'medio_completo',
             'cep' => '01001-000',
             'logradouro' => 'Praça da Sé',
