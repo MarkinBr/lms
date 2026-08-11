@@ -36,6 +36,14 @@ class Curso extends Model
         return $this->hasMany(Turma::class);
     }
 
+    /**
+     * Disciplinas que compõem a estrutura acadêmica do curso.
+     */
+    public function disciplinas(): HasMany
+    {
+        return $this->hasMany(Disciplina::class);
+    }
+
     public function modalities(): HasMany
     {
         return $this->hasMany(CourseModality::class, 'curso_id');

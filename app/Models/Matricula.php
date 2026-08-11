@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -17,8 +18,11 @@ class Matricula extends Model
      * Valores em minúsculas para bater com os scopes existentes (LOWER()).
      */
     public const STATUS_ATIVA = 'ativa';
+
     public const STATUS_TRANCADA = 'trancada';
+
     public const STATUS_CONCLUIDA = 'concluida';
+
     public const STATUS_CANCELADA = 'cancelada';
 
     protected $fillable = [
@@ -37,7 +41,7 @@ class Matricula extends Model
 
     protected $casts = [
         'data_matricula' => 'date',
-        'data_validade'  => 'date',
+        'data_validade' => 'date',
         'data_conclusao' => 'date',
     ];
 
@@ -64,6 +68,19 @@ class Matricula extends Model
     public function turma(): BelongsTo
     {
         return $this->belongsTo(Turma::class);
+    }
+
+    /**
+     * Turmas acadêmicas associadas à matrícula.
+     *
+     * O relacionamento legado turma() permanece em uso para manter
+     * compatibilidade com matrículas antigas.
+     */
+    public function turmasHistorico(): BelongsToMany
+    {
+        return $this->belongsToMany(Turma::class, 'matricula_turma')
+            ->withPivot('status', 'observacao')
+            ->withTimestamps();
     }
 
     /**
@@ -94,7 +111,7 @@ class Matricula extends Model
     {
         return $query->where(function ($q) {
             $q->whereRaw("LOWER(COALESCE(status, '')) IN ('expirado','expirada')")
-              ->orWhereDate('data_validade', '<', now(config('app.timezone', 'America/Sao_Paulo')));
+                ->orWhereDate('data_validade', '<', now(config('app.timezone', 'America/Sao_Paulo')));
         });
     }
 
