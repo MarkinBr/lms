@@ -62,7 +62,9 @@ class ApplicationApiTest extends TestCase
 
         Mail::assertSent(InscricaoConfirmacaoMail::class, function (InscricaoConfirmacaoMail $mail): bool {
             return $mail->hasTo('maria@example.test')
-                && $mail->inscricoes->count() === 1;
+                && $mail->inscricoes->count() === 1
+                && str_contains($mail->render(), '/acompanhar-inscricao/')
+                && str_contains($mail->render(), 'signature=');
         });
     }
 

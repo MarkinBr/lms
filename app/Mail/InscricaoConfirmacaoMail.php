@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\URL;
 
 class InscricaoConfirmacaoMail extends Mailable
 {
@@ -17,8 +18,22 @@ class InscricaoConfirmacaoMail extends Mailable
     /**
      * @param Collection<int, Application> $inscricoes
      */
+    /**
+     * @var array<string, string>
+     */
+    public array $linksAcompanhamento;
+
     public function __construct(public readonly Collection $inscricoes)
     {
+        $this->linksAcompanhamento = $this->inscricoes
+            ->mapWithKeys(fn (Application $inscricao) => [
+                $inscricao->id => URL::temporarySignedRoute(
+                    'site.acompanhamento-link',
+                    now()->addDays(30),
+                    ['application' => $inscricao],
+                ),
+            ])
+            ->all();
     }
 
     public function envelope(): Envelope
