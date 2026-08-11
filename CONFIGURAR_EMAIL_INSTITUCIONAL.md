@@ -1,6 +1,23 @@
 # E-mail institucional de confirmação
 
-As inscrições enviam os protocolos ao e-mail informado pelo candidato. O remetente é definido somente no arquivo local `.env`; senhas nunca devem ser adicionadas ao Git.
+As inscrições enviam os protocolos ao e-mail informado pelo candidato. O remetente é definido somente no arquivo local `.env`; senhas e chaves nunca devem ser adicionadas ao Git.
+
+## Resend (recomendado para o CETSADP)
+
+O Resend permite o envio transacional pelo domínio institucional sem precisar contratar uma caixa de e-mail. Depois de verificar o domínio no painel do Resend, crie uma chave de API para SMTP e preencha o `.env` local:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.resend.com
+MAIL_PORT=465
+MAIL_SCHEME=smtps
+MAIL_USERNAME=resend
+MAIL_PASSWORD="cole-a-chave-da-api-do-resend-aqui"
+MAIL_FROM_ADDRESS="inscricoes@cetsadp.com.br"
+MAIL_FROM_NAME="CETSADP"
+```
+
+O endereço de envio não precisa ter uma caixa postal no Resend. Caso queira receber respostas, configure um endereço de resposta em um provedor de e-mail ou encaminhamento separado.
 
 ## Gmail ou Google Workspace
 
@@ -16,7 +33,7 @@ MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=contato@cetsadp.com.br
 MAIL_PASSWORD="cole-a-senha-de-aplicativo-aqui"
-MAIL_ENCRYPTION=tls
+MAIL_SCHEME=smtp
 MAIL_FROM_ADDRESS="contato@cetsadp.com.br"
 MAIL_FROM_NAME="CETSADP"
 ```
