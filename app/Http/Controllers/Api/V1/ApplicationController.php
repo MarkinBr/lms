@@ -7,8 +7,10 @@ use App\Mail\InscricaoConfirmacaoMail;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
 use App\Models\CourseModality;
+use App\Services\NotificarDecisaoInscricaoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -255,6 +257,7 @@ class ApplicationController extends Controller
                 $detalhes["inscricoes.{$indice}.curso_id"] = [
                     'Você já possui uma inscrição para este curso.',
                 ];
+
                 continue;
             }
 
@@ -420,9 +423,9 @@ class ApplicationController extends Controller
      * Uma indisponibilidade temporária do provedor de e-mail não pode apagar
      * nem invalidar uma inscrição que foi gravada com sucesso.
      *
-     * @param \Illuminate\Support\Collection<int, Application> $inscricoes
+     * @param  Collection<int, Application>  $inscricoes
      */
-    private function enviarConfirmacaoPorEmail(string $email, \Illuminate\Support\Collection $inscricoes): void
+    private function enviarConfirmacaoPorEmail(string $email, Collection $inscricoes): void
     {
         try {
             $inscricoes->each(
@@ -455,11 +458,14 @@ class ApplicationController extends Controller
     /**
      * Atualiza status da inscrição (Secretaria/Admin)
      */
-    public function updateStatus(Request $request, Application $application): JsonResponse
-    {
+    public function updateStatus(
+        Request $request,
+        Application $application,
+        NotificarDecisaoInscricaoService $notificador,
+    ): JsonResponse {
         $validated = $request->validate([
             'status' => 'required|in:em_analise,aprovado,rejeitado,matriculado,cancelado',
-            'observacoes_secretaria' => 'nullable|string|max:1000',
+            'observacoes_secretaria' => 'nullable|string|max:1000|required_if:status,rejeitado',
         ]);
 
         $oldStatus = $application->status;
@@ -482,7 +488,16 @@ class ApplicationController extends Controller
             ->event('status_changed')
             ->log('Status da inscrição alterado');
 
-        // TODO: Enviar e-mail para o candidato sobre aprovação/rejeição
+        if ($oldStatus !== $validated['status']) {
+            if ($validated['status'] === Application::STATUS_APROVADO) {
+                $notificador->notificarAprovacao($application);
+            }
+
+            if ($validated['status'] === Application::STATUS_REJEITADO) {
+                $notificador->notificarRejeicao($application, (string) $validated['observacoes_secretaria']);
+            }
+        }
+
         // TODO: Enviar notificação WhatsApp
 
         return response()->json([
