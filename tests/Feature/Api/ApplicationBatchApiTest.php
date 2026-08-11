@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Api;
 
+use App\Mail\InscricaoConfirmacaoMail;
 use App\Models\Application;
 use App\Models\CourseModality;
 use App\Models\Curso;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ApplicationBatchApiTest extends TestCase
@@ -57,6 +59,8 @@ class ApplicationBatchApiTest extends TestCase
 
     public function test_cria_duas_inscricoes_para_cursos_diferentes_na_mesma_requisicao(): void
     {
+        Mail::fake();
+
         [$cursoA, $modalidadeA] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'EAD');
         [$cursoB, $modalidadeB] = $this->criarCursoComModalidade('Habilitação ao Diaconato', 'Presencial');
 
@@ -91,6 +95,11 @@ class ApplicationBatchApiTest extends TestCase
             'curso_id' => $cursoA->id,
             'status' => 'em_analise',
         ]);
+
+        Mail::assertSent(InscricaoConfirmacaoMail::class, function (InscricaoConfirmacaoMail $mail): bool {
+            return $mail->hasTo('maria@example.test')
+                && $mail->inscricoes->count() === 2;
+        });
         $this->assertDatabaseHas('applications', [
             'cpf' => '12345678901',
             'curso_id' => $cursoB->id,

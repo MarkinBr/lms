@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Mail\InscricaoConfirmacaoMail;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
 use App\Models\CourseModality;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ApplicationController extends Controller
 {
@@ -190,7 +194,8 @@ class ApplicationController extends Controller
             }
         }
 
-        // TODO: Enviar e-mail de confirmação para o candidato
+        $this->enviarConfirmacaoPorEmail($application->email, collect([$application]));
+
         // TODO: Enviar notificação WhatsApp para o candidato
         // TODO: Enviar notificação para Secretaria sobre nova inscrição
 
@@ -309,7 +314,8 @@ class ApplicationController extends Controller
             return $criadas;
         });
 
-        // TODO: Enviar e-mail de confirmação com a lista de protocolos
+        $this->enviarConfirmacaoPorEmail($validated['email'], collect($inscricoesCriadas));
+
         // TODO: Enviar notificação para Secretaria sobre novas inscrições
 
         return response()->json([
@@ -407,6 +413,30 @@ class ApplicationController extends Controller
     private function gerarProtocolo(): string
     {
         return 'INSC-'.strtoupper(Str::random(8)).'-'.now()->format('Ymd');
+    }
+
+    /**
+     * Envia os protocolos após a inscrição já estar confirmada no banco.
+     * Uma indisponibilidade temporária do provedor de e-mail não pode apagar
+     * nem invalidar uma inscrição que foi gravada com sucesso.
+     *
+     * @param \Illuminate\Support\Collection<int, Application> $inscricoes
+     */
+    private function enviarConfirmacaoPorEmail(string $email, \Illuminate\Support\Collection $inscricoes): void
+    {
+        try {
+            $inscricoes->each(
+                fn (Application $inscricao) => $inscricao->load(['curso', 'courseModality']),
+            );
+
+            Mail::to($email)->send(new InscricaoConfirmacaoMail($inscricoes));
+        } catch (Throwable $exception) {
+            Log::warning('Não foi possível enviar a confirmação de inscrição por e-mail.', [
+                'email' => $email,
+                'protocolos' => $inscricoes->pluck('protocol')->all(),
+                'erro' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**
