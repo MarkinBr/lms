@@ -4,21 +4,27 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ApplicationResource\Pages;
 use App\Models\Application;
-use App\Models\Curso;
 use App\Models\CourseModality;
+use App\Services\AprovarInscricaoException;
+use App\Services\AprovarInscricaoService;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * ApplicationResource - Recurso de Inscrições no Filament
- * 
- * Gerencia inscrições de candidatos no painel da Secretaria
+ *
+ * Fluxo oficial: Candidato se inscreve → Secretaria analisa → Aprova+Matricula/Rejeita
+ *
+ * Regras importantes desta versão:
+ *  - A ação "Aprovar e matricular" é a ÚNICA porta de entrada para virar matrícula.
+ *  - O campo `status` do formulário comum é somente leitura para não contornar o fluxo.
+ *  - Rejeição exige justificativa.
+ *  - Apenas Secretaria e Administrador podem executar as ações.
  */
 class ApplicationResource extends Resource
 {
@@ -37,8 +43,23 @@ class ApplicationResource extends Resource
     protected static ?string $recordTitleAttribute = 'nome_completo';
 
     /**
-     * Definir o formulário de criação/edição
+     * Verifica se o usuário atual pode aprovar/rejeitar inscrições.
+     * Segue os perfis existentes do sistema (`users.nivel`).
      */
+    public static function usuarioPodeGerenciar(): bool
+    {
+        $u = auth()->user();
+        if (! $u) {
+            return false;
+        }
+
+        return in_array(
+            strtolower((string) $u->nivel),
+            ['admin', 'secretario', 'secretaria'],
+            true,
+        );
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -57,9 +78,8 @@ class ApplicationResource extends Resource
                         Forms\Components\TextInput::make('cpf')
                             ->label('CPF')
                             ->required()
-                            ->maxLength(14) // CPF formatado: 000.000.000-00
-                            ->mask('999.999.999-99')
-                            ->unique(ignoreRecord: true),
+                            ->maxLength(14)
+                            ->mask('999.999.999-99'),
 
                         Forms\Components\TextInput::make('rg')
                             ->label('RG')
@@ -110,7 +130,6 @@ class ApplicationResource extends Resource
                     ]),
 
                 Forms\Components\Section::make('Contato')
-                    ->description('Formas de contato')
                     ->icon('heroicon-o-phone')
                     ->columns(3)
                     ->schema([
@@ -119,7 +138,6 @@ class ApplicationResource extends Resource
                             ->email()
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true)
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('telefone')
@@ -138,7 +156,6 @@ class ApplicationResource extends Resource
                     ]),
 
                 Forms\Components\Section::make('Endereço')
-                    ->description('Endereço residencial completo')
                     ->icon('heroicon-o-map-pin')
                     ->columns(3)
                     ->schema([
@@ -177,12 +194,10 @@ class ApplicationResource extends Resource
                         Forms\Components\TextInput::make('estado')
                             ->label('Estado')
                             ->required()
-                            ->maxLength(2)
-                            ->native(false),
+                            ->maxLength(2),
                     ]),
 
                 Forms\Components\Section::make('Dados Acadêmicos')
-                    ->description('Informações sobre escolaridade e curso pretendido')
                     ->icon('heroicon-o-academic-cap')
                     ->columns(3)
                     ->schema([
@@ -204,12 +219,11 @@ class ApplicationResource extends Resource
                         Forms\Components\Select::make('curso_id')
                             ->label('Curso Pretendido')
                             ->required()
-                            ->relationship('curso', 'nome')
+                            ->relationship('curso', 'titulo')
                             ->preload()
                             ->searchable()
                             ->live()
                             ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                // Resetar modalidade quando curso mudar
                                 $set('course_modality_id', null);
                             }),
 
@@ -218,10 +232,10 @@ class ApplicationResource extends Resource
                             ->required()
                             ->options(function ($get) {
                                 $cursoId = $get('curso_id');
-                                if (!$cursoId) {
+                                if (! $cursoId) {
                                     return [];
                                 }
-                                
+
                                 return CourseModality::where('curso_id', $cursoId)
                                     ->pluck('nome', 'id');
                             })
@@ -230,14 +244,13 @@ class ApplicationResource extends Resource
                     ]),
 
                 Forms\Components\Section::make('Análise da Secretaria')
-                    ->description('Avaliação da inscrição pela secretaria')
+                    ->description('Somente leitura — use as ações "Aprovar e matricular" ou "Rejeitar".')
                     ->icon('heroicon-o-clipboard-document-check')
-                    ->columns(1)
+                    ->columns(2)
                     ->visible(fn ($record) => $record !== null)
                     ->schema([
                         Forms\Components\Select::make('status')
                             ->label('Status')
-                            ->required()
                             ->options([
                                 Application::STATUS_EM_ANALISE => 'Em Análise',
                                 Application::STATUS_APROVADO => 'Aprovado',
@@ -245,14 +258,26 @@ class ApplicationResource extends Resource
                                 Application::STATUS_MATRICULADO => 'Matriculado',
                                 Application::STATUS_CANCELADO => 'Cancelado',
                             ])
-                            ->default(Application::STATUS_EM_ANALISE)
-                            ->disabled(fn ($record) => $record?->isMatriculado()),
+                            // Bloqueado no formulário comum para não contornar
+                            // o fluxo oficial de aprovação/matrícula.
+                            ->disabled()
+                            ->dehydrated(false),
 
                         Forms\Components\Textarea::make('observacoes_secretaria')
                             ->label('Observações da Secretaria')
                             ->nullable()
                             ->rows(3)
+                            ->disabled()
+                            ->dehydrated(false)
                             ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('protocol')
+                            ->label('Protocolo da inscrição')
+                            ->content(fn ($record) => $record?->protocol ?? '—'),
+
+                        Forms\Components\Placeholder::make('numero_matricula')
+                            ->label('Número da matrícula')
+                            ->content(fn ($record) => $record?->matricula?->numero_matricula ?? 'Ainda não matriculado'),
 
                         Forms\Components\Placeholder::make('analisado_por')
                             ->label('Analisado por')
@@ -265,9 +290,6 @@ class ApplicationResource extends Resource
             ]);
     }
 
-    /**
-     * Definir a tabela de listagem
-     */
     public static function table(Table $table): Table
     {
         return $table
@@ -277,12 +299,17 @@ class ApplicationResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('protocol')
+                    ->label('Protocolo')
+                    ->searchable()
+                    ->copyable(),
+
                 Tables\Columns\TextColumn::make('cpf')
                     ->label('CPF')
                     ->formatStateUsing(fn ($state) => preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $state))
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('curso.nome')
+                Tables\Columns\TextColumn::make('curso.titulo')
                     ->label('Curso')
                     ->sortable(),
 
@@ -290,22 +317,26 @@ class ApplicationResource extends Resource
                     ->label('Modalidade')
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('matricula.numero_matricula')
+                    ->label('Matrícula')
+                    ->formatStateUsing(fn ($state) => $state ?? '—'),
+
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
                         'warning' => Application::STATUS_EM_ANALISE,
                         'success' => Application::STATUS_APROVADO,
-                        'danger' => Application::STATUS_REJEITADO,
+                        'danger'  => Application::STATUS_REJEITADO,
                         'primary' => Application::STATUS_MATRICULADO,
-                        'gray' => Application::STATUS_CANCELADO,
+                        'gray'    => Application::STATUS_CANCELADO,
                     ])
                     ->formatStateUsing(fn ($state) => [
                         Application::STATUS_EM_ANALISE => 'Em Análise',
-                        Application::STATUS_APROVADO => 'Aprovado',
-                        Application::STATUS_REJEITADO => 'Rejeitado',
+                        Application::STATUS_APROVADO   => 'Aprovado',
+                        Application::STATUS_REJEITADO  => 'Rejeitado',
                         Application::STATUS_MATRICULADO => 'Matriculado',
-                        Application::STATUS_CANCELADO => 'Cancelado',
-                    ][$state]),
+                        Application::STATUS_CANCELADO  => 'Cancelado',
+                    ][$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Inscrito em')
@@ -319,99 +350,112 @@ class ApplicationResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
                     ->options([
                         Application::STATUS_EM_ANALISE => 'Em Análise',
-                        Application::STATUS_APROVADO => 'Aprovado',
-                        Application::STATUS_REJEITADO => 'Rejeitado',
+                        Application::STATUS_APROVADO   => 'Aprovado',
+                        Application::STATUS_REJEITADO  => 'Rejeitado',
                         Application::STATUS_MATRICULADO => 'Matriculado',
-                        Application::STATUS_CANCELADO => 'Cancelado',
+                        Application::STATUS_CANCELADO  => 'Cancelado',
                     ]),
 
-                Tables\Filters\SelectFilter::make('curso')
-                    ->relationship('curso', 'nome'),
-
-                Tables\Filters\TernaryFilter::make('documentos_validados')
-                    ->label('Documentos Validados')
-                    ->placeholder('Todos')
-                    ->trueLabel('Com documentos validados')
-                    ->falseLabel('Sem documentos validados')
-                    ->query(fn (Builder $query, bool $value): Builder => 
-                        $query->whereHas('documents', fn ($q) => $q->where('validado', $value))
-                    ),
+                Tables\Filters\SelectFilter::make('curso_id')
+                    ->label('Curso')
+                    ->relationship('curso', 'titulo'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()
-                    ->label('Visualizar'),
+                Tables\Actions\ViewAction::make()->label('Visualizar'),
 
                 Tables\Actions\EditAction::make()
                     ->label('Editar')
-                    ->visible(fn ($record) => !$record->isMatriculado()),
+                    ->visible(fn ($record) => ! $record->isMatriculado()),
 
-                Tables\Actions\Action::make('approve')
-                    ->label('Aprovar')
-                    ->icon('heroicon-o-check-circle')
+                Tables\Actions\Action::make('aprovar_e_matricular')
+                    ->label('Aprovar e matricular')
+                    ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Aprovar Inscrição')
-                    ->modalDescription('Tem certeza que deseja aprovar esta inscrição? O candidato poderá ser matriculado.')
+                    ->modalHeading('Aprovar e matricular candidato')
+                    ->modalDescription('Esta ação cria (ou reutiliza) a conta do aluno, gera a matrícula no curso e envia o link seguro para definição de senha.')
+                    ->modalSubmitActionLabel('Confirmar aprovação')
                     ->form([
                         Forms\Components\Textarea::make('observacoes')
-                            ->label('Observações (opcional)')
+                            ->label('Observações internas (opcional)')
                             ->rows(3),
                     ])
-                    ->action(function ($record, $data) {
-                        $record->approve(auth()->id(), $data['observacoes'] ?? null);
-                        
-                        Notification::make()
-                            ->title('Inscrição aprovada com sucesso!')
-                            ->success()
-                            ->send();
-                    })
-                    ->visible(fn ($record) => $record->isEmAnalise()),
+                    ->visible(fn ($record) => self::usuarioPodeGerenciar()
+                        && in_array($record->status, [
+                            Application::STATUS_EM_ANALISE,
+                            Application::STATUS_APROVADO,
+                        ], true))
+                    ->action(function ($record, array $data): void {
+                        /** @var AprovarInscricaoService $service */
+                        $service = app(AprovarInscricaoService::class);
 
-                Tables\Actions\Action::make('reject')
+                        try {
+                            $resultado = $service->executar(
+                                $record,
+                                auth()->user(),
+                                $data['observacoes'] ?? null,
+                            );
+
+                            Notification::make()
+                                ->title('Matrícula realizada com sucesso')
+                                ->body(sprintf(
+                                    'Aluno %s matriculado no curso %s. Matrícula nº %s.',
+                                    $resultado->user->name,
+                                    optional($resultado->matricula->curso)->titulo ?? '—',
+                                    $resultado->matricula->numero_matricula,
+                                ))
+                                ->success()
+                                ->send();
+                        } catch (AprovarInscricaoException $e) {
+                            Notification::make()
+                                ->title('Não foi possível concluir a matrícula')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                Tables\Actions\Action::make('rejeitar')
                     ->label('Rejeitar')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading('Rejeitar Inscrição')
-                    ->modalDescription('Informe o motivo da rejeição:')
+                    ->modalHeading('Rejeitar inscrição')
+                    ->modalDescription('Informe o motivo da rejeição. O candidato poderá ser notificado.')
                     ->form([
                         Forms\Components\Textarea::make('motivo')
-                            ->label('Motivo da Rejeição')
+                            ->label('Motivo da rejeição')
                             ->required()
+                            ->minLength(3)
                             ->rows(3),
                     ])
-                    ->action(function ($record, $data) {
-                        $record->reject(auth()->id(), $data['motivo']);
-                        
-                        Notification::make()
-                            ->title('Inscrição rejeitada')
-                            ->danger()
-                            ->send();
-                    })
-                    ->visible(fn ($record) => $record->isEmAnalise()),
+                    ->visible(fn ($record) => self::usuarioPodeGerenciar()
+                        && in_array($record->status, [
+                            Application::STATUS_EM_ANALISE,
+                            Application::STATUS_APROVADO,
+                        ], true))
+                    ->action(function ($record, array $data): void {
+                        /** @var AprovarInscricaoService $service */
+                        $service = app(AprovarInscricaoService::class);
 
-                Tables\Actions\Action::make('matricular')
-                    ->label('Matricular')
-                    ->icon('heroicon-o-user-plus')
-                    ->color('primary')
-                    ->requiresConfirmation()
-                    ->modalHeading('Realizar Matrícula')
-                    ->modalDescription('Esta ação criará a matrícula do aluno e enviará os dados de acesso.')
-                    ->action(function ($record) {
-                        // Aqui será implementada a lógica de matrícula
-                        // Por enquanto, apenas marca como matriculado
-                        
-                        $record->markAsMatriculado();
-                        
-                        Notification::make()
-                            ->title('Candidato marcado como matriculado')
-                            ->success()
-                            ->body('Agora é necessário criar a matrícula e usuário no sistema.')
-                            ->send();
-                    })
-                    ->visible(fn ($record) => $record->isAprovado()),
+                        try {
+                            $service->rejeitar($record, auth()->user(), (string) ($data['motivo'] ?? ''));
+
+                            Notification::make()
+                                ->title('Inscrição rejeitada')
+                                ->success()
+                                ->send();
+                        } catch (AprovarInscricaoException $e) {
+                            Notification::make()
+                                ->title('Não foi possível rejeitar')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -421,33 +465,29 @@ class ApplicationResource extends Resource
             ->defaultSort('created_at', 'desc');
     }
 
-    /**
-     * Definir páginas do recurso
-     */
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListApplications::route('/'),
+            'index'  => Pages\ListApplications::route('/'),
             'create' => Pages\CreateApplication::route('/nova'),
-            'view' => Pages\ViewApplication::route('/{record}'),
-            'edit' => Pages\EditApplication::route('/{record}/edit'),
+            'view'   => Pages\ViewApplication::route('/{record}'),
+            'edit'   => Pages\EditApplication::route('/{record}/edit'),
         ];
     }
 
-    /**
-     * Escopo global: somente inscrições não deletadas
-     */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->whereNull('deleted_at');
+        return parent::getEloquentQuery()
+            ->with(['curso', 'courseModality', 'matricula'])
+            ->whereNull('deleted_at');
     }
 
     /**
-     * Verificar permissão para acessar este recurso
+     * Acesso ao recurso segue a coluna `users.nivel`
+     * (admin, secretario, secretaria).
      */
     public static function canAccess(): bool
     {
-        // Apenas Admin e Secretaria podem acessar
-        return auth()->user()->hasAnyRole(['admin', 'secretaria']);
+        return self::usuarioPodeGerenciar();
     }
 }

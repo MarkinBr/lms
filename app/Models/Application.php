@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -190,6 +191,14 @@ class Application extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(ApplicationDocument::class, 'application_id');
+    }
+
+    /**
+     * Matrícula gerada a partir desta inscrição, quando aprovada.
+     */
+    public function matricula(): HasOne
+    {
+        return $this->hasOne(Matricula::class, 'application_id');
     }
 
     /**
