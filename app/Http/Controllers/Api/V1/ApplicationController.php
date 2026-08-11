@@ -5,14 +5,61 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
-use Illuminate\Http\Request;
+use App\Models\CourseModality;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ApplicationController extends Controller
 {
+    /**
+     * Regras comuns dos dados pessoais/endereço do candidato.
+     * O e-mail deixou de ser globalmente único e o CPF passou a ser
+     * validado por curso (ver regrasCpfEmailPorCurso()).
+     */
+    private function regrasDadosPessoais(): array
+    {
+        return [
+            'nome_completo' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'telefone' => 'required|string|max:20',
+            'whatsapp' => 'nullable|string|max:20',
+            'cpf' => 'required|string|max:14',
+            'rg' => 'nullable|string|max:20',
+            'data_nascimento' => 'required|date|before:today',
+            'sexo' => 'required|in:M,F,Outro',
+            'estado_civil' => 'nullable|string|max:50',
+            'nacionalidade' => 'nullable|string|max:100',
+            'naturalidade_cidade' => 'nullable|string|max:100',
+            'naturalidade_estado' => 'nullable|string|max:2',
+            'escolaridade' => 'required|string|max:100',
+
+            // Endereço
+            'cep' => 'required|string|max:10',
+            'logradouro' => 'required|string|max:255',
+            'numero' => 'required|string|max:20',
+            'complemento' => 'nullable|string|max:100',
+            'bairro' => 'required|string|max:100',
+            'cidade' => 'required|string|max:100',
+            'estado' => 'required|string|max:2',
+        ];
+    }
+
+    /**
+     * CPF (sem máscara) deve ser único dentro do mesmo curso.
+     * O mesmo CPF pode se inscrever em cursos diferentes.
+     */
+    private function regrasCpfEmailPorCurso(int $cursoId): array
+    {
+        $cpfRule = Rule::unique('applications', 'cpf')
+            ->where('curso_id', $cursoId);
+
+        return ['cpf' => ['required', 'string', 'max:14', $cpfRule]];
+    }
+
     /**
      * Lista todas as inscrições (Secretaria/Admin)
      */
@@ -54,49 +101,48 @@ class ApplicationController extends Controller
 
     /**
      * Cria uma nova inscrição (Candidato - Público)
+     * Endpoint único preservado: POST /api/v1/applications
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'nome_completo' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:applications,email',
-            'telefone' => 'required|string|max:20',
-            'whatsapp' => 'nullable|string|max:20',
-            'cpf' => 'required|string|max:14|unique:applications,cpf',
-            'rg' => 'nullable|string|max:20',
-            'data_nascimento' => 'required|date|before:today',
-            'sexo' => 'required|in:M,F,Outro',
-            'estado_civil' => 'nullable|string|max:50',
-            'nacionalidade' => 'nullable|string|max:100|default:Brasileira',
-            'naturalidade_cidade' => 'nullable|string|max:100',
-            'naturalidade_estado' => 'nullable|string|max:2',
-            'escolaridade' => 'required|string|max:100',
-            
-            // Endereço
-            'cep' => 'required|string|max:10',
-            'logradouro' => 'required|string|max:255',
-            'numero' => 'required|string|max:20',
-            'complemento' => 'nullable|string|max:100',
-            'bairro' => 'required|string|max:100',
-            'cidade' => 'required|string|max:100',
-            'estado' => 'required|string|max:2',
-            
-            // Curso
-            'curso_id' => 'required|exists:courses,id',
-            'course_modality_id' => 'required|exists:course_modalities,id',
-            
-            // Documentos (opcionais no momento da inscrição)
-            'documentos' => 'nullable|array',
-            'documentos.*.type' => 'required|in:photo,id_document,cpf,residence_certificate,school_history,other',
-            'documentos.*.file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240', // 10MB
-        ], [
-            'cpf.unique' => 'Já existe uma inscrição com este CPF.',
-            'email.unique' => 'Este e-mail já está em uso.',
-            'data_nascimento.before' => 'Data de nascimento deve ser no passado.',
-        ]);
+        $cursoId = (int) $request->input('curso_id');
+
+        $validated = $request->validate(
+            array_merge($this->regrasDadosPessoais(), $this->regrasCpfEmailPorCurso($cursoId), [
+                // Curso
+                'curso_id' => 'required|integer|exists:cursos,id',
+                'course_modality_id' => 'required|integer|exists:course_modalities,id',
+
+                // Documentos (opcionais no momento da inscrição)
+                'documentos' => 'nullable|array',
+                'documentos.*.tipo' => 'required|in:'.implode(',', Application::DOCUMENT_TYPES),
+                'documentos.*.arquivo' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            ]),
+            [
+                'cpf.unique' => 'Já existe uma inscrição com este CPF para este curso.',
+                'data_nascimento.before' => 'Data de nascimento deve ser no passado.',
+            ],
+        );
+
+        $modalidade = CourseModality::query()->find($validated['course_modality_id']);
+
+        if (! $modalidade || $modalidade->curso_id !== (int) $validated['curso_id']) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'Dados inválidos',
+                    'details' => [
+                        'course_modality_id' => [
+                            'A modalidade selecionada não pertence ao curso informado.',
+                        ],
+                    ],
+                ],
+            ], 422);
+        }
 
         // Gera protocolo único
-        $protocol = 'INSC-' . strtoupper(Str::random(8)) . '-' . now()->format('Ymd');
+        $protocol = $this->gerarProtocolo();
 
         // Cria a inscrição
         $application = Application::create([
@@ -127,18 +173,19 @@ class ApplicationController extends Controller
         ]);
 
         // Processa documentos se enviados
-        if (!empty($validated['documents'])) {
-            foreach ($validated['documents'] as $docData) {
-                $file = $docData['file'];
-                $filename = $this->storeDocument($file, $application->id, $docData['type']);
-                
+        if (! empty($validated['documentos'])) {
+            foreach ($validated['documentos'] as $docData) {
+                $file = $docData['arquivo'];
+                $filename = $this->storeDocument($file, $application->id, $docData['tipo']);
+
                 ApplicationDocument::create([
                     'application_id' => $application->id,
-                    'type' => $docData['type'],
-                    'filename' => $filename,
-                    'original_name' => $file->getClientOriginalName(),
+                    'tipo' => $docData['tipo'],
+                    'nome_armazenado' => basename($filename),
+                    'nome_original' => $file->getClientOriginalName(),
                     'mime_type' => $file->getClientMimeType(),
-                    'size' => $file->getSize(),
+                    'tamanho' => $file->getSize(),
+                    'caminho_arquivo' => $filename,
                 ]);
             }
         }
@@ -151,10 +198,215 @@ class ApplicationController extends Controller
             'success' => true,
             'message' => 'Inscrição realizada com sucesso! Você receberá um e-mail de confirmação.',
             'data' => [
-                'application' => $application->load('course'),
+                'application' => $application->load(['curso', 'courseModality']),
                 'protocol' => $protocol,
             ],
         ], 201);
+    }
+
+    /**
+     * Cria inscrições em lote (1 a 3 cursos por envio).
+     * Endpoint: POST /api/v1/applications/batch
+     *
+     * Regras:
+     * - cada curso gera uma Application independente, com protocolo próprio;
+     * - não permite cursos repetidos no mesmo envio;
+     * - cada modalidade deve pertencer ao curso correspondente;
+     * - tudo em transação: se qualquer item falhar, nada é gravado.
+     */
+    public function storeBatch(Request $request): JsonResponse
+    {
+        $validated = $request->validate(
+            array_merge($this->regrasDadosPessoais(), [
+                'inscricoes' => 'required|array|min:1|max:3',
+                'inscricoes.*.curso_id' => 'required|integer|exists:cursos,id|distinct',
+                'inscricoes.*.course_modality_id' => 'required|integer|exists:course_modalities,id',
+            ]),
+            [
+                'inscricoes.required' => 'Informe ao menos uma inscrição.',
+                'inscricoes.min' => 'Informe ao menos uma inscrição.',
+                'inscricoes.max' => 'É possível se inscrever em no máximo 3 cursos por envio.',
+                'inscricoes.*.curso_id.distinct' => 'Não é permitido repetir o mesmo curso no mesmo envio.',
+                'inscricoes.*.curso_id.exists' => 'Um dos cursos selecionados não foi encontrado.',
+                'inscricoes.*.course_modality_id.exists' => 'Uma das modalidades selecionadas não foi encontrada.',
+                'data_nascimento.before' => 'Data de nascimento deve ser no passado.',
+            ],
+        );
+
+        $cpf = preg_replace('/\D/', '', (string) $validated['cpf']);
+        $detalhes = [];
+
+        // Valida CPF por curso e modalidade pertencente ao curso, ANTES de gravar
+        foreach ($validated['inscricoes'] as $indice => $inscricao) {
+            $cursoId = (int) $inscricao['curso_id'];
+            $modalidadeId = (int) $inscricao['course_modality_id'];
+
+            $jaInscrito = Application::query()
+                ->where('cpf', $cpf)
+                ->where('curso_id', $cursoId)
+                ->exists();
+
+            if ($jaInscrito) {
+                $detalhes["inscricoes.{$indice}.curso_id"] = [
+                    'Você já possui uma inscrição para este curso.',
+                ];
+                continue;
+            }
+
+            $modalidade = CourseModality::query()->find($modalidadeId);
+
+            if (! $modalidade || (int) $modalidade->curso_id !== $cursoId) {
+                $detalhes["inscricoes.{$indice}.course_modality_id"] = [
+                    'A modalidade selecionada não pertence ao curso informado.',
+                ];
+            }
+        }
+
+        if ($detalhes !== []) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'Dados inválidos',
+                    'details' => $detalhes,
+                ],
+            ], 422);
+        }
+
+        // Criação em transação: se qualquer item falhar, nenhum registro é gravado
+        $inscricoesCriadas = DB::transaction(function () use ($validated) {
+            $criadas = [];
+
+            foreach ($validated['inscricoes'] as $inscricao) {
+                $criadas[] = Application::create([
+                    'protocol' => $this->gerarProtocolo(),
+                    'nome_completo' => $validated['nome_completo'],
+                    'email' => $validated['email'],
+                    'telefone' => $validated['telefone'],
+                    'whatsapp' => $validated['whatsapp'] ?? $validated['telefone'],
+                    'cpf' => $validated['cpf'],
+                    'rg' => $validated['rg'] ?? null,
+                    'data_nascimento' => $validated['data_nascimento'],
+                    'sexo' => $validated['sexo'],
+                    'estado_civil' => $validated['estado_civil'] ?? null,
+                    'nacionalidade' => $validated['nacionalidade'] ?? 'Brasileira',
+                    'naturalidade_cidade' => $validated['naturalidade_cidade'] ?? null,
+                    'naturalidade_estado' => $validated['naturalidade_estado'] ?? null,
+                    'escolaridade' => $validated['escolaridade'],
+                    'cep' => $validated['cep'],
+                    'logradouro' => $validated['logradouro'],
+                    'numero' => $validated['numero'],
+                    'complemento' => $validated['complemento'] ?? null,
+                    'bairro' => $validated['bairro'],
+                    'cidade' => $validated['cidade'],
+                    'estado' => $validated['estado'],
+                    'curso_id' => (int) $inscricao['curso_id'],
+                    'course_modality_id' => (int) $inscricao['course_modality_id'],
+                    'status' => Application::STATUS_EM_ANALISE,
+                ]);
+            }
+
+            return $criadas;
+        });
+
+        // TODO: Enviar e-mail de confirmação com a lista de protocolos
+        // TODO: Enviar notificação para Secretaria sobre novas inscrições
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Inscrições realizadas com sucesso! Guarde os protocolos abaixo.',
+            'data' => [
+                'inscricoes' => collect($inscricoesCriadas)
+                    ->map(fn (Application $application) => [
+                        'protocol' => $application->protocol,
+                        'curso' => [
+                            'id' => $application->curso->id,
+                            'titulo' => $application->curso->titulo,
+                        ],
+                        'modalidade' => [
+                            'id' => $application->courseModality->id,
+                            'nome' => $application->courseModality->nome,
+                        ],
+                        'status' => $application->status,
+                    ])
+                    ->values(),
+            ],
+        ], 201);
+    }
+
+    /**
+     * Acompanhamento público e seguro da inscrição.
+     * Endpoint: POST /api/v1/applications/acompanhamento
+     *
+     * Exige protocolo + e-mail. Não aceita CPF e não revela
+     * se o protocolo existe quando os dados não coincidem.
+     */
+    public function acompanhar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'protocol' => 'required|string|max:40',
+            'email' => 'required|email|max:255',
+        ], [
+            'protocol.required' => 'Informe o protocolo da inscrição.',
+            'email.required' => 'Informe o e-mail utilizado na inscrição.',
+            'email.email' => 'Informe um e-mail válido.',
+        ]);
+
+        $application = Application::with(['curso', 'courseModality'])
+            ->where('protocol', trim((string) $request->input('protocol')))
+            ->where('email', mb_strtolower(trim((string) $request->input('email'))))
+            ->first();
+
+        if (! $application) {
+            // Resposta genérica: não revela se o protocolo existe
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INSCRICAO_NAO_ENCONTRADA',
+                    'message' => 'Não foi possível localizar a inscrição. Verifique o protocolo e o e-mail informados.',
+                ],
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'protocol' => $application->protocol,
+                'curso' => [
+                    'id' => $application->curso->id,
+                    'titulo' => $application->curso->titulo,
+                ],
+                'modalidade' => [
+                    'id' => $application->courseModality->id,
+                    'nome' => $application->courseModality->nome,
+                ],
+                'status' => $application->status,
+                'status_label' => $this->rotuloStatus($application->status),
+                'data_inscricao' => $application->created_at->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Rótulo amigável do status da inscrição
+     */
+    private function rotuloStatus(string $status): string
+    {
+        return [
+            Application::STATUS_EM_ANALISE => 'Em análise pela secretaria',
+            Application::STATUS_APROVADO => 'Aprovado',
+            Application::STATUS_REJEITADO => 'Não aprovado',
+            Application::STATUS_MATRICULADO => 'Matriculado',
+            Application::STATUS_CANCELADO => 'Cancelado',
+        ][$status] ?? $status;
+    }
+
+    /**
+     * Gera protocolo único de inscrição
+     */
+    private function gerarProtocolo(): string
+    {
+        return 'INSC-'.strtoupper(Str::random(8)).'-'.now()->format('Ymd');
     }
 
     /**
@@ -162,22 +414,7 @@ class ApplicationController extends Controller
      */
     public function show(Application $application): JsonResponse
     {
-        $application->load(['course', 'documents']);
-
-        return response()->json([
-            'success' => true,
-            'data' => $application,
-        ]);
-    }
-
-    /**
-     * Consulta inscrição por protocolo (Candidato)
-     */
-    public function showByProtocol(string $protocol): JsonResponse
-    {
-        $application = Application::with(['course', 'documents'])
-            ->where('protocol', $protocol)
-            ->firstOrFail();
+        $application->load(['curso', 'courseModality', 'documents']);
 
         return response()->json([
             'success' => true,
@@ -238,34 +475,35 @@ class ApplicationController extends Controller
         }
 
         // Só permite upload se estiver pendente ou em análise
-        if (!in_array($application->status, ['pending', 'under_review'])) {
+        if ($application->status !== Application::STATUS_EM_ANALISE) {
             throw ValidationException::withMessages([
                 'application' => 'Não é possível enviar documentos para inscrições finalizadas.',
             ]);
         }
 
         $validated = $request->validate([
-            'type' => 'required|in:photo,id_document,cpf,residence_certificate,school_history,other',
-            'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'tipo' => 'required|in:'.implode(',', Application::DOCUMENT_TYPES),
+            'arquivo' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
-        $file = $validated['file'];
-        $filename = $this->storeDocument($file, $application->id, $validated['type']);
+        $file = $validated['arquivo'];
+        $filename = $this->storeDocument($file, $application->id, $validated['tipo']);
 
         $document = ApplicationDocument::create([
             'application_id' => $application->id,
-            'type' => $validated['type'],
-            'filename' => $filename,
-            'original_name' => $file->getClientOriginalName(),
+            'tipo' => $validated['tipo'],
+            'nome_armazenado' => basename($filename),
+            'nome_original' => $file->getClientOriginalName(),
             'mime_type' => $file->getClientMimeType(),
-            'size' => $file->getSize(),
+            'tamanho' => $file->getSize(),
+            'caminho_arquivo' => $filename,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Documento enviado com sucesso.',
             'data' => $document,
-        ]);
+        ], 201);
     }
 
     /**
@@ -284,15 +522,15 @@ class ApplicationController extends Controller
     /**
      * Armazena documento no storage
      */
-    private function storeDocument($file, int $applicationId, string $type): string
+    private function storeDocument($file, string $applicationId, string $type): string
     {
         $folder = "applications/{$applicationId}";
         $extension = $file->getClientOriginalExtension();
-        $filename = "{$type}_" . Str::uuid() . ".{$extension}";
+        $filename = "{$type}_".Str::uuid().".{$extension}";
 
         // Usa S3/R2 em produção, local em desenvolvimento
         $disk = config('filesystems.cloud_disk', 'public');
-        
+
         $path = $file->storeAs($folder, $filename, $disk);
 
         return $path;

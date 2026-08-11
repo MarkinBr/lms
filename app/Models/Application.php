@@ -2,24 +2,25 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 /**
  * Application - Inscrição de Candidato
- * 
+ *
  * Representa uma inscrição de candidato ao CETSADP.
  * Fluxo: Candidato se inscreve → Secretaria analisa → Aprova/Rejeita → Matrícula
- * 
+ *
  * @property string $id
  * @property string $nome_completo
  * @property string $cpf
  * @property string|null $rg
- * @property \Carbon\Carbon $data_nascimento
+ * @property Carbon $data_nascimento
  * @property string $sexo
  * @property string|null $estado_civil
  * @property string $nacionalidade
@@ -42,10 +43,10 @@ use Illuminate\Support\Str;
  * @property array|null $documentos_urls
  * @property string|null $observacoes_secretaria
  * @property string|null $analisado_por_id
- * @property \Carbon\Carbon|null $analisado_em
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
- * @property \Carbon\Carbon|null $deleted_at
+ * @property Carbon|null $analisado_em
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property Carbon|null $deleted_at
  */
 class Application extends Model
 {
@@ -55,9 +56,13 @@ class Application extends Model
      * Status possíveis da inscrição
      */
     const STATUS_EM_ANALISE = 'em_analise';
+
     const STATUS_APROVADO = 'aprovado';
+
     const STATUS_REJEITADO = 'rejeitado';
+
     const STATUS_MATRICULADO = 'matriculado';
+
     const STATUS_CANCELADO = 'cancelado';
 
     /**
@@ -70,7 +75,7 @@ class Application extends Model
         'comprovante_residencia',
         'historico_escolar',
         'certificado_conclusao',
-        'outro'
+        'outro',
     ];
 
     protected $table = 'applications';
@@ -107,6 +112,7 @@ class Application extends Model
         'escolaridade',
         'curso_id',
         'course_modality_id',
+        'protocol',
         'status',
         'documentos_urls',
         'observacoes_secretaria',
@@ -137,17 +143,17 @@ class Application extends Model
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
             }
-            
+
             // Formatar CPF (remove caracteres especiais)
-            if (!empty($model->cpf)) {
+            if (! empty($model->cpf)) {
                 $model->cpf = preg_replace('/\D/', '', $model->cpf);
             }
         });
 
         static::updating(function ($model) {
             // Se o status mudou para aprovado e não estava aprovado antes
-            if ($model->isDirty('status') && 
-                $model->status === self::STATUS_APROVADO && 
+            if ($model->isDirty('status') &&
+                $model->status === self::STATUS_APROVADO &&
                 $model->getOriginal('status') !== self::STATUS_APROVADO) {
                 $model->analisado_em = now();
             }
@@ -321,6 +327,7 @@ class Application extends Model
         if (empty($this->rg)) {
             return null;
         }
+
         return preg_replace('/(\d{1,2})(\d{3})(\d{3})([0-9X]{1})$/', '$1.$2.$3-$4', $this->rg);
     }
 
@@ -329,8 +336,8 @@ class Application extends Model
      */
     public function getEnderecoCompletoAttribute(): string
     {
-        return "{$this->logradouro}, {$this->numero}" . 
-               ($this->complemento ? " - {$this->complemento}" : "") . 
+        return "{$this->logradouro}, {$this->numero}".
+               ($this->complemento ? " - {$this->complemento}" : '').
                " - {$this->bairro}, {$this->cidade}/{$this->estado}";
     }
 

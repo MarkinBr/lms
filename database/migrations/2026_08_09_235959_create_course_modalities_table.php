@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('course_modalities', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('curso_id')->constrained('cursos')->restrictOnDelete();
+            $table->string('nome');
+            $table->text('descricao')->nullable();
+            $table->decimal('valor_total', 10, 2)->nullable();
+            $table->unsignedInteger('numero_parcelas')->nullable();
+            $table->boolean('ativo')->default(true);
             $table->timestamps();
         });
     }

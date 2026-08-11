@@ -48,6 +48,15 @@
   {{-- Inscrição / Matrícula (data-page="inscricao") --}}
   @include('site.pages.inscricao')
 
+  {{-- Acompanhar Inscrição (data-page="acompanhar-inscricao") --}}
+  @include('site.pages.acompanhar-inscricao')
+
+  {{-- Termos e Condições (data-page="termos-e-condicoes") --}}
+  @include('site.pages.termos-e-condicoes')
+
+  {{-- Política de Privacidade (data-page="politica-de-privacidade") --}}
+  @include('site.pages.politica-de-privacidade')
+
   {{-- Sobre Nós (data-page="sobre") --}}
   @include('site.pages.sobre')
 

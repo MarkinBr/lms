@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Curso extends Model
 {
@@ -34,6 +34,11 @@ class Curso extends Model
     public function turmas(): HasMany
     {
         return $this->hasMany(Turma::class);
+    }
+
+    public function modalities(): HasMany
+    {
+        return $this->hasMany(CourseModality::class, 'curso_id');
     }
 
     public function modulos()

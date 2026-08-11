@@ -78,7 +78,8 @@ const ICONS = {
   trash:'<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>',
   layers:'<path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/>',
   pluscircle:'<circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>',
-  plus:'<path d="M12 5v14M5 12h14"/>'
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>'
 };
 function svg(name,cls){return `<svg class="${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
 function paintIcons(root){
@@ -127,13 +128,14 @@ document.getElementById('header-root').innerHTML = `<div class="wrap">
     <li><a data-go="eventos" data-nav="ev">${cmsText("menu.eventos","EVENTOS")}</a></li>
     <li><a data-go="noticias" data-nav="not">${cmsText("menu.noticias","NOTÍCIAS")}</a></li>
     <li><a data-go="contato" data-nav="cont">${cmsText("menu.contato","CONTATO")}</a></li>
+    <li><a data-go="acompanhar-inscricao" data-nav="acomp">${cmsText("menu.acompanhar","ACOMPANHAR INSCRIÇÃO")}</a></li>
     <li class="nav-cta-wrap"><button class="btn btn-outline nav-cta" data-go="inscricao">${cmsText("menu.cta","MATRÍCULAS ABERTAS")}</button></li>
   </ul>
 </div>`;
 function buildFooter(variant){
-  const supMap={site:[['Portal do Aluno','data-go="login-aluno"'],['Validar Documento','data-toast="Validação de documento..."'],['Biblioteca','href="#"'],['Perguntas Frequentes','href="#"'],['Fale Conosco','href="#"']],secretaria:[['Perguntas Frequentes','href="#"'],['Tutoriais','href="#"'],['Suporte Técnico','href="#"'],['Fale Conosco','href="#"']],aluno:[['Perguntas Frequentes','href="#"'],['Fale Conosco','href="#"'],['Suporte Técnico','href="#"'],['Tutoriais','href="#"']]};
+  const supMap={site:[['Portal do Aluno','data-go="login-aluno"'],['Acompanhar Inscrição','data-go="acompanhar-inscricao"'],['Termos e Condições','data-go="termos-e-condicoes"'],['Política de Privacidade','data-go="politica-de-privacidade"'],['Perguntas Frequentes','href="#"'],['Fale Conosco','data-go="contato"']],secretaria:[['Perguntas Frequentes','href="#"'],['Tutoriais','href="#"'],['Suporte Técnico','href="#"'],['Fale Conosco','href="#"']],aluno:[['Perguntas Frequentes','href="#"'],['Fale Conosco','href="#"'],['Suporte Técnico','href="#"'],['Tutoriais','href="#"']]};
   const sup=(supMap[variant]||supMap.site).map(([t,a])=>`<li><a ${a}>${t}</a></li>`).join('');
-  return `<footer class="footer"><div class="cross-bg">✝</div><div class="wrap footer-top"><div class="fbrand"><div style="display:flex;align-items:center;gap:10px">${LOGO_MARK.replace('class="logo-mark"','class="logo-mark" style="width:54px;height:54px"')}<b>CETSADP</b></div><p>Centro Educacional, Teológico e Social da Igreja Evangélica Assembleia de Deus em Paracambi.</p><div class="socials"><a href="#" aria-label="Facebook">${svg('fb')}</a><a href="#" aria-label="Instagram">${svg('ig')}</a><a href="#" aria-label="YouTube">${svg('yt')}</a></div></div><div><h5>Instituição</h5><ul><li><a data-go="sobre">Sobre Nós</a></li><li><a href="#">Missão e Visão</a></li><li><a href="#">História</a></li><li><a href="#">Diretoria</a></li><li><a href="#">Estrutura</a></li></ul></div><div><h5>Cursos</h5><ul><li><a data-go="teologia">Curso Médio em Teologia</a></li><li><a data-go="diaconato">Habilitação ao Diaconato</a></li><li><a data-go="lideranca">Liderança Cristã Ministerial</a></li><li><a href="#">Calendário Acadêmico</a></li><li><a href="#">Processo Seletivo</a></li></ul></div><div><h5>Suporte</h5><ul>${sup}</ul></div><div class="fcontact"><h5>Contato</h5><div>${svg('pin')}<span>Rua Afonso Franco, 15<br>Centro - Paracambi/RJ<br>CEP: 26600-000</span></div><div>${svg('phone')}<a href="tel:2126833271">(21) 2683-3271</a></div><div>${svg('mail')}<a href="mailto:contato@cetsadp.com.br">contato@cetsadp.com.br</a></div></div></div><div class="footer-bottom"><div class="wrap"><span>© 2026 CETSADP - Todos os direitos reservados.</span><span>Desenvolvido com <span class="heart">♥</span> para a obra do Senhor.</span></div></div></footer>`;
+  return `<footer class="footer"><div class="cross-bg">✝</div><div class="wrap footer-top"><div class="fbrand"><div style="display:flex;align-items:center;gap:10px">${LOGO_MARK.replace('class="logo-mark"','class="logo-mark" style="width:54px;height:54px"')}<b>CETSADP</b></div><p>Centro Educacional, Teológico e Social da Igreja Evangélica Assembleia de Deus em Paracambi.</p><div class="socials"><a href="#" aria-label="Facebook">${svg('fb')}</a><a href="#" aria-label="Instagram">${svg('ig')}</a><a href="#" aria-label="YouTube">${svg('yt')}</a></div></div><div><h5>Instituição</h5><ul><li><a data-go="sobre">Sobre Nós</a></li><li><a href="#">Missão e Visão</a></li><li><a href="#">História</a></li><li><a href="#">Diretoria</a></li><li><a href="#">Estrutura</a></li></ul></div><div><h5>Cursos</h5><ul><li><a data-go="teologia">Curso Médio em Teologia</a></li><li><a data-go="diaconato">Habilitação ao Diaconato</a></li><li><a data-go="lideranca">Liderança Cristã Ministerial</a></li><li><a href="#">Calendário Acadêmico</a></li><li><a href="#">Processo Seletivo</a></li></ul></div><div><h5>Suporte</h5><ul>${sup}</ul></div><div class="fcontact"><h5>Contato</h5><div>${svg('pin')}<span>Rua Afonso Franco, 15<br>Centro - Paracambi/RJ<br>CEP: 26600-000</span></div><div>${svg('phone')}<a href="tel:2126833271">(21) 2683-3271</a></div><div>${svg('mail')}<a href="mailto:contato@cetsadp.com.br">contato@cetsadp.com.br</a></div></div></div><div class="footer-bottom"><div class="wrap"><span>© 2026 CETSADP - Todos os direitos reservados.</span><span><a data-go="termos-e-condicoes" style="cursor:pointer">Termos e Condições</a> · <a data-go="politica-de-privacidade" style="cursor:pointer">Política de Privacidade</a></span><span>Desenvolvido com <span class="heart">♥</span> para a obra do Senhor.</span></div></div></footer>`;
 }
 document.getElementById('footer-root').innerHTML=buildFooter('site');
 document.querySelectorAll('.footer-mount').forEach(m=>{m.innerHTML=buildFooter(m.dataset.fv);});
@@ -154,7 +156,7 @@ const topbarRoot=document.getElementById('topbar-root'),headerRoot=document.getE
 function chromeFor(p){topbarRoot.style.display=p.dataset.topbar==='0'?'none':'';headerRoot.style.display=p.dataset.header==='0'?'none':'';footerRoot.style.display=p.dataset.footer==='0'?'none':'';}
 function initPanes(pageEl){const tabset=pageEl.querySelector('.tabs');if(!tabset)return;const activeBtn=tabset.querySelector('button.active')||tabset.querySelector('button');if(activeBtn)showPane(pageEl,activeBtn.dataset.tab);}
 function showPane(pageEl,tab){pageEl.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('active',p.dataset.pane===tab));}
-function go(name){let target=null;pages.forEach(p=>{const on=p.dataset.page===name;p.classList.toggle('active',on);if(on)target=p;});if(target){chromeFor(target);initPanes(target);}document.querySelectorAll('#nav [data-nav]').forEach(a=>a.classList.remove('active'));const map={home:'home',sobre:'sobre',professores:'prof',teologia:'cursos',diaconato:'cursos',lideranca:'cursos',inscricao:'cursos',eventos:'ev',noticias:'not',contato:'cont'};const navEl=document.querySelector(`#nav [data-nav="${map[name]}"]`);if(navEl)navEl.classList.add('active');window.scrollTo({top:0,behavior:'instant'});document.getElementById('nav').classList.remove('open');document.querySelectorAll('.app-side').forEach(s=>s.classList.remove('open'));setTimeout(revealObserve,60);}
+function go(name){let target=null;pages.forEach(p=>{const on=p.dataset.page===name;p.classList.toggle('active',on);if(on)target=p;});if(target){chromeFor(target);initPanes(target);}document.querySelectorAll('#nav [data-nav]').forEach(a=>a.classList.remove('active'));const map={home:'home',sobre:'sobre',professores:'prof',teologia:'cursos',diaconato:'cursos',lideranca:'cursos',inscricao:'cursos',eventos:'ev',noticias:'not',contato:'cont','acompanhar-inscricao':'acomp'};const navEl=document.querySelector(`#nav [data-nav="${map[name]}"]`);if(navEl)navEl.classList.add('active');window.scrollTo({top:0,behavior:'instant'});document.getElementById('nav').classList.remove('open');document.querySelectorAll('.app-side').forEach(s=>s.classList.remove('open'));setTimeout(revealObserve,60);}
 window.go=go;
 document.addEventListener('click',e=>{
   const burger=e.target.closest('.app-burger');if(burger){burger.closest('.app').querySelector('.app-side').classList.toggle('open');return;}
@@ -183,8 +185,98 @@ document.querySelectorAll('.faq-item').forEach(it=>{it.querySelector('.faq-q').a
 (function(){const el=document.getElementById('evCal');if(!el)return;const y=+el.dataset.year,m=+el.dataset.month,evs=(el.dataset.events||'').split(',').map(Number);const first=new Date(y,m,1).getDay();const days=new Date(y,m+1,0).getDate();const hs=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];let html=hs.map(h=>`<span class="ch">${h}</span>`).join('');for(let i=0;i<first;i++)html+=`<span class="cd out"></span>`;const today=new Date();for(let d=1;d<=days;d++){const has=evs.includes(d);const isToday=(today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d);html+=`<span class="cd${has?' has':''}${isToday?' today':''}" ${has?'data-toast="Evento neste dia — confira a programação acima"':''}>${d}</span>`;}el.innerHTML=html;})();
 /* contador regressivo */
 (function(){const el=document.getElementById('cd');if(!el)return;const target=new Date(el.dataset.target).getTime();const boxes=el.querySelectorAll('.cd-box b');function tick(){const d=target-Date.now();const pad=n=>String(Math.max(0,n)).padStart(2,'0');if(d<=0){boxes.forEach(b=>b.textContent='00');return;}boxes[0].textContent=pad(Math.floor(d/864e5));boxes[1].textContent=pad(Math.floor(d%864e5/36e5));boxes[2].textContent=pad(Math.floor(d%36e5/6e4));boxes[3].textContent=pad(Math.floor(d%6e4/1e3));}tick();setInterval(tick,1000);})();
-/* inscrição: card lateral acompanha o curso */
-(function(){const sel=document.getElementById('inscCourseSel');if(!sel)return;const D={teo:{ic:'book',t:'CURSO MÉDIO<br>EM TEOLOGIA',d:'2 anos',m:'Presencial, Híbrido e EAD',c:'Reconhecida pelo IEADP',s:'28 de Março de 2026'},dia:{ic:'hand',t:'HABILITAÇÃO AO<br>DIACONATO',d:'7 meses',m:'Presencial, Híbrido e EAD',c:'Reconhecida pelo IEADP',s:'28 de Março de 2026'},lid:{ic:'users',t:'LIDERANÇA CRISTÃ<br>MINISTERIAL',d:'2 anos (4 semestres)',m:'Presencial, Híbrido e EAD',c:'Reconhecida pelo IEADP',s:'28 de Março de 2026'}};function up(){const d=D[sel.value]||D.teo;document.getElementById('inscTitle').innerHTML=d.t;document.getElementById('inscDur').textContent=d.d;document.getElementById('inscMod').textContent=d.m;document.getElementById('inscCert').textContent=d.c;document.getElementById('inscStart').textContent=d.s;const ic=document.getElementById('inscIc');ic.innerHTML=svg(d.ic);}sel.addEventListener('change',up);})();
+/* inscrição: catálogo público (cursos + modalidades) da API, com 1 a 3 cursos por envio */
+(function(){
+  const lista=document.getElementById('inscCursosList');
+  const btnAdd=document.getElementById('inscAddCurso');
+  if(!lista||!btnAdd)return;
+  const MAX_CURSOS=3;
+  let cursosCache=[];
+
+  function itens(){return [...lista.querySelectorAll('.insc-curso-item')];}
+
+  function atualizarOpcoesCursos(){
+    const usados=itens().map(it=>it.querySelector('.insc-curso-sel').value).filter(v=>v!=='');
+    itens().forEach(it=>{
+      const sel=it.querySelector('.insc-curso-sel');
+      [...sel.options].forEach(opt=>{
+        if(opt.value==='')return;
+        opt.disabled=usados.includes(opt.value)&&opt.value!==sel.value;
+      });
+    });
+    // botão de adicionar: some quando atinge o máximo ou quando todos os cursos já foram usados
+    const esgotou=usados.length>=cursosCache.length&&cursosCache.length>0;
+    btnAdd.style.display=(itens().length>=MAX_CURSOS||esgotou)?'none':'';
+    // botão de remover: só aparece quando há mais de um item
+    itens().forEach((it,i)=>{const rm=it.querySelector('.insc-curso-remove');if(rm)rm.style.display=itens().length>1?'':'none';});
+  }
+
+  function preencherSelectCurso(sel){
+    if(cursosCache.length===0){sel.innerHTML='<option value="">Carregando cursos…</option>';return;}
+    sel.innerHTML='<option value="">Selecione um curso</option>'+
+      cursosCache.map(c=>`<option value="${c.id}">${c.titulo}</option>`).join('');
+  }
+
+  function preencherModalidades(item,cursoId){
+    const modSel=item.querySelector('.insc-mod-sel');
+    const curso=cursosCache.find(c=>String(c.id)===String(cursoId));
+    if(!curso||!Array.isArray(curso.modalidades)||curso.modalidades.length===0){
+      modSel.innerHTML='<option value="">Selecione um curso primeiro</option>';
+      return;
+    }
+    modSel.innerHTML='<option value="">Selecione a modalidade</option>'+
+      curso.modalidades.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('');
+  }
+
+  function criarItem(){
+    const item=document.createElement('div');
+    item.className='fgrid insc-curso-item';
+    item.innerHTML=`<div class="field"><label>Curso desejado <span class="req">*</span></label><select class="insc-curso-sel" required></select></div><div class="field"><label>Modalidade <span class="req">*</span></label><select class="insc-mod-sel" required><option value="">Selecione um curso primeiro</option></select></div><div class="field" style="align-self:end"><button type="button" class="btn btn-outline insc-curso-remove" style="width:100%">REMOVER</button></div>`;
+    preencherSelectCurso(item.querySelector('.insc-curso-sel'));
+    return item;
+  }
+
+  btnAdd.addEventListener('click',()=>{
+    if(itens().length>=MAX_CURSOS){toast('Você pode se inscrever em até 3 cursos por envio.');return;}
+    lista.appendChild(criarItem());
+    atualizarOpcoesCursos();
+  });
+
+  lista.addEventListener('change',e=>{
+    const sel=e.target.closest('.insc-curso-sel');
+    if(sel){preencherModalidades(sel.closest('.insc-curso-item'),sel.value);}
+    atualizarOpcoesCursos();
+  });
+
+  lista.addEventListener('click',e=>{
+    const rm=e.target.closest('.insc-curso-remove');
+    if(!rm)return;
+    if(itens().length<=1)return;
+    rm.closest('.insc-curso-item').remove();
+    atualizarOpcoesCursos();
+  });
+
+  fetch('/api/v1/cursos',{headers:{'Accept':'application/json'}})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(json=>{
+      const dados=(json&&json.data)?json.data:[];
+      cursosCache=Array.isArray(dados)?dados:[];
+      itens().forEach(it=>preencherSelectCurso(it.querySelector('.insc-curso-sel')));
+      if(cursosCache.length===0){
+        itens().forEach(it=>{
+          it.querySelector('.insc-curso-sel').innerHTML='<option value="">Nenhum curso disponível</option>';
+          it.querySelector('.insc-mod-sel').innerHTML='<option value="">Nenhum curso disponível</option>';
+        });
+      }
+      atualizarOpcoesCursos();
+    })
+    .catch(()=>{
+      itens().forEach(it=>{
+        it.querySelector('.insc-curso-sel').innerHTML='<option value="">Não foi possível carregar os cursos</option>';
+        it.querySelector('.insc-mod-sel').innerHTML='<option value="">Não foi possível carregar as modalidades</option>';
+      });
+    });
+})();
 let revealObserve;
 (function(){const io=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});},{threshold:.12});revealObserve=()=>document.querySelectorAll('.page.active .reveal:not(.in)').forEach(el=>io.observe(el));revealObserve();})();
 const header=headerRoot,totop=document.getElementById('totop');
@@ -192,7 +284,160 @@ window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.
 totop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 let toastTimer;
 function toast(msg){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
-document.getElementById('inscForm').addEventListener('submit',e=>{e.preventDefault();toast('Inscrição enviada! Em breve a secretaria entrará em contato.');e.target.reset();window.scrollTo({top:0,behavior:'smooth'});});
+/* inscrição: envio em lote para /api/v1/applications/batch */
+(function(){
+  const form=document.getElementById('inscForm');
+  if(!form)return;
+  const sucesso=document.getElementById('inscSucesso');
+  const OPCIONAIS=['rg','estado_civil','nacionalidade','naturalidade_cidade','naturalidade_estado','complemento'];
+  const OBRIGATORIOS=['nome_completo','cpf','data_nascimento','sexo','email','telefone','cep','logradouro','numero','bairro','cidade','estado','escolaridade'];
+  function getVal(name){const el=form.querySelector(`[name="${name}"]`);return el?String(el.value||'').trim():'';}
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function montarPayload(){
+    const payload={};
+    OBRIGATORIOS.forEach(k=>{payload[k]=getVal(k);});
+    OPCIONAIS.forEach(k=>{const v=getVal(k);if(v!=='')payload[k]=v;});
+    // telefone preenche também whatsapp
+    if(payload.telefone)payload.whatsapp=payload.telefone;
+    // monta a lista de inscrições (1 a 3 cursos)
+    payload.inscricoes=[...form.querySelectorAll('.insc-curso-item')]
+      .map(it=>({
+        curso_id:Number(it.querySelector('.insc-curso-sel').value),
+        course_modality_id:Number(it.querySelector('.insc-mod-sel').value)
+      }))
+      .filter(i=>i.curso_id>0&&i.course_modality_id>0);
+    return payload;
+  }
+  function exibirSucesso(inscricoes){
+    if(!sucesso)return;
+    const linhas=(inscricoes||[]).map(i=>`<div class="side-feat" style="align-items:flex-start"><span class="ic" data-ic="check"></span><div><b>${escapeHtml(i.curso&&i.curso.titulo?i.curso.titulo:'Curso')}</b><small>${escapeHtml(i.modalidade&&i.modalidade.nome?i.modalidade.nome:'')}</small><small style="display:block;font-size:1rem;font-weight:800;color:var(--navy);letter-spacing:.5px;margin-top:4px">${escapeHtml(i.protocol||'')}</small></div></div>`).join('');
+    sucesso.innerHTML=`<div class="form-sec-title" data-ic="check">INSCRIÇÃO ENVIADA COM SUCESSO!</div>
+      <p style="font-size:.9rem;color:var(--body);margin-bottom:14px">Anote ou copie os protocolos abaixo. Eles são necessários para acompanhar cada inscrição. Você também receberá um e-mail de confirmação.</p>
+      ${linhas}
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+        <button type="button" class="btn btn-navy" id="inscCopiarProtocolos">COPIAR PROTOCOLOS</button>
+        <button type="button" class="btn btn-outline" data-go="acompanhar-inscricao">ACOMPANHAR INSCRIÇÃO</button>
+      </div>`;
+    sucesso.style.display='';
+    paintIcons(sucesso);
+    sucesso.dataset.protocolos=(inscricoes||[]).map(i=>i.protocol).filter(Boolean).join('\n');
+    sucesso.scrollIntoView({behavior:'smooth',block:'start'});
+    const copiar=sucesso.querySelector('#inscCopiarProtocolos');
+    if(copiar)copiar.addEventListener('click',()=>{
+      const texto=sucesso.dataset.protocolos||'';
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(texto).then(()=>toast('Protocolos copiados!')).catch(()=>toast('Não foi possível copiar. Anote os protocolos acima.'));
+      }else{
+        toast('Não foi possível copiar. Anote os protocolos acima.');
+      }
+    });
+  }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    if(!form.reportValidity())return;
+    const payload=montarPayload();
+    if(payload.inscricoes.length===0){toast('Selecione ao menos um curso e uma modalidade.');return;}
+    if(payload.inscricoes.length>3){toast('Você pode se inscrever em até 3 cursos por envio.');return;}
+    const cursos=payload.inscricoes.map(i=>i.curso_id);
+    if(new Set(cursos).size!==cursos.length){toast('Não é possível repetir o mesmo curso no mesmo envio.');return;}
+    const btn=form.querySelector('button[type="submit"]');
+    const btnHtml=btn?btn.innerHTML:'';
+    if(btn){btn.disabled=true;btn.innerHTML='Enviando…';}
+    if(sucesso){sucesso.style.display='none';sucesso.innerHTML='';}
+    try{
+      const resp=await fetch('/api/v1/applications/batch',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      let data=null;try{data=await resp.json();}catch(_){}
+      if(resp.status===201){
+        const inscricoes=(data&&data.data&&data.data.inscricoes)?data.data.inscricoes:[];
+        toast(inscricoes.length>1?`${inscricoes.length} inscrições enviadas com sucesso!`:'Inscrição enviada com sucesso!');
+        // não limpa a tela: os protocolos ficam visíveis até o usuário copiá-los
+        exibirSucesso(inscricoes);
+      }else if(resp.status===422){
+        let msg='Verifique os dados informados.';
+        const details=data&&data.error&&data.error.details;
+        if(details&&typeof details==='object'){
+          const primeira=Object.values(details)[0];
+          if(Array.isArray(primeira)&&primeira.length)msg=primeira[0];
+          else if(typeof primeira==='string')msg=primeira;
+        }else if(data&&data.error&&data.error.message){
+          msg=data.error.message;
+        }else if(data&&data.message){
+          msg=data.message;
+        }
+        toast(msg);
+      }else{
+        toast('Não foi possível enviar a inscrição. Tente novamente em instantes.');
+      }
+    }catch(err){
+      toast('Falha de conexão. Verifique sua internet e tente novamente.');
+    }finally{
+      if(btn){btn.disabled=false;btn.innerHTML=btnHtml;}
+    }
+  });
+})();
+/* acompanhamento: consulta segura protocolo + e-mail */
+(function(){
+  const form=document.getElementById('acompanharForm');
+  if(!form)return;
+  const resultado=document.getElementById('acompResultado');
+  const erro=document.getElementById('acompErro');
+  const MSG_ERRO='Não foi possível localizar a inscrição. Verifique o protocolo e o e-mail informados.';
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function formatarData(iso){const d=new Date(iso);if(isNaN(d))return iso||'';return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' às '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+  function mostrarErro(msg){
+    if(resultado){resultado.style.display='none';resultado.innerHTML='';}
+    if(!erro)return;
+    erro.innerHTML=`<div class="form-sec-title" data-ic="xcircle">NÃO ENCONTRAMOS SUA INSCRIÇÃO</div><p style="font-size:.9rem;color:var(--body)">${escapeHtml(msg||MSG_ERRO)}</p><p style="font-size:.82rem;color:var(--muted);margin-top:10px">Se o problema persistir, fale com a secretaria pelo telefone (21) 2683-3271 ou pelo e-mail contato@cetsadp.com.br.</p>`;
+    erro.style.display='';
+    paintIcons(erro);
+    erro.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    if(!form.reportValidity())return;
+    const btn=form.querySelector('button[type="submit"]');
+    const btnHtml=btn?btn.innerHTML:'';
+    if(btn){btn.disabled=true;btn.innerHTML='Consultando…';}
+    try{
+      const resp=await fetch('/api/v1/applications/acompanhamento',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify({
+          protocol:document.getElementById('acompProtocolo').value.trim(),
+          email:document.getElementById('acompEmail').value.trim()
+        })
+      });
+      let data=null;try{data=await resp.json();}catch(_){}
+      if(resp.ok&&data&&data.success&&data.data){
+        const d=data.data;
+        if(erro){erro.style.display='none';erro.innerHTML='';}
+        if(resultado){
+          resultado.innerHTML=`<div class="form-sec-title" data-ic="check">INSCRIÇÃO LOCALIZADA</div>
+            <div class="side-feat"><span class="ic" data-ic="clipboard"></span><div><b>Protocolo</b><small>${escapeHtml(d.protocol||'')}</small></div></div>
+            <div class="side-feat"><span class="ic" data-ic="book"></span><div><b>${escapeHtml(d.curso&&d.curso.titulo?d.curso.titulo:'Curso')}</b><small>Curso</small></div></div>
+            <div class="side-feat"><span class="ic" data-ic="monitor"></span><div><b>${escapeHtml(d.modalidade&&d.modalidade.nome?d.modalidade.nome:'Modalidade')}</b><small>Modalidade</small></div></div>
+            <div class="side-feat"><span class="ic" data-ic="calendar"></span><div><b>${escapeHtml(formatarData(d.data_inscricao))}</b><small>Data da inscrição</small></div></div>
+            <div style="margin-top:16px;padding:14px;border-radius:12px;background:rgba(216,169,60,.12);border:1px solid var(--gold);text-align:center"><small style="display:block;font-size:.68rem;font-weight:800;letter-spacing:1px;color:var(--gold-deep)">SITUAÇÃO ATUAL</small><b style="font-family:var(--serif);font-size:1.15rem;color:var(--navy)">${escapeHtml(d.status_label||d.status||'')}</b></div>`;
+          resultado.style.display='';
+          paintIcons(resultado);
+          resultado.scrollIntoView({behavior:'smooth',block:'center'});
+        }
+      }else if(resp.status===429){
+        mostrarErro('Muitas tentativas em sequência. Aguarde um instante e tente novamente.');
+      }else{
+        mostrarErro();
+      }
+    }catch(err){
+      mostrarErro('Falha de conexão. Verifique sua internet e tente novamente.');
+    }finally{
+      if(btn){btn.disabled=false;btn.innerHTML=btnHtml;}
+    }
+  });
+})();
 document.getElementById('loginSecForm').addEventListener('submit',e=>{e.preventDefault();toast('Acesso concedido. Carregando secretaria...');setTimeout(()=>go('dash-secretaria'),500);});
 document.getElementById('loginAluForm').addEventListener('submit',e=>{e.preventDefault();toast('Acesso concedido. Carregando portal...');setTimeout(()=>go('dash-aluno'),500);});
 const nlForm=document.getElementById('nlForm');if(nlForm)nlForm.addEventListener('submit',e=>{e.preventDefault();toast('Inscrição na newsletter confirmada! Que Deus abençoe.');nlForm.reset();});
