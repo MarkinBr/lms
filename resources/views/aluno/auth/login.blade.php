@@ -618,6 +618,12 @@
             <form method="POST" action="{{ route('aluno.login.submit') }}" class="form-wrapper">
                 @csrf
 
+                @if (session('status'))
+                    <div class="error-alert" style="background: rgba(34,139,34,0.08); border-left-color:#2e7d32; color:#1b5e20;">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
                 @if ($errors->any())
                     <div class="error-alert">
                         <strong>Autenticação não autorizada.</strong> Verifique suas credenciais.
@@ -662,7 +668,7 @@
                         >
                         <label for="remember" class="remember-label">Permanecer conectado</label>
                     </div>
-                    <a href="#" class="password-link">Recuperar acesso</a>
+                    <a href="{{ route('password.request') }}" class="password-link">Recuperar acesso</a>
                 </div>
 
                 <button type="submit" class="login-button">

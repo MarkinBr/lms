@@ -8,7 +8,7 @@
       <form class="login-card" id="loginAluForm" method="POST" action="{{ route('aluno.login.submit') }}">@csrf<div class="lc-ic" data-ic="lock"></div><h2>ACESSO AO PORTAL</h2><svg class="crown-sm" data-ic="crown" viewBox="0 0 24 24"></svg><p class="lc-sub">Informe seu e-mail e senha para acessar sua área exclusiva.</p>
         <div class="lfield"><label>E-MAIL OU CPF</label><div class="inp"><input type="text" name="email" placeholder="Digite seu e-mail ou CPF" required><button type="button" class="si" tabindex="-1" data-ic="user"></button></div></div>
         <div class="lfield"><label>SENHA</label><div class="inp"><input type="password" name="password" placeholder="Digite sua senha" required><button type="button" class="si" tabindex="-1" data-ic="eyeoff"></button></div></div>
-        <div class="lrow"><label class="rem"><input type="checkbox"> Lembrar-me</label><a href="#" data-toast="Instruções de recuperação enviadas.">Esqueceu sua senha?</a></div>
+        <div class="lrow"><label class="rem"><input type="checkbox" name="remember"> Lembrar-me</label><a href="{{ route('password.request') }}">Esqueceu sua senha?</a></div>
         <button type="submit" class="btn btn-navy btn-block btn-lg" data-icm="lock">ENTRAR</button>
         <div class="divider-or">OU</div>
         <button type="button" class="btn btn-outline btn-block" data-icm="user" data-toast="Realize seu cadastro na secretaria.">PRIMEIRO ACESSO</button>
