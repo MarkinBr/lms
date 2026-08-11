@@ -194,8 +194,7 @@ class ApplicationResource extends Resource
                         Forms\Components\TextInput::make('estado')
                             ->label('Estado')
                             ->required()
-                            ->maxLength(2)
-                            ->native(false),
+                            ->maxLength(2),
                     ]),
 
                 Forms\Components\Section::make('Dados Acadêmicos')
