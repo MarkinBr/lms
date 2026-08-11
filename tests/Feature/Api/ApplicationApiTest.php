@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Api;
 
+use App\Mail\InscricaoConfirmacaoMail;
 use App\Models\CourseModality;
 use App\Models\Curso;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ApplicationApiTest extends TestCase
@@ -13,6 +15,8 @@ class ApplicationApiTest extends TestCase
 
     public function test_cria_inscricao_publica_com_ids_numericos_do_schema(): void
     {
+        Mail::fake();
+
         $curso = Curso::query()->create([
             'titulo' => 'Curso Médio em Teologia',
             'ativo' => true,
@@ -55,6 +59,11 @@ class ApplicationApiTest extends TestCase
             'course_modality_id' => $modalidade->id,
             'status' => 'em_analise',
         ]);
+
+        Mail::assertSent(InscricaoConfirmacaoMail::class, function (InscricaoConfirmacaoMail $mail): bool {
+            return $mail->hasTo('maria@example.test')
+                && $mail->inscricoes->count() === 1;
+        });
     }
 
     public function test_nao_cria_inscricao_quando_modalidade_nao_pertence_ao_curso(): void
