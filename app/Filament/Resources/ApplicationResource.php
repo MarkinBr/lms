@@ -246,7 +246,7 @@ class ApplicationResource extends Resource
                 Forms\Components\Section::make('Análise da Secretaria')
                     ->description('Somente leitura — use as ações "Aprovar e matricular" ou "Rejeitar".')
                     ->icon('heroicon-o-clipboard-document-check')
-                    ->columns(1)
+                    ->columns(2)
                     ->visible(fn ($record) => $record !== null)
                     ->schema([
                         Forms\Components\Select::make('status')
@@ -271,6 +271,14 @@ class ApplicationResource extends Resource
                             ->dehydrated(false)
                             ->columnSpanFull(),
 
+                        Forms\Components\Placeholder::make('protocol')
+                            ->label('Protocolo da inscrição')
+                            ->content(fn ($record) => $record?->protocol ?? '—'),
+
+                        Forms\Components\Placeholder::make('numero_matricula')
+                            ->label('Número da matrícula')
+                            ->content(fn ($record) => $record?->matricula?->numero_matricula ?? 'Ainda não matriculado'),
+
                         Forms\Components\Placeholder::make('analisado_por')
                             ->label('Analisado por')
                             ->content(fn ($record) => $record?->analisadoPor?->name ?? 'Não analisado'),
@@ -291,6 +299,11 @@ class ApplicationResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('protocol')
+                    ->label('Protocolo')
+                    ->searchable()
+                    ->copyable(),
+
                 Tables\Columns\TextColumn::make('cpf')
                     ->label('CPF')
                     ->formatStateUsing(fn ($state) => preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $state))
@@ -303,6 +316,10 @@ class ApplicationResource extends Resource
                 Tables\Columns\TextColumn::make('courseModality.nome')
                     ->label('Modalidade')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('matricula.numero_matricula')
+                    ->label('Matrícula')
+                    ->formatStateUsing(fn ($state) => $state ?? '—'),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
@@ -460,7 +477,9 @@ class ApplicationResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->whereNull('deleted_at');
+        return parent::getEloquentQuery()
+            ->with(['curso', 'courseModality', 'matricula'])
+            ->whereNull('deleted_at');
     }
 
     /**
