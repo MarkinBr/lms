@@ -29,11 +29,16 @@ Route::prefix('v1')->group(function () {
 
     // Rotas públicas (sem autenticação)
     Route::prefix('applications')->group(function () {
-        // Candidato cria inscrição
+        // Candidato cria inscrição única
         Route::post('/', [ApplicationController::class, 'store']);
 
-        // Candidato consulta sua inscrição por protocolo
-        Route::get('/by-protocol/{protocol}', [ApplicationController::class, 'showByProtocol']);
+        // Candidato cria inscrições em lote (1 a 3 cursos por envio)
+        Route::post('/batch', [ApplicationController::class, 'storeBatch']);
+
+        // Candidato acompanha a inscrição com protocolo + e-mail
+        // (substitui a antiga consulta pública por protocolo, que expunha todos os dados)
+        Route::post('/acompanhamento', [ApplicationController::class, 'acompanhar'])
+            ->middleware('throttle:10,1');
 
         // Candidato envia documento complementar
         Route::post('/{application}/documents', [ApplicationController::class, 'uploadDocument'])
