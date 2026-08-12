@@ -15,6 +15,7 @@ class Disciplina extends Model
 
     protected $fillable = [
         'curso_id',
+        'modulo_id',
         'codigo',
         'nome',
         'descricao',
@@ -59,6 +60,16 @@ class Disciplina extends Model
                     'ordem' => 'A ordem deve ser um inteiro positivo.',
                 ]);
             }
+
+            if (filled($disciplina->modulo_id)) {
+                $modulo = Modulo::query()->find($disciplina->modulo_id);
+
+                if (! $modulo || (int) $modulo->curso_id !== (int) $disciplina->curso_id) {
+                    throw ValidationException::withMessages([
+                        'modulo_id' => 'O módulo selecionado não pertence ao curso da disciplina.',
+                    ]);
+                }
+            }
         });
 
         static::deleting(function (Disciplina $disciplina) {
@@ -75,6 +86,11 @@ class Disciplina extends Model
         return $this->belongsTo(Curso::class);
     }
 
+    public function modulo(): BelongsTo
+    {
+        return $this->belongsTo(Modulo::class);
+    }
+
     public function turmas(): HasMany
     {
         return $this->hasMany(Turma::class);
@@ -88,6 +104,11 @@ class Disciplina extends Model
     public function scopePorCurso(Builder $query, int $cursoId): Builder
     {
         return $query->where('curso_id', $cursoId);
+    }
+
+    public function scopePorModulo(Builder $query, int $moduloId): Builder
+    {
+        return $query->where('modulo_id', $moduloId);
     }
 
     public function podeSerExcluida(): bool
