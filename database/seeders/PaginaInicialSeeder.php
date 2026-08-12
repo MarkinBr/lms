@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\PaginaInicial;
+use Illuminate\Database\Seeder;
 
 class PaginaInicialSeeder extends Seeder
 {
@@ -15,12 +15,12 @@ class PaginaInicialSeeder extends Seeder
         PaginaInicial::create([
             'titulo_identificacao' => 'Tema Padrão - Lançamento 2025',
             'ativa' => true,
-            
+
             // --- HERO ---
             'hero_titulo_principal' => 'Transforme Seu',
             'hero_destaque_1' => 'Chamado',
             'hero_destaque_2' => 'Ministério',
-            'hero_subtitulo' => 'Formação teológica de excelência com metodologia EAD moderna. Capacite-se para servir ao Reino de Deus com conhecimento, sabedoria e unção.',
+            'hero_subtitulo' => 'Formação teológica de excelência com metodologia híbrida, combinando atividades online e presenciais. Capacite-se para servir ao Reino de Deus com conhecimento, sabedoria e unção.',
             'hero_botao_texto' => 'Comece Agora',
             'hero_botao_link' => '/admin/register',
             'hero_botao_secundario_texto' => 'Ver Cursos',
@@ -28,7 +28,7 @@ class PaginaInicialSeeder extends Seeder
 
             // --- ESTATÍSTICAS ---
             'estatisticas' => [
-                ['numero' => '100%', 'texto' => 'Online', 'icone' => 'fas fa-laptop'],
+                ['numero' => '100%', 'texto' => 'Híbrido', 'icone' => 'fas fa-laptop'],
                 ['numero' => '3+', 'texto' => 'Cursos', 'icone' => 'fas fa-book'],
                 ['numero' => '2024', 'texto' => 'Fundação', 'icone' => 'fas fa-calendar'],
                 ['numero' => '150+', 'texto' => 'Alunos Ativos', 'icone' => 'fas fa-users'],
@@ -50,7 +50,7 @@ class PaginaInicialSeeder extends Seeder
             'cursos_categorias' => [
                 ['nome' => 'Teologia'],
                 ['nome' => 'Ministério'],
-                ['nome' => 'Liderança']
+                ['nome' => 'Liderança'],
             ],
             'cursos_lista' => [
                 [
@@ -58,22 +58,22 @@ class PaginaInicialSeeder extends Seeder
                     'categoria' => 'Ministério',
                     'nivel' => 'INICIANTE',
                     'resumo' => 'Preparação completa para o exercício do diaconato.',
-                    'duracao' => '6 meses',
-                    'carga_horaria' => '120h',
-                    'modalidade' => '100% Online',
+                    'duracao' => '7 meses',
+                    'carga_horaria' => 'Não informada',
+                    'modalidade' => 'Híbrida (online e presencial)',
                     'investimento' => 'R$ 50,00/mês',
-                    'link' => '/admin/register'
+                    'link' => '/admin/register',
                 ],
                 [
                     'titulo' => 'Médio em Teologia',
                     'categoria' => 'Teologia',
                     'nivel' => 'INTERMEDIÁRIO',
                     'resumo' => 'Aprofundamento nas Escrituras e doutrinas.',
-                    'duracao' => '12 meses',
-                    'carga_horaria' => '360h',
-                    'modalidade' => '100% Online',
+                    'duracao' => '3 anos',
+                    'carga_horaria' => '960h',
+                    'modalidade' => 'Híbrida (online e presencial)',
                     'investimento' => 'R$ 100,00/mês',
-                    'link' => '/admin/register'
+                    'link' => '/admin/register',
                 ],
                 [
                     'titulo' => 'Liderança Cristã',
@@ -82,9 +82,9 @@ class PaginaInicialSeeder extends Seeder
                     'resumo' => 'Gestão e liderança para o Reino de Deus.',
                     'duracao' => '18 meses',
                     'carga_horaria' => '400h',
-                    'modalidade' => 'Híbrido',
+                    'modalidade' => 'Híbrida (online e presencial)',
                     'investimento' => 'R$ 150,00/mês',
-                    'link' => '/admin/register'
+                    'link' => '/admin/register',
                 ],
             ],
 
@@ -100,7 +100,7 @@ class PaginaInicialSeeder extends Seeder
             // --- VANTAGENS ---
             'vantagens_titulo' => 'Diferenciais',
             'vantagens_lista' => [
-                ['titulo' => '100% EAD', 'descricao' => 'Estude onde quiser', 'icone' => 'fas fa-wifi'],
+                ['titulo' => 'Modalidade Híbrida', 'descricao' => 'Estude online e participe de encontros presenciais', 'icone' => 'fas fa-wifi'],
                 ['titulo' => 'Professores Qualificados', 'descricao' => 'Mestres e Doutores', 'icone' => 'fas fa-user-tie'],
                 ['titulo' => 'Material Didático', 'descricao' => 'Incluso no curso', 'icone' => 'fas fa-book'],
             ],
@@ -119,13 +119,13 @@ class PaginaInicialSeeder extends Seeder
             'whatsapp' => '(21) 99999-9999',
             'email' => 'contato@cetsadp.com.br',
             'horario_funcionamento' => 'Seg-Sex: 18h às 22h',
-            
+
             // --- CORES ---
             'cores_personalizadas' => [
                 'primary' => '#003D7A',
                 'secondary' => '#D62828',
-                'accent' => '#F77F00'
-            ]
+                'accent' => '#F77F00',
+            ],
         ]);
     }
 }
