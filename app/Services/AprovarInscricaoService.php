@@ -40,6 +40,10 @@ use Illuminate\Support\Str;
  */
 class AprovarInscricaoService
 {
+    public function __construct(
+        private readonly NotificarDecisaoInscricaoService $notificador,
+    ) {}
+
     /**
      * Aprova a inscrição e produz a matrícula/conta correspondente.
      *
@@ -87,7 +91,7 @@ class AprovarInscricaoService
                 ->where(function ($q) use ($inscricao) {
                     // Só bloqueia se a matrícula ativa NÃO for da própria inscrição.
                     $q->whereNull('application_id')
-                      ->orWhere('application_id', '!=', $inscricao->id);
+                        ->orWhere('application_id', '!=', $inscricao->id);
                 })
                 ->lockForUpdate()
                 ->first();
@@ -109,44 +113,44 @@ class AprovarInscricaoService
 
             if (! $matricula) {
                 $matricula = Matricula::query()->create([
-                    'user_id'          => $user->id,
-                    'curso_id'         => $inscricao->curso_id,
-                    'application_id'   => $inscricao->id,
-                    'turma_id'         => null, // Secretaria define depois.
-                    'data_matricula'   => now()->toDateString(),
-                    'status'           => Matricula::STATUS_ATIVA,
+                    'user_id' => $user->id,
+                    'curso_id' => $inscricao->curso_id,
+                    'application_id' => $inscricao->id,
+                    'turma_id' => null, // Secretaria define depois.
+                    'data_matricula' => now()->toDateString(),
+                    'status' => Matricula::STATUS_ATIVA,
                     'numero_matricula' => $this->gerarNumeroMatriculaUnico(),
-                    'observacoes'      => $observacoes,
+                    'observacoes' => $observacoes,
                 ]);
                 $matriculaRecemCriada = true;
             }
 
             // 7) Atualizar inscrição → matriculado + auditoria simples.
             $inscricao->update([
-                'status'                 => Application::STATUS_MATRICULADO,
-                'analisado_por_id'       => $operador->id,
-                'analisado_em'           => now(),
+                'status' => Application::STATUS_MATRICULADO,
+                'analisado_por_id' => $operador->id,
+                'analisado_em' => now(),
                 'observacoes_secretaria' => $observacoes ?? $inscricao->observacoes_secretaria,
             ]);
 
             // 8) Auditoria estruturada (Log; substituível por qualquer serviço
             // de auditoria já presente no projeto — mantém contrato genérico).
             $this->registrarAuditoria('inscricao.aprovada_e_matriculada', [
-                'application_id'        => $inscricao->id,
-                'user_id'               => $user->id,
-                'matricula_id'          => $matricula->id,
-                'numero_matricula'      => $matricula->numero_matricula,
-                'curso_id'              => $inscricao->curso_id,
-                'operador_id'           => $operador->id,
-                'usuario_recem_criado'  => $usuarioRecemCriado,
+                'application_id' => $inscricao->id,
+                'user_id' => $user->id,
+                'matricula_id' => $matricula->id,
+                'numero_matricula' => $matricula->numero_matricula,
+                'curso_id' => $inscricao->curso_id,
+                'operador_id' => $operador->id,
+                'usuario_recem_criado' => $usuarioRecemCriado,
                 'matricula_recem_criada' => $matriculaRecemCriada,
             ]);
 
             return new AprovarInscricaoResult(
-                application:         $inscricao->refresh(),
-                user:                $user->refresh(),
-                matricula:           $matricula->refresh(),
-                usuarioRecemCriado:  $usuarioRecemCriado,
+                application: $inscricao->refresh(),
+                user: $user->refresh(),
+                matricula: $matricula->refresh(),
+                usuarioRecemCriado: $usuarioRecemCriado,
                 matriculaRecemCriada: $matriculaRecemCriada,
             );
         });
@@ -155,6 +159,13 @@ class AprovarInscricaoService
         // de definição de senha SOMENTE para conta recém-criada.
         if ($resultado->usuarioRecemCriado) {
             $this->dispararLinkDefinicaoSenha($resultado->user);
+        }
+
+        if ($resultado->matriculaRecemCriada) {
+            $this->notificador->notificarMatricula(
+                $resultado->application,
+                $resultado->matricula->numero_matricula,
+            );
         }
 
         return $resultado;
@@ -178,7 +189,7 @@ class AprovarInscricaoService
             );
         }
 
-        return DB::transaction(function () use ($application, $operador, $motivo) {
+        $inscricaoRejeitada = DB::transaction(function () use ($application, $operador, $motivo) {
             /** @var Application $inscricao */
             $inscricao = Application::query()
                 ->whereKey($application->getKey())
@@ -203,20 +214,24 @@ class AprovarInscricaoService
             }
 
             $inscricao->update([
-                'status'                 => Application::STATUS_REJEITADO,
-                'analisado_por_id'       => $operador->id,
-                'analisado_em'           => now(),
+                'status' => Application::STATUS_REJEITADO,
+                'analisado_por_id' => $operador->id,
+                'analisado_em' => now(),
                 'observacoes_secretaria' => $motivo,
             ]);
 
             $this->registrarAuditoria('inscricao.rejeitada', [
                 'application_id' => $inscricao->id,
-                'operador_id'    => $operador->id,
-                'motivo'         => $motivo,
+                'operador_id' => $operador->id,
+                'motivo' => $motivo,
             ]);
 
             return $inscricao->refresh();
         });
+
+        $this->notificador->notificarRejeicao($inscricaoRejeitada, $motivo);
+
+        return $inscricaoRejeitada;
     }
 
     /**
@@ -272,23 +287,23 @@ class AprovarInscricaoService
 
         // Criar novo usuário aluno.
         $novo = User::query()->create([
-            'name'        => $inscricao->nome_completo,
-            'email'       => $email,
-            'cpf'         => $cpf,
-            'telefone'    => $inscricao->telefone,
-            'data_nasc'   => $inscricao->data_nascimento,
-            'cep'         => $inscricao->cep,
-            'endereco'    => $inscricao->logradouro,
-            'numero'      => $inscricao->numero,
+            'name' => $inscricao->nome_completo,
+            'email' => $email,
+            'cpf' => $cpf,
+            'telefone' => $inscricao->telefone,
+            'data_nasc' => $inscricao->data_nascimento,
+            'cep' => $inscricao->cep,
+            'endereco' => $inscricao->logradouro,
+            'numero' => $inscricao->numero,
             'complemento' => $inscricao->complemento,
-            'bairro'      => $inscricao->bairro,
-            'cidade'      => $inscricao->cidade,
-            'estado'      => $inscricao->estado,
-            'nivel'       => 'aluno',
-            'ativo'       => true,
+            'bairro' => $inscricao->bairro,
+            'cidade' => $inscricao->cidade,
+            'estado' => $inscricao->estado,
+            'nivel' => 'aluno',
+            'ativo' => true,
             // Senha aleatória forte, gravada apenas como hash pelo cast 'hashed'.
             // Nunca retornada, exibida ou logada em texto puro.
-            'password'    => Str::random(48),
+            'password' => Str::random(48),
         ]);
 
         return [$novo, true];
@@ -317,10 +332,10 @@ class AprovarInscricaoService
         $user = User::query()->findOrFail($matricula->user_id);
 
         return new AprovarInscricaoResult(
-            application:          $inscricao,
-            user:                 $user,
-            matricula:            $matricula,
-            usuarioRecemCriado:   false,
+            application: $inscricao,
+            user: $user,
+            matricula: $matricula,
+            usuarioRecemCriado: false,
             matriculaRecemCriada: false,
         );
     }
@@ -334,7 +349,7 @@ class AprovarInscricaoService
         $ano = now()->format('Y');
 
         for ($i = 0; $i < 5; $i++) {
-            $numero = $ano . '-' . str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
+            $numero = $ano.'-'.str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
             $existe = Matricula::query()->where('numero_matricula', $numero)->exists();
             if (! $existe) {
                 return $numero;
@@ -342,7 +357,7 @@ class AprovarInscricaoService
         }
 
         // Fallback: usa uuid curto para garantir unicidade.
-        return $ano . '-' . strtoupper(substr((string) Str::uuid(), 0, 8));
+        return $ano.'-'.strtoupper(substr((string) Str::uuid(), 0, 8));
     }
 
     /**
@@ -356,18 +371,18 @@ class AprovarInscricaoService
 
             $this->registrarAuditoria('usuario.link_definicao_senha_enviado', [
                 'user_id' => $user->id,
-                'status'  => (string) $status,
+                'status' => (string) $status,
             ]);
         } catch (\Throwable $e) {
             // Não relançamos: a matrícula não pode ser desfeita por falha de e-mail.
             Log::error('Falha ao enviar link de definição de senha para novo aluno.', [
-                'user_id'   => $user->id,
+                'user_id' => $user->id,
                 'exception' => $e->getMessage(),
             ]);
 
             $this->registrarAuditoria('usuario.link_definicao_senha_falhou', [
                 'user_id' => $user->id,
-                'erro'    => $e->getMessage(),
+                'erro' => $e->getMessage(),
             ]);
         }
     }
