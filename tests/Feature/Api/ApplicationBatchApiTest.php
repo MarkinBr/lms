@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\Application;
 use App\Models\CourseModality;
 use App\Models\Curso;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -137,7 +136,52 @@ class ApplicationBatchApiTest extends TestCase
                 'A modalidade selecionada não pertence ao curso informado.',
             );
 
+        $details = $response->json('error.details');
+        $this->assertArrayNotHasKey('inscricoes.1.course_modality_id', $details);
+        $this->assertArrayHasKey('inscricoes', $details);
+
         $this->assertDatabaseCount('applications', 0);
+    }
+
+    public function test_dois_erros_em_indices_diferentes_sao_preservados_e_nada_e_gravado(): void
+    {
+        [$cursoA, $modalidadeA] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'EAD');
+        [$cursoB, $modalidadeB] = $this->criarCursoComModalidade('Habilitação ao Diaconato', 'Presencial');
+        [$cursoC] = $this->criarCursoComModalidade('Liderança Cristã Ministerial', 'Híbrido');
+
+        $this->postJson('/api/v1/applications', array_merge($this->dadosPessoais(), [
+            'curso_id' => $cursoA->id,
+            'course_modality_id' => $modalidadeA->id,
+        ]))->assertCreated();
+
+        $response = $this->postJson('/api/v1/applications/batch', array_merge($this->dadosPessoais(), [
+            'inscricoes' => [
+                ['curso_id' => $cursoA->id, 'course_modality_id' => $modalidadeA->id],
+                ['curso_id' => $cursoB->id, 'course_modality_id' => $modalidadeB->id],
+                ['curso_id' => $cursoC->id, 'course_modality_id' => $modalidadeB->id],
+            ],
+        ]));
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('error.details.inscricoes.0.curso_id.0', 'Você já possui uma inscrição para este curso.')
+            ->assertJsonPath(
+                'error.details.inscricoes.2.course_modality_id.0',
+                'A modalidade selecionada não pertence ao curso informado.',
+            );
+
+        $erros = $response->json('error.details.inscricoes');
+        $this->assertArrayHasKey('0', $erros);
+        $this->assertArrayNotHasKey('1', $erros);
+        $this->assertArrayHasKey('2', $erros);
+
+        $details = $response->json('error.details');
+        $this->assertArrayNotHasKey('inscricoes.0.curso_id', $details);
+        $this->assertArrayNotHasKey('inscricoes.2.course_modality_id', $details);
+
+        $this->assertDatabaseCount('applications', 1);
+        $this->assertDatabaseMissing('applications', ['curso_id' => $cursoB->id]);
+        $this->assertDatabaseMissing('applications', ['curso_id' => $cursoC->id]);
     }
 
     public function test_impede_inscricao_duplicada_para_o_mesmo_curso_com_o_mesmo_cpf(): void
@@ -166,6 +210,13 @@ class ApplicationBatchApiTest extends TestCase
                 'error.details.inscricoes.0.curso_id.0',
                 'Você já possui uma inscrição para este curso.',
             );
+
+        $details = $response->json('error.details');
+        $this->assertArrayNotHasKey('inscricoes.0.curso_id', $details);
+        $this->assertArrayHasKey('inscricoes', $details);
+
+        $json = json_decode($response->getContent());
+        $this->assertInstanceOf(\stdClass::class, $json->error->details->inscricoes);
 
         // Continua existindo apenas a inscrição original
         $this->assertDatabaseCount('applications', 1);

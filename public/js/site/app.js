@@ -332,6 +332,32 @@ function toast(msg){const t=document.getElementById('toast');document.getElement
       }
     });
   }
+  /**
+   * Retorna a primeira mensagem textual encontrada em objetos ou arrays
+   * de validação, incluindo o contrato aninhado e o formato plano legado.
+   */
+  function extrairPrimeiraMensagem(valor){
+    if(valor==null)return null;
+    if(typeof valor==='string'){
+      const mensagem=valor.trim();
+      return mensagem||null;
+    }
+    if(Array.isArray(valor)){
+      for(const item of valor){
+        const mensagem=extrairPrimeiraMensagem(item);
+        if(mensagem)return mensagem;
+      }
+      return null;
+    }
+    if(typeof valor==='object'){
+      for(const chave of Object.keys(valor)){
+        const mensagem=extrairPrimeiraMensagem(valor[chave]);
+        if(mensagem)return mensagem;
+      }
+    }
+    return null;
+  }
+
   form.addEventListener('submit',async e=>{
     e.preventDefault();
     if(!form.reportValidity())return;
@@ -359,10 +385,9 @@ function toast(msg){const t=document.getElementById('toast');document.getElement
       }else if(resp.status===422){
         let msg='Verifique os dados informados.';
         const details=data&&data.error&&data.error.details;
-        if(details&&typeof details==='object'){
-          const primeira=Object.values(details)[0];
-          if(Array.isArray(primeira)&&primeira.length)msg=primeira[0];
-          else if(typeof primeira==='string')msg=primeira;
+        const primeiraMensagem=extrairPrimeiraMensagem(details);
+        if(primeiraMensagem){
+          msg=primeiraMensagem;
         }else if(data&&data.error&&data.error.message){
           msg=data.error.message;
         }else if(data&&data.message){
