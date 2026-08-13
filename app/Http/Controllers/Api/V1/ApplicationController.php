@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
 use App\Models\CourseModality;
+use App\Models\User;
+use App\Services\AprovarInscricaoException;
+use App\Services\AprovarInscricaoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,7 +68,7 @@ class ApplicationController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Application::with(['curso', 'documentos'])
+        $query = Application::with(['curso', 'documents'])
             ->orderBy('created_at', 'desc');
 
         // Filtros
@@ -250,6 +253,7 @@ class ApplicationController extends Controller
                 $detalhes["inscricoes.{$indice}.curso_id"] = [
                     'Você já possui uma inscrição para este curso.',
                 ];
+
                 continue;
             }
 
@@ -423,42 +427,66 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Atualiza status da inscrição (Secretaria/Admin)
+     * Decide uma inscrição pelo mesmo fluxo usado no painel da Secretaria.
      */
-    public function updateStatus(Request $request, Application $application): JsonResponse
-    {
+    public function updateStatus(
+        Request $request,
+        Application $application,
+        AprovarInscricaoService $aprovarInscricao,
+    ): JsonResponse {
+        if (is_string($request->input('observacoes_secretaria'))) {
+            $request->merge([
+                'observacoes_secretaria' => trim($request->input('observacoes_secretaria')),
+            ]);
+        }
+
         $validated = $request->validate([
-            'status' => 'required|in:em_analise,aprovado,rejeitado,matriculado,cancelado',
-            'observacoes_secretaria' => 'nullable|string|max:1000',
+            'status' => ['required', Rule::in([
+                Application::STATUS_APROVADO,
+                Application::STATUS_REJEITADO,
+            ])],
+            'observacoes_secretaria' => [
+                Rule::requiredIf($request->input('status') === Application::STATUS_REJEITADO),
+                'nullable',
+                'string',
+                'min:3',
+                'max:1000',
+            ],
+        ], [
+            'status.in' => 'A decisão deve ser aprovado ou rejeitado.',
+            'observacoes_secretaria.required' => 'A justificativa da rejeição é obrigatória.',
+            'observacoes_secretaria.min' => 'A justificativa da rejeição deve ter ao menos 3 caracteres.',
         ]);
 
-        $oldStatus = $application->status;
-        $application->update([
-            'status' => $validated['status'],
-            'observacoes_secretaria' => $validated['observacoes_secretaria'] ?? null,
-            'analisado_em' => now(),
-            'analisado_por_id' => auth()->id(),
-        ]);
+        /** @var User $operador */
+        $operador = $request->user();
+        $observacoes = isset($validated['observacoes_secretaria'])
+            ? trim((string) $validated['observacoes_secretaria'])
+            : null;
 
-        // Log de auditoria
-        activity()
-            ->performedBy(auth()->user())
-            ->on($application)
-            ->withProperties([
-                'old_status' => $oldStatus,
-                'new_status' => $validated['status'],
-                'observacoes' => $validated['observacoes_secretaria'] ?? null,
-            ])
-            ->event('status_changed')
-            ->log('Status da inscrição alterado');
-
-        // TODO: Enviar e-mail para o candidato sobre aprovação/rejeição
-        // TODO: Enviar notificação WhatsApp
+        try {
+            if ($validated['status'] === Application::STATUS_APROVADO) {
+                $resultado = $aprovarInscricao->executar($application, $operador, $observacoes);
+                $application = $resultado->application;
+                $mensagem = 'Inscrição aprovada e matrícula gerada com sucesso.';
+            } else {
+                $application = $aprovarInscricao->rejeitar($application, $operador, (string) $observacoes);
+                $mensagem = 'Inscrição rejeitada com sucesso.';
+            }
+        } catch (AprovarInscricaoException $exception) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => $exception->codigoDominio,
+                    'message' => $exception->getMessage(),
+                ],
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => "Inscrição {$validated['status']} com sucesso.",
-            'data' => $application->load(['curso', 'documentos']),
+            'message' => $mensagem,
+            'data' => $application->load(['curso', 'courseModality', 'documents', 'matricula']),
         ]);
     }
 

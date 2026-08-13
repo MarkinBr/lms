@@ -5,25 +5,25 @@ namespace App\Models;
 // Importações necessárias para o Filament funcionar
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * Os atributos que podem ser preenchidos em massa.
-     * 
+     *
      * CORREÇÃO v9.3.2: Adicionados campos SSO (username, last_sso_at, sso_provider)
      */
     protected $fillable = [
         'name',
         'email',
         'password',
-        
+
         // Identificação e Status
         'cpf',
         'telefone',
@@ -35,7 +35,7 @@ class User extends Authenticatable implements FilamentUser
         // Dados Bancários
         'tipo_chave',
         'chave_pix',
-        
+
         // Endereço
         'cep',
         'endereco',
@@ -68,7 +68,7 @@ class User extends Authenticatable implements FilamentUser
         'senha_alterada_em',
         'exclusao_solicitada_em',
         'motivo_exclusao',
-        'status', 
+        'status',
         'perfil_atualizado_em',
 
         // === CAMPOS SSO (v9.3.2) ===
@@ -114,7 +114,7 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         // 1. Usuário inativo nunca entra no sistema
-        if (!$this->ativo) {
+        if (! $this->ativo) {
             return false;
         }
 
@@ -168,8 +168,8 @@ class User extends Authenticatable implements FilamentUser
     public function cursos()
     {
         return $this->belongsToMany(Curso::class, 'matriculas', 'user_id', 'curso_id')
-                    ->withPivot('status', 'data_matricula', 'data_validade')
-                    ->withTimestamps();
+            ->withPivot('status', 'data_matricula', 'data_validade')
+            ->withTimestamps();
     }
 
     // Certificados do Aluno
@@ -177,14 +177,14 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(Certificado::class, 'aluno_id');
     }
-    
+
     // Aulas concluídas pelo aluno (Relacionamento com Progresso)
     public function aulasConcluidas()
     {
         // Mantive 'aluno_id' aqui pois a tabela 'aula_progresso' parece usar este nome
         return $this->belongsToMany(Aula::class, 'aula_progresso', 'aluno_id', 'aula_id')
-                    ->withPivot('concluida', 'updated_at')
-                    ->wherePivot('concluida', true);
+            ->withPivot('concluida', 'updated_at')
+            ->wherePivot('concluida', true);
     }
 
     // === RELACIONAMENTOS ADICIONADOS PARA CORRIGIR O ERRO ===
