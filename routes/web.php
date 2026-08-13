@@ -7,6 +7,11 @@ use App\Http\Controllers\MensalidadeReportController;
 use App\Http\Controllers\RelatorioFinanceiroController;
 use App\Http\Controllers\MatriculaReportController;
 use App\Http\Controllers\ValidacaoDeclaracaoController;
+use App\Http\Controllers\ReciboPublicoController;
+use App\Http\Controllers\RelatorioInadimplenciaController;
+use App\Http\Controllers\RelatorioFluxoCaixaController;
+use App\Http\Controllers\ExtratoAlunoController;
+use App\Http\Controllers\DREController;
 
 // Controllers do Portal do Aluno
 use App\Http\Controllers\Aluno\DashboardController;
@@ -180,7 +185,6 @@ Route::post('/sso/logout', [App\Http\Controllers\SsoController::class, 'logoutBi
     ->middleware(['auth', 'throttle:10,1']);
 
 // === RECIBO PÚBLICO SEGURO (LGPD - Patch 06) ===
-use App\Http\Controllers\ReciboPublicoController;
 
 Route::prefix('recibo/v')->name('recibo.publico.')->group(function () {
     Route::get('/{codigo}', [ReciboPublicoController::class, 'form'])
@@ -194,9 +198,6 @@ Route::prefix('recibo/v')->name('recibo.publico.')->group(function () {
 });
 
 // === RELATÓRIOS AVANÇADOS (Auditoria v2026.06) ===
-use App\Http\Controllers\RelatorioInadimplenciaController;
-use App\Http\Controllers\RelatorioFluxoCaixaController;
-use App\Http\Controllers\ExtratoAlunoController;
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/relatorios/inadimplencia/aging',
@@ -213,7 +214,6 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // === DRE (Auditoria v2026.06) ===
-use App\Http\Controllers\DREController;
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/relatorios/dre', [DREController::class, 'gerar'])
