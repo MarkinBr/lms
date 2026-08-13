@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\MatriculaTurma;
 use App\Models\Turma;
 use App\Models\User;
 
@@ -32,8 +33,20 @@ class TurmaPolicy
         }
 
         if ($user->nivel === 'aluno') {
-            return $turma->matriculasTurmas()
+            // Vínculo atual via pivot matricula_turma.
+            $vinculoPivot = $turma->matriculasTurmas()
                 ->where('matriculas.user_id', $user->id)
+                ->wherePivot('status', MatriculaTurma::STATUS_ATIVO)
+                ->exists();
+
+            if ($vinculoPivot) {
+                return true;
+            }
+
+            // Vínculo legado via matriculas.turma_id.
+            return $turma->matriculas()
+                ->where('user_id', $user->id)
+                ->ativas()
                 ->exists();
         }
 

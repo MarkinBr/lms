@@ -50,6 +50,14 @@ class Matricula extends Model
         return $this->hasMany(Mensalidade::class);
     }
 
+    /**
+     * Frequências (presenças/faltas) registradas para esta matrícula.
+     */
+    public function frequencias(): HasMany
+    {
+        return $this->hasMany(Frequencia::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -99,6 +107,47 @@ class Matricula extends Model
     public function declaracoes(): HasMany
     {
         return $this->hasMany(Declaracao::class);
+    }
+
+    /**
+     * Resumo de frequência da matrícula por chamadas concluídas.
+     * Pode ser recortado por turma e/ou disciplina. Nunca gera dados:
+     * somente leitura. Percentual = (presentes + faltas justificadas) /
+     * chamadas concluídas aplicáveis * 100; 0 quando não houver chamada.
+     *
+     * @return array{chamadas_concluidas:int, presentes:int, faltas:int, faltas_justificadas:int, percentual:float}
+     */
+    public function resumoFrequencia(?int $turmaId = null, ?int $disciplinaId = null): array
+    {
+        $concluidas = ChamadaFrequencia::query()
+            ->concluidas()
+            ->when($turmaId, fn ($q) => $q->where('turma_id', $turmaId))
+            ->when($disciplinaId, fn ($q) => $q->where('disciplina_id', $disciplinaId))
+            ->whereHas('frequencias', fn ($q) => $q->where('matricula_id', $this->id))
+            ->count();
+
+        $base = $this->frequencias()
+            ->whereHas('chamada', function ($q) use ($turmaId, $disciplinaId) {
+                $q->concluidas()
+                    ->when($turmaId, fn ($qq) => $qq->where('turma_id', $turmaId))
+                    ->when($disciplinaId, fn ($qq) => $qq->where('disciplina_id', $disciplinaId));
+            });
+
+        $presentes = (clone $base)->where('situacao', Frequencia::SITUACAO_PRESENTE)->count();
+        $faltas = (clone $base)->where('situacao', Frequencia::SITUACAO_FALTA)->count();
+        $faltasJustificadas = (clone $base)->where('situacao', Frequencia::SITUACAO_FALTA_JUSTIFICADA)->count();
+
+        $percentual = $concluidas > 0
+            ? round((($presentes + $faltasJustificadas) / $concluidas) * 100, 2)
+            : 0.0;
+
+        return [
+            'chamadas_concluidas' => $concluidas,
+            'presentes' => $presentes,
+            'faltas' => $faltas,
+            'faltas_justificadas' => $faltasJustificadas,
+            'percentual' => $percentual,
+        ];
     }
 
     // BUG-M01: scope agrupado e case-insensitive
