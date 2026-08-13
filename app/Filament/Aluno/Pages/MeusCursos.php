@@ -2,117 +2,156 @@
 
 namespace App\Filament\Aluno\Pages;
 
+use App\Models\Matricula;
+use App\Models\MatriculaTurma;
+use App\Models\Turma;
+use App\Models\User;
 use Filament\Pages\Page;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class MeusCursos extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
+
     protected static ?string $navigationLabel = 'Meus Cursos';
+
     protected static ?string $title = 'Meus Cursos';
+
     protected static ?string $navigationGroup = 'Ensino';
+
     protected static string $view = 'filament.aluno.pages.meus-cursos';
+
     protected static ?int $navigationSort = 2;
 
-    public $cursos = [];
-    public $filtroStatus = 'todos';
-    public $ordenacao = 'recente';
-    public $busca = '';
+    /**
+     * Busca textual livre sobre o título do curso (dados reais).
+     */
+    public string $busca = '';
 
-    public function mount(): void
+    public function getHeading(): string|Htmlable
     {
-        $this->carregarCursos();
+        $total = $this->matriculas->count();
+
+        $rotulo = $total === 1 ? 'matrícula ativa' : 'matrículas ativas';
+
+        return "Meus Cursos — {$total} {$rotulo}";
     }
 
-    public function carregarCursos(): void
+    /**
+     * Dados preparados para a view: somente matrículas ativas do aluno
+     * autenticado, com turmas reais (legado + pivot, sem duplicar).
+     */
+    public function getMatriculasProperty(): Collection
     {
-        $query = \DB::table('matriculas')
-            ->join('cursos', 'cursos.id', '=', 'matriculas.curso_id')
-            ->where('matriculas.user_id', Auth::id());
+        $aluno = Auth::user();
 
-        // Filtro por status
-        if ($this->filtroStatus !== 'todos') {
-            $query->where('matriculas.status', $this->filtroStatus);
-        }
+        abort_unless($aluno instanceof User, 403);
 
-        // Busca por nome
-        if (!empty($this->busca)) {
-            $query->where('cursos.titulo', 'like', "%{$this->busca}%");
-        }
-
-        // Ordenação
-        switch ($this->ordenacao) {
-            case 'alfabetica':
-                $query->orderBy('cursos.titulo');
-                break;
-            case 'progresso':
-                // Ordenar por progresso (calculado depois)
-                break;
-            default: // 'recente'
-                $query->orderBy('matriculas.created_at', 'desc');
-        }
-
-        $this->cursos = $query->select(
-            'cursos.*',
-            'matriculas.data_matricula',
-            'matriculas.status as status_matricula',
-            'matriculas.data_validade'
-        )->get()->map(function($curso) {
-            // Calcula estatísticas do curso
-            $totalAulas = \DB::table('modulos')
-                ->join('aulas', 'aulas.modulo_id', '=', 'modulos.id')
-                ->where('modulos.curso_id', $curso->id)
-                ->count();
-
-            $aulasAssistidas = \DB::table('aula_progresso')
-                ->join('aulas', 'aulas.id', '=', 'aula_progresso.aula_id')
-                ->join('modulos', 'modulos.id', '=', 'aulas.modulo_id')
-                ->where('modulos.curso_id', $curso->id)
-                ->where('aula_progresso.aluno_id', Auth::id())
-                ->where('aula_progresso.concluida', true)
-                ->count();
-
-            $curso->total_aulas = $totalAulas;
-            $curso->aulas_assistidas = $aulasAssistidas;
-            $curso->progresso = $totalAulas > 0 ? round(($aulasAssistidas / $totalAulas) * 100) : 0;
-
-            // Última aula assistida
-            $curso->ultima_aula = \DB::table('aula_progresso')
-                ->join('aulas', 'aulas.id', '=', 'aula_progresso.aula_id')
-                ->join('modulos', 'modulos.id', '=', 'aulas.modulo_id')
-                ->where('modulos.curso_id', $curso->id)
-                ->where('aula_progresso.aluno_id', Auth::id())
-                ->orderBy('aula_progresso.updated_at', 'desc')
-                ->select('aulas.*')
-                ->first();
-
-            // Certificado disponível
-            $curso->certificado_disponivel = $curso->progresso >= 100;
-
-            return $curso;
-        })->toArray();
-
-        // Ordenação por progresso (após calcular)
-        if ($this->ordenacao === 'progresso') {
-            usort($this->cursos, function($a, $b) {
-                return $b->progresso <=> $a->progresso;
-            });
-        }
+        return static::matriculasDoAluno($aluno, $this->busca);
     }
 
-    public function updatedFiltroStatus(): void
+    /**
+     * Fonte única de consulta da área do aluno. Somente leitura: nunca cria
+     * matrículas, turmas, vínculos ou qualquer dado acadêmico.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public static function matriculasDoAluno(User $aluno, string $busca = ''): Collection
     {
-        $this->carregarCursos();
+        $matriculas = Matricula::query()
+            ->ativas() // compatível com legado: 'ativo'/'ativa', case-insensitive
+            ->where('user_id', $aluno->id)
+            ->with([
+                'curso:id,titulo',
+                'turma.professor:id,name',
+                'turma.periodoLetivo:id,nome',
+                'turmasHistorico' => fn ($query) => $query
+                    ->wherePivot('status', MatriculaTurma::STATUS_ATIVO)
+                    ->with(['professor:id,name', 'periodoLetivo:id,nome']),
+            ])
+            ->orderByDesc('data_matricula')
+            ->orderByDesc('id')
+            ->get();
+
+        $itens = $matriculas->map(fn (Matricula $matricula) => static::prepararMatricula($matricula));
+
+        $termo = trim($busca);
+
+        if ($termo !== '') {
+            $itens = $itens->filter(
+                fn (array $item) => str_contains(
+                    mb_strtolower((string) $item['curso_titulo']),
+                    mb_strtolower($termo),
+                )
+            );
+        }
+
+        return $itens->values();
     }
 
-    public function updatedOrdenacao(): void
+    /**
+     * Turmas ativas da matrícula unindo os dois vínculos possíveis:
+     * - pivot `matricula_turma` com status ativo (vínculo atual);
+     * - coluna legada `matriculas.turma_id`.
+     *
+     * A mesma turma nunca aparece duas vezes quando ambos existem.
+     *
+     * @return Collection<int, Turma>
+     */
+    public static function turmasAtivasDaMatricula(Matricula $matricula): Collection
     {
-        $this->carregarCursos();
+        $doPivot = $matricula->relationLoaded('turmasHistorico')
+            ? $matricula->turmasHistorico->filter(
+                fn (Turma $turma) => ($turma->pivot->status ?? null) === MatriculaTurma::STATUS_ATIVO
+            )
+            : $matricula->turmasHistorico()
+                ->wherePivot('status', MatriculaTurma::STATUS_ATIVO)
+                ->with(['professor:id,name', 'periodoLetivo:id,nome'])
+                ->get();
+
+        $turmas = $doPivot->values();
+
+        $legada = $matricula->relationLoaded('turma')
+            ? $matricula->turma
+            : $matricula->turma()->with(['professor:id,name', 'periodoLetivo:id,nome'])->first();
+
+        if ($legada instanceof Turma && ! $turmas->contains('id', $legada->id)) {
+            $turmas->push($legada);
+        }
+
+        return $turmas->values();
     }
 
-    public function updatedBusca(): void
+    /**
+     * Estrutura plana e neutra para renderização: só dados que existem de
+     * fato; ausência de turma, período ou docente vira estado neutro.
+     *
+     * @return array<string, mixed>
+     */
+    public static function prepararMatricula(Matricula $matricula): array
     {
-        $this->carregarCursos();
+        $turmas = static::turmasAtivasDaMatricula($matricula);
+
+        return [
+            'id' => $matricula->id,
+            'numero_matricula' => $matricula->numero_matricula,
+            'status' => strtolower((string) $matricula->status),
+            'status_label' => 'Ativa',
+            'data_matricula' => $matricula->data_matricula?->format('d/m/Y'),
+            'curso_titulo' => $matricula->curso?->titulo ?? 'Curso não identificado',
+            // Informação institucional fixa do CETSADP: não gera nem lista aulas.
+            'modalidade_label' => 'Híbrida (online e presencial)',
+            'turmas' => $turmas->map(fn (Turma $turma) => [
+                'id' => $turma->id,
+                'nome' => $turma->nome ?? $turma->codigo ?? ('Turma #'.$turma->id),
+                'codigo' => $turma->codigo,
+                'periodo_letivo' => $turma->periodoLetivo?->nome,
+                'professor' => $turma->professor?->name,
+            ])->all(),
+            'possui_turma' => $turmas->isNotEmpty(),
+            'detalhe_url' => MeuCursoDetalhe::getUrl(['matricula' => $matricula->id], panel: 'aluno'),
+        ];
     }
 }

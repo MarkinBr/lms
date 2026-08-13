@@ -5,8 +5,11 @@ namespace App\Filament\Secretario\Resources;
 use App\Filament\Secretario\Resources\DisciplinaSecretariaResource\Pages;
 use App\Models\Curso;
 use App\Models\Disciplina;
+use App\Models\Modulo;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -49,6 +52,47 @@ class DisciplinaSecretariaResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                // Se o curso muda e o módulo atual não pertence
+                                // mais ao novo curso, limpa a seleção para
+                                // evitar associação curso/módulo inválida.
+                                $moduloId = $get('modulo_id');
+
+                                if (! $moduloId) {
+                                    return;
+                                }
+
+                                $pertence = Modulo::query()
+                                    ->whereKey($moduloId)
+                                    ->where('curso_id', $get('curso_id'))
+                                    ->exists();
+
+                                if (! $pertence) {
+                                    $set('modulo_id', null);
+                                }
+                            })
+                            ->columnSpanFull(),
+                        Forms\Components\Select::make('modulo_id')
+                            ->label('Módulo')
+                            ->options(function (Get $get) {
+                                $cursoId = $get('curso_id');
+
+                                if (! $cursoId) {
+                                    return [];
+                                }
+
+                                return Modulo::query()
+                                    ->where('curso_id', $cursoId)
+                                    ->orderBy('ordem')
+                                    ->pluck('titulo', 'id');
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->placeholder('Sem módulo')
+                            ->helperText('Opcional. Só lista módulos do curso selecionado.')
+                            ->disabled(fn (Get $get) => ! $get('curso_id'))
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('codigo')
                             ->required()
@@ -89,6 +133,13 @@ class DisciplinaSecretariaResource extends Resource
                     ->badge()
                     ->color('primary')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('modulo.titulo')
+                    ->label('Módulo')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('carga_horaria')
                     ->label('C/H')
                     ->sortable(),
@@ -106,6 +157,11 @@ class DisciplinaSecretariaResource extends Resource
                 Tables\Filters\SelectFilter::make('curso_id')
                     ->label('Curso')
                     ->relationship('curso', 'titulo')
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\SelectFilter::make('modulo_id')
+                    ->label('Módulo')
+                    ->relationship('modulo', 'titulo')
                     ->searchable()
                     ->preload(),
                 Tables\Filters\TernaryFilter::make('ativa')
