@@ -1,5 +1,6 @@
 # Dependencies
 vendor/
+node_modules/
 
 # Build artifacts
 public/build/
@@ -24,12 +25,16 @@ storage/framework/views/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs and test cache
 *.log
+.phpunit.result.cache
 
 # Temporary files
 *.tmp
 
+# Contexto temporário usado na revisão de entregas por IA
+/contexto-*/
+/external-*/
 # Dados locais, dumps e backups (nunca versionar)
 /cetsadp_lms
 *.sqlite
@@ -41,4 +46,3 @@ Thumbs.db
 # Pacotes de revisão e arquivos compactados gerados localmente
 *.zip
 *.tar.gz
-node_modules
