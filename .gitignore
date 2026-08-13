@@ -35,7 +35,6 @@ Thumbs.db
 # Contexto temporário usado na revisão de entregas por IA
 /contexto-*/
 /external-*/
-
 # Dados locais, dumps e backups (nunca versionar)
 /cetsadp_lms
 *.sqlite
