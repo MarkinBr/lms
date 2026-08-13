@@ -115,4 +115,27 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Remetente e Reply-To das confirmações de inscrição (Issue #39)
+    |--------------------------------------------------------------------------
+    |
+    | Identidade dedicada aos e-mails de confirmação de inscrição. O
+    | remetente usa um endereço específico de inscrições e as respostas
+    | dos candidatos são encaminhadas ao Reply-To institucional da
+    | Secretaria. Ambos têm fallback seguro para o remetente global.
+    |
+    */
+
+    'inscricoes' => [
+        'from' => [
+            'address' => env('MAIL_INSCRICOES_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+            'name' => env('MAIL_INSCRICOES_FROM_NAME', env('MAIL_FROM_NAME', 'Example')),
+        ],
+        'reply_to' => [
+            'address' => env('MAIL_INSCRICOES_REPLY_TO_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+            'name' => env('MAIL_INSCRICOES_REPLY_TO_NAME', env('MAIL_FROM_NAME', 'Example')),
+        ],
+    ],
+
 ];
