@@ -237,12 +237,16 @@ class ApplicationController extends Controller
         );
 
         $cpf = preg_replace('/\D/', '', (string) $validated['cpf']);
-        $detalhes = [];
+        /**
+         * @var array<string, array<string, array<int, string>>> $errosPorIndice
+         */
+        $errosPorIndice = [];
 
         // Valida CPF por curso e modalidade pertencente ao curso, ANTES de gravar
         foreach ($validated['inscricoes'] as $indice => $inscricao) {
             $cursoId = (int) $inscricao['curso_id'];
             $modalidadeId = (int) $inscricao['course_modality_id'];
+            $chaveIndice = (string) $indice;
 
             $jaInscrito = Application::query()
                 ->where('cpf', $cpf)
@@ -250,7 +254,7 @@ class ApplicationController extends Controller
                 ->exists();
 
             if ($jaInscrito) {
-                $detalhes["inscricoes.{$indice}.curso_id"] = [
+                $errosPorIndice[$chaveIndice]['curso_id'] = [
                     'Você já possui uma inscrição para este curso.',
                 ];
 
@@ -260,19 +264,23 @@ class ApplicationController extends Controller
             $modalidade = CourseModality::query()->find($modalidadeId);
 
             if (! $modalidade || (int) $modalidade->curso_id !== $cursoId) {
-                $detalhes["inscricoes.{$indice}.course_modality_id"] = [
+                $errosPorIndice[$chaveIndice]['course_modality_id'] = [
                     'A modalidade selecionada não pertence ao curso informado.',
                 ];
             }
         }
 
-        if ($detalhes !== []) {
+        if ($errosPorIndice !== []) {
+            ksort($errosPorIndice, SORT_NUMERIC);
+
             return response()->json([
                 'success' => false,
                 'error' => [
                     'code' => 'VALIDATION_ERROR',
                     'message' => 'Dados inválidos',
-                    'details' => $detalhes,
+                    'details' => [
+                        'inscricoes' => (object) $errosPorIndice,
+                    ],
                 ],
             ], 422);
         }
