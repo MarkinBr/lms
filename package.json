@@ -4,9 +4,12 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "check:js": "node --check public/js/site/app.js",
+        "test:e2e": "playwright test"
     },
     "devDependencies": {
+        "@playwright/test": "^1.62.1",
         "@prisma/client": "^7.9.1",
         "@tailwindcss/vite": "^4.0.0",
         "autoprefixer": "^10.4.24",

@@ -28,6 +28,8 @@ Thumbs.db
 # Logs and test cache
 *.log
 .phpunit.result.cache
+/tests/e2e/.report/
+/tests/e2e/.artifacts/
 
 # Temporary files
 *.tmp
