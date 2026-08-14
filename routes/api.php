@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\ApplicationController;
+use App\Http\Controllers\Api\V1\ApplicationDocumentDownloadController;
 use App\Http\Controllers\Api\V1\CourseCatalogController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
@@ -60,4 +61,13 @@ Route::prefix('v1')->group(function () {
         Route::patch('applications/{application}/status', [ApplicationController::class, 'updateStatus'])
             ->name('applications.status');
     });
+
+    // === Download protegido de documentos de inscrição (Issue #50) ===
+    // Sanctum + ApplicationDocumentPolicy (autodiscovery — não existe
+    // AuthServiceProvider). Fica fora do grupo role:secretario,admin porque o
+    // candidato-dono também baixa os próprios documentos.
+    Route::middleware('auth:sanctum')->get(
+        'applications/{application}/documents/{document}',
+        ApplicationDocumentDownloadController::class,
+    )->name('applications.documents.download');
 });
