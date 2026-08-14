@@ -102,6 +102,8 @@ class InscricaoDecisaoMailTest extends TestCase
                 && str_contains($render, 'Híbrida')
                 && str_contains($render, $resultado->application->protocol)
                 && str_contains($render, $resultado->matricula->numero_matricula)
+                && str_contains($render, '/acompanhar-inscricao/')
+                && str_contains($render, 'signature=')
                 && ! str_contains($render, '52998224725')
                 && ! str_contains($render, '99.888.777-6')
                 && ! str_contains($render, 'Rua Confidencial')
@@ -129,6 +131,8 @@ class InscricaoDecisaoMailTest extends TestCase
                 && $mail->tipo === InscricaoDecisaoMail::TIPO_REJEICAO
                 && $mail->envelope()->subject === 'Resultado da sua inscrição — CETSADP'
                 && str_contains($render, '&lt;script&gt;')
+                && str_contains($render, '/acompanhar-inscricao/')
+                && str_contains($render, 'signature=')
                 && str_contains($render, 'Não aprovada')
                 && ! str_contains($render, '<script>alert("xss")</script>')
                 && ! str_contains($render, $motivo)
