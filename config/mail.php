@@ -138,4 +138,15 @@ return [
         ],
     ],
 
+    'contact' => [
+        'to' => [
+            'address' => env('MAIL_CONTACT_TO_ADDRESS', 'contato@cetsadp.com.br'),
+            'name' => env('MAIL_CONTACT_TO_NAME', 'Secretaria CETSADP'),
+        ],
+        'from' => [
+            'address' => env('MAIL_CONTACT_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+            'name' => env('MAIL_CONTACT_FROM_NAME', env('MAIL_FROM_NAME', 'CETSADP')),
+        ],
+    ],
+
 ];

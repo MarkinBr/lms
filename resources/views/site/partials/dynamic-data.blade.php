@@ -37,6 +37,9 @@ window.LARAVEL_ROUTES = {
 @if(session('success'))
   <script>window.__FLASH_SUCCESS = @json(session('success'));</script>
 @endif
+@if(session('error'))
+  <script>window.__FLASH_ERROR = @json(session('error'));</script>
+@endif
 @if($errors->any())
   <script>window.__FLASH_ERRORS = @json($errors->all());</script>
 @endif

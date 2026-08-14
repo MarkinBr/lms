@@ -39,8 +39,12 @@ use App\Http\Controllers\Auth\AlunoLoginController;
 
 // === 1. SITE INSTITUCIONAL ===
 Route::get('/', [SiteController::class, 'index'])->name('site.index');
-Route::post('/contato', [SiteController::class, 'contato'])->name('site.contato');
-Route::post('/newsletter', [SiteController::class, 'newsletter'])->name('site.newsletter');
+Route::post('/contato', [SiteController::class, 'contato'])
+    ->middleware('throttle:10,1')
+    ->name('site.contato');
+Route::post('/newsletter', [SiteController::class, 'newsletter'])
+    ->middleware('throttle:10,1')
+    ->name('site.newsletter');
 
 Route::get('/sobre', fn() => redirect('/#sobre'));
 Route::get('/cursos-site', fn() => redirect('/#cursos'));
