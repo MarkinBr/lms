@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Mail\InscricaoDecisaoMail;
 use App\Models\Application;
 use App\Models\CourseModality;
 use App\Models\Curso;
@@ -208,6 +209,11 @@ class ApplicationStatusApiTest extends TestCase
         $this->assertSame('Documentação conferida.', $inscricao->observacoes_secretaria);
         $this->assertNotNull($inscricao->analisado_em);
         Notification::assertSentToTimes($aluno, ResetPassword::class, 1);
+        Mail::assertSent(InscricaoDecisaoMail::class, function (InscricaoDecisaoMail $mail) use ($inscricao): bool {
+            return $mail->tipo === InscricaoDecisaoMail::TIPO_MATRICULA
+                && $mail->protocolo === $inscricao->protocol
+                && $mail->numeroMatricula !== null;
+        });
     }
 
     public function test_aprovacao_reutiliza_aluno_existente_pelo_cpf_e_email(): void
@@ -272,6 +278,7 @@ class ApplicationStatusApiTest extends TestCase
         $this->assertSame($operadorOriginal, $inscricaoAtualizada->analisado_por_id);
         $this->assertSame($observacaoOriginal, $inscricaoAtualizada->observacoes_secretaria);
         Notification::assertSentToTimes($aluno, ResetPassword::class, 1);
+        Mail::assertSent(InscricaoDecisaoMail::class, 1);
     }
 
     public function test_rejeicao_exige_justificativa_valida_sem_alterar_inscricao(): void
@@ -321,6 +328,11 @@ class ApplicationStatusApiTest extends TestCase
         $this->assertSame(0, Matricula::query()->count());
         $this->assertSame(0, User::query()->where('nivel', 'aluno')->count());
         Notification::assertNothingSent();
+        Mail::assertSent(InscricaoDecisaoMail::class, function (InscricaoDecisaoMail $mail) use ($inscricao, $motivo): bool {
+            return $mail->tipo === InscricaoDecisaoMail::TIPO_REJEICAO
+                && $mail->protocolo === $inscricao->protocol
+                && $mail->motivoRejeicao === $motivo;
+        });
     }
 
     public function test_status_nao_suportados_sao_rejeitados_sem_efeitos_colaterais(): void
