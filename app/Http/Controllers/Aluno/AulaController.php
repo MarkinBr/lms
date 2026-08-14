@@ -14,6 +14,28 @@ use Illuminate\Support\Facades\DB;
 class AulaController extends Controller
 {
     /**
+     * Issue #49: verifica se o aluno autenticado possui vínculo (matrícula ativa/concluída)
+     * com o curso da aula. Aplica a mesma regra em todas as operações de aula,
+     * nunca confiando em IDs enviados pelo cliente.
+     */
+    private function autorizarVinculo(int $alunoId, Aula $aula): void
+    {
+        $curso = $aula->modulo?->curso;
+
+        abort_if(! $curso, 404, 'Esta aula não está vinculada a um curso válido.');
+
+        $matriculado = Matricula::where('user_id', $alunoId)
+            ->where('curso_id', $curso->id)
+            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
+            ->exists();
+
+        // 403 genérico: não confirma existência da aula/curso a quem não tem vínculo.
+        abort_unless($matriculado, 403, 'Você não está matriculado neste curso.');
+
+        abort_unless($aula->liberada, 403, 'Esta aula ainda não foi liberada.');
+    }
+
+    /**
      * Exibe a sala de aula.
      */
     public function show($id)
@@ -24,7 +46,7 @@ class AulaController extends Controller
         $modulo = $aula->modulo;
         $curso = $modulo?->curso;
 
-        if (!$curso) {
+        if (! $curso) {
             return redirect()->route('aluno.cursos')
                 ->with('error', 'Esta aula não está vinculada a um curso válido.');
         }
@@ -34,12 +56,12 @@ class AulaController extends Controller
             ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
             ->exists();
 
-        if (!$matriculado) {
+        if (! $matriculado) {
             return redirect()->route('aluno.cursos')
                 ->with('error', 'Você não está matriculado neste curso.');
         }
 
-        if (!$aula->liberada) {
+        if (! $aula->liberada) {
             return redirect()->route('aluno.curso.show', $curso->id)
                 ->with('error', 'Esta aula ainda não foi liberada.');
         }
@@ -141,6 +163,9 @@ class AulaController extends Controller
         $aluno = auth()->user();
         $aula = Aula::findOrFail($id);
 
+        // Issue #49: só permite concluir aula do próprio vínculo.
+        $this->autorizarVinculo((int) $aluno->id, $aula);
+
         DB::transaction(function () use ($aluno, $aula) {
             AulaProgresso::updateOrCreate(
                 ['aluno_id' => $aluno->id, 'aula_id' => $aula->id],
@@ -175,6 +200,10 @@ class AulaController extends Controller
 
         $aluno = auth()->user();
         $aula = Aula::findOrFail($id);
+
+        // Issue #49: só permite registrar progresso em aula do próprio vínculo.
+        $this->autorizarVinculo((int) $aluno->id, $aula);
+
         $novoProgresso = (int) $request->input('progresso');
 
         $progresso = Progresso::firstOrCreate(
@@ -182,7 +211,7 @@ class AulaController extends Controller
             ['progresso_porcentagem' => 0, 'concluida' => false]
         );
 
-        if (!$progresso->concluida && $novoProgresso > $progresso->progresso_porcentagem) {
+        if (! $progresso->concluida && $novoProgresso > $progresso->progresso_porcentagem) {
             $progresso->update(['progresso_porcentagem' => $novoProgresso]);
         }
 
@@ -202,6 +231,9 @@ class AulaController extends Controller
 
         $aluno = auth()->user();
         $aula = Aula::findOrFail($id);
+
+        // Issue #49: só permite registrar tempo em aula do próprio vínculo.
+        $this->autorizarVinculo((int) $aluno->id, $aula);
 
         $progresso = Progresso::firstOrCreate(
             ['user_id' => $aluno->id, 'aula_id' => $aula->id],
@@ -230,6 +262,9 @@ class AulaController extends Controller
 
         $aluno = auth()->user();
         $aula = Aula::findOrFail($id);
+
+        // Issue #49: só permite salvar quiz de aula do próprio vínculo.
+        $this->autorizarVinculo((int) $aluno->id, $aula);
 
         $progresso = Progresso::firstOrCreate(
             ['user_id' => $aluno->id, 'aula_id' => $aula->id],
@@ -261,6 +296,9 @@ class AulaController extends Controller
         $aluno = auth()->user();
         $aula = Aula::findOrFail($id);
 
+        // Issue #49: só permite salvar notas de aula do próprio vínculo.
+        $this->autorizarVinculo((int) $aluno->id, $aula);
+
         $progresso = Progresso::firstOrCreate(
             ['user_id' => $aluno->id, 'aula_id' => $aula->id],
             []
@@ -283,6 +321,9 @@ class AulaController extends Controller
 
         $aluno = auth()->user();
         $aula = Aula::findOrFail($id);
+
+        // Issue #49: só permite comentar em aula do próprio vínculo.
+        $this->autorizarVinculo((int) $aluno->id, $aula);
 
         $comentario = ComentarioAula::create([
             'aula_id' => $aula->id,
