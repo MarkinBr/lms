@@ -50,6 +50,9 @@
                                 </tr>
                             </table>
 
+                            <p style="margin:24px 0 10px;color:#5e6977;font-size:14px">Acompanhe sua inscrição diretamente pelo link seguro abaixo:</p>
+                            <p style="margin:0 0 24px"><a href="{{ $linkAcompanhamento }}" style="display:inline-block;padding:12px 18px;background:#102a43;border-radius:5px;color:#fff;font-size:13px;font-weight:bold;letter-spacing:.4px;text-decoration:none">ACOMPANHAR INSCRIÇÃO</a></p>
+
                             @if (! $ehMatricula)
                                 <div style="margin:20px 0;padding:16px 18px;border:1px solid #e7d1cd;border-radius:8px;background:#fdf5f4">
                                     <strong style="display:block;color:#6b7280;font-size:11px;letter-spacing:.7px">JUSTIFICATIVA DA SECRETARIA</strong>
@@ -57,7 +60,7 @@
                                 </div>
                             @endif
 
-                            <p style="color:#5e6977;font-size:14px">Para consultar os dados públicos da inscrição, acesse o portal e informe o protocolo e o mesmo e-mail utilizado no cadastro.</p>
+                            <p style="color:#5e6977;font-size:14px">O link é pessoal e válido por 30 dias. Não o compartilhe com terceiros.</p>
                             <p style="margin-bottom:0">Atenciosamente,<br><strong>Secretaria CETSADP</strong></p>
                         </td>
                     </tr>

@@ -6,6 +6,7 @@ use App\Mail\InscricaoDecisaoMail;
 use App\Models\Application;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Throwable;
 
 /**
@@ -26,6 +27,7 @@ class NotificarDecisaoInscricaoService
                 curso: (string) optional($inscricao->curso)->titulo,
                 modalidade: (string) optional($inscricao->courseModality)->nome,
                 protocolo: (string) $inscricao->protocol,
+                linkAcompanhamento: $this->linkAcompanhamento($inscricao),
                 tipo: InscricaoDecisaoMail::TIPO_MATRICULA,
                 numeroMatricula: $numeroMatricula !== '' ? $numeroMatricula : null,
             );
@@ -56,6 +58,7 @@ class NotificarDecisaoInscricaoService
                 curso: (string) optional($inscricao->curso)->titulo,
                 modalidade: (string) optional($inscricao->courseModality)->nome,
                 protocolo: (string) $inscricao->protocol,
+                linkAcompanhamento: $this->linkAcompanhamento($inscricao),
                 tipo: InscricaoDecisaoMail::TIPO_REJEICAO,
                 motivoRejeicao: $motivo,
             );
@@ -98,5 +101,14 @@ class NotificarDecisaoInscricaoService
         ]);
 
         return false;
+    }
+
+    private function linkAcompanhamento(Application $inscricao): string
+    {
+        return URL::temporarySignedRoute(
+            'site.acompanhamento-link',
+            now()->addDays(30),
+            ['application' => $inscricao->getKey()],
+        );
     }
 }

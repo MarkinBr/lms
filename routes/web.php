@@ -12,6 +12,7 @@ use App\Http\Controllers\RelatorioInadimplenciaController;
 use App\Http\Controllers\RelatorioFluxoCaixaController;
 use App\Http\Controllers\ExtratoAlunoController;
 use App\Http\Controllers\DREController;
+use App\Http\Controllers\AcompanhamentoInscricaoLinkController;
 
 // Controllers do Portal do Aluno
 use App\Http\Controllers\Aluno\DashboardController;
@@ -44,6 +45,9 @@ Route::post('/newsletter', [SiteController::class, 'newsletter'])->name('site.ne
 Route::get('/sobre', fn() => redirect('/#sobre'));
 Route::get('/cursos-site', fn() => redirect('/#cursos'));
 Route::get('/contato-site', fn() => redirect('/#contato'));
+Route::get('/acompanhar-inscricao/{application}', [AcompanhamentoInscricaoLinkController::class, 'show'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('site.acompanhamento-link');
 
 
 // === 2. AUTENTICAÇÃO E REDIRECIONAMENTOS ===
