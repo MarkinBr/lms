@@ -568,19 +568,28 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Armazena documento no storage
+     * Armazena documento no disco PRIVADO configurado (Issue #50).
+     *
+     * - Não há fallback silencioso para "public".
+     * - O disco é resolvido por config('filesystems.applications_disk'),
+     *   declarado em config/filesystems.php.
+     * - Se a configuração estiver ausente ou apontar para "public", o upload
+     *   falha com 500 registrado, em vez de gravar PII em disco público.
      */
     private function storeDocument($file, string $applicationId, string $type): string
     {
+        $disk = (string) config('filesystems.applications_disk');
+
+        // Segurança em profundidade: nunca degrada para o disco público.
+        if ($disk === '' || $disk === 'public') {
+            report(new \RuntimeException('Disco de documentos de inscrição não configurado corretamente.'));
+            abort(500);
+        }
+
         $folder = "applications/{$applicationId}";
         $extension = $file->getClientOriginalExtension();
         $filename = "{$type}_".Str::uuid().".{$extension}";
 
-        // Usa S3/R2 em produção, local em desenvolvimento
-        $disk = config('filesystems.cloud_disk', 'public');
-
-        $path = $file->storeAs($folder, $filename, $disk);
-
-        return $path;
+        return $file->storeAs($folder, $filename, $disk);
     }
 }

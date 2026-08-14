@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Disco dos documentos de inscrição (Issue #50)
+    |--------------------------------------------------------------------------
+    |
+    | Nome lógico do disco onde os documentos de inscrição (RG, CPF,
+    | comprovantes, histórico) são gravados. Deve apontar sempre para um
+    | disco PRIVADO. Nunca use "public" aqui: documentos contêm PII.
+    |
+    */
+    'applications_disk' => env('APPLICATIONS_DISK', 'applications'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -58,6 +70,36 @@ return [
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
             'report' => false,
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | applications — disco PRIVADO dos documentos de inscrição
+        |----------------------------------------------------------------------
+        |
+        | Driver "local" por padrão (raiz em storage/app/private/applications,
+        | sem symlink em public/). Para S3/R2, defina APPLICATIONS_DRIVER=s3
+        | e as demais APPLICATIONS_S3_*. NUNCA aponte este disco para
+        | storage/app/public — os arquivos aqui contêm PII do candidato.
+        |
+        */
+        'applications' => [
+            'driver' => env('APPLICATIONS_DRIVER', 'local'),
+
+            // Local (privado, sem serve, sem URL pública)
+            'root' => storage_path('app/private/applications'),
+            'visibility' => 'private',
+            'serve' => false,
+            'throw' => false,
+            'report' => false,
+
+            // S3/R2 (usados quando driver = s3)
+            'key' => env('APPLICATIONS_S3_KEY'),
+            'secret' => env('APPLICATIONS_S3_SECRET'),
+            'region' => env('APPLICATIONS_S3_REGION'),
+            'bucket' => env('APPLICATIONS_S3_BUCKET'),
+            'endpoint' => env('APPLICATIONS_S3_ENDPOINT'),
+            'use_path_style_endpoint' => env('APPLICATIONS_S3_PATH_STYLE', false),
         ],
 
     ],

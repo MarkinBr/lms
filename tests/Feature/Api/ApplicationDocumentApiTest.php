@@ -17,9 +17,17 @@ class ApplicationDocumentApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Issue #50: o upload deve ir para o disco PRIVADO configurado.
+        config()->set('filesystems.applications_disk', 'applications');
+    }
+
     public function test_authenticated_owner_can_upload_document_to_application_under_review(): void
     {
-        Storage::fake('public');
+        Storage::fake('applications');
 
         $user = User::factory()->create(['email' => 'candidata@example.com']);
         $application = $this->createApplicationEmAnalise(['email' => $user->email]);
@@ -45,12 +53,12 @@ class ApplicationDocumentApiTest extends TestCase
             ->sole();
 
         $this->assertGreaterThan(0, $document->tamanho);
-        Storage::disk('public')->assertExists($document->caminho_arquivo);
+        Storage::disk('applications')->assertExists($document->caminho_arquivo);
     }
 
     public function test_upload_is_rejected_when_authenticated_user_does_not_own_the_application(): void
     {
-        Storage::fake('public');
+        Storage::fake('applications');
 
         $user = User::factory()->create(['email' => 'dona-da-conta@example.com']);
         $application = $this->createApplicationEmAnalise(['email' => 'outra-pessoa@example.com']);
