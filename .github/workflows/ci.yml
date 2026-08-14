@@ -57,7 +57,8 @@ jobs:
         run: |
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base="$(git rev-parse HEAD^)"; fi
-          mapfile -t files < <(git diff --name-only "$base" "$GITHUB_SHA" -- '*.php')
+          # Ignora arquivos removidos: eles não existem no checkout para o php -l.
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base" "$GITHUB_SHA" -- '*.php')
           if [ "${#files[@]}" -gt 0 ]; then
             printf '%s\0' "${files[@]}" | xargs -0 -n1 php -l
           else
@@ -69,7 +70,8 @@ jobs:
         run: |
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base="$(git rev-parse HEAD^)"; fi
-          mapfile -t files < <(git diff --name-only "$base" "$GITHUB_SHA" -- '*.php')
+          # Mantém o Pint restrito aos PHP existentes e alterados.
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base" "$GITHUB_SHA" -- '*.php')
           if [ "${#files[@]}" -gt 0 ]; then vendor/bin/pint --test "${files[@]}"; fi
 
       - name: Testes Laravel direcionados
