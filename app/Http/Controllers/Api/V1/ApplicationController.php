@@ -9,6 +9,7 @@ use App\Models\CourseModality;
 use App\Models\User;
 use App\Services\AprovarInscricaoException;
 use App\Services\AprovarInscricaoService;
+use App\Services\NotificarInscricaoRecebidaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,10 @@ use Illuminate\Validation\ValidationException;
 
 class ApplicationController extends Controller
 {
+    public function __construct(
+        private readonly NotificarInscricaoRecebidaService $notificarInscricao,
+    ) {}
+
     /**
      * Regras comuns dos dados pessoais/endereço do candidato.
      * O e-mail deixou de ser globalmente único e o CPF passou a ser
@@ -193,13 +198,17 @@ class ApplicationController extends Controller
             }
         }
 
-        // TODO: Enviar e-mail de confirmação para o candidato
+        // Confirmação institucional por e-mail, somente após a inscrição e os
+        // documentos estarem persistidos. Falhas do provedor não desfazem o
+        // registro nem alteram a resposta HTTP 201.
+        $this->notificarInscricao->enviar(collect([$application]));
+
         // TODO: Enviar notificação WhatsApp para o candidato
         // TODO: Enviar notificação para Secretaria sobre nova inscrição
 
         return response()->json([
             'success' => true,
-            'message' => 'Inscrição realizada com sucesso! Você receberá um e-mail de confirmação.',
+            'message' => 'Inscrição realizada com sucesso! Guarde o protocolo abaixo.',
             'data' => [
                 'application' => $application->load(['curso', 'courseModality']),
                 'protocol' => $protocol,
@@ -321,7 +330,10 @@ class ApplicationController extends Controller
             return $criadas;
         });
 
-        // TODO: Enviar e-mail de confirmação com a lista de protocolos
+        // Uma confirmação consolidada com todos os protocolos, somente depois
+        // de a transação concluir e nunca dentro do laço.
+        $this->notificarInscricao->enviar(collect($inscricoesCriadas));
+
         // TODO: Enviar notificação para Secretaria sobre novas inscrições
 
         return response()->json([

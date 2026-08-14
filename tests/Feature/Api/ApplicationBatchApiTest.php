@@ -2,9 +2,15 @@
 
 namespace Tests\Feature\Api;
 
+use App\Mail\InscricaoConfirmacaoMail;
+use App\Models\Application;
 use App\Models\CourseModality;
 use App\Models\Curso;
+use App\Services\NotificarInscricaoRecebidaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ApplicationBatchApiTest extends TestCase
@@ -56,6 +62,8 @@ class ApplicationBatchApiTest extends TestCase
 
     public function test_cria_duas_inscricoes_para_cursos_diferentes_na_mesma_requisicao(): void
     {
+        Mail::fake();
+
         [$cursoA, $modalidadeA] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'EAD');
         [$cursoB, $modalidadeB] = $this->criarCursoComModalidade('Habilitação ao Diaconato', 'Presencial');
 
@@ -95,10 +103,94 @@ class ApplicationBatchApiTest extends TestCase
             'curso_id' => $cursoB->id,
             'status' => 'em_analise',
         ]);
+
+        Mail::assertSent(InscricaoConfirmacaoMail::class, function (InscricaoConfirmacaoMail $mail) use ($protocoloA, $protocoloB, $cursoA, $cursoB, $modalidadeA, $modalidadeB): bool {
+            return $mail->hasTo('maria@example.test')
+                && count($mail->inscricoes) === 2
+                && $mail->inscricoes[0] === [
+                    'protocol' => $protocoloA,
+                    'curso' => $cursoA->titulo,
+                    'modalidade' => $modalidadeA->nome,
+                ]
+                && $mail->inscricoes[1] === [
+                    'protocol' => $protocoloB,
+                    'curso' => $cursoB->titulo,
+                    'modalidade' => $modalidadeB->nome,
+                ];
+        });
+        Mail::assertSentCount(1);
+    }
+
+    public function test_falha_da_notificacao_nao_altera_201_nem_persistencia_do_lote(): void
+    {
+        Mail::fake();
+
+        $nivelTransacaoInicial = DB::connection()->transactionLevel();
+
+        $notificador = new class($nivelTransacaoInicial) extends NotificarInscricaoRecebidaService
+        {
+            public int $chamadas = 0;
+
+            public int $quantidadeRecebida = 0;
+
+            public bool $persistidasAposTransacao = false;
+
+            public function __construct(private readonly int $nivelTransacaoInicial) {}
+
+            public function enviar(Collection $inscricoes): bool
+            {
+                $this->chamadas++;
+                $this->quantidadeRecebida = $inscricoes->count();
+                $this->persistidasAposTransacao = $inscricoes->count() === 2
+                    && $inscricoes->every(
+                        fn (Application $inscricao): bool => $inscricao->exists
+                            && Application::query()->whereKey($inscricao->getKey())->exists(),
+                    )
+                    && DB::connection()->transactionLevel() === $this->nivelTransacaoInicial;
+
+                return false;
+            }
+        };
+        $this->app->instance(NotificarInscricaoRecebidaService::class, $notificador);
+
+        [$cursoA, $modalidadeA] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'Híbrido');
+        [$cursoB, $modalidadeB] = $this->criarCursoComModalidade('Habilitação ao Diaconato', 'Híbrido');
+
+        $response = $this->postJson('/api/v1/applications/batch', array_merge($this->dadosPessoais(), [
+            'email' => 'lote.falha@example.test',
+            'cpf' => '52998224725',
+            'inscricoes' => [
+                ['curso_id' => $cursoA->id, 'course_modality_id' => $modalidadeA->id],
+                ['curso_id' => $cursoB->id, 'course_modality_id' => $modalidadeB->id],
+            ],
+        ]));
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(2, 'data.inscricoes');
+
+        $this->assertNotEmpty($response->json('data.inscricoes.0.protocol'));
+        $this->assertNotEmpty($response->json('data.inscricoes.1.protocol'));
+        $this->assertSame(1, $notificador->chamadas);
+        $this->assertSame(2, $notificador->quantidadeRecebida);
+        $this->assertTrue($notificador->persistidasAposTransacao);
+        $this->assertDatabaseCount('applications', 2);
+        $this->assertDatabaseHas('applications', [
+            'email' => 'lote.falha@example.test',
+            'curso_id' => $cursoA->id,
+        ]);
+        $this->assertDatabaseHas('applications', [
+            'email' => 'lote.falha@example.test',
+            'curso_id' => $cursoB->id,
+        ]);
+        Mail::assertNothingSent();
     }
 
     public function test_impede_curso_repetido_na_mesma_requisicao(): void
     {
+        Mail::fake();
+
         [$curso, $modalidade] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'EAD');
 
         $response = $this->postJson('/api/v1/applications/batch', array_merge($this->dadosPessoais(), [
@@ -111,10 +203,13 @@ class ApplicationBatchApiTest extends TestCase
         $response->assertStatus(422);
 
         $this->assertDatabaseCount('applications', 0);
+        Mail::assertNothingSent();
     }
 
     public function test_rollback_total_quando_modalidade_nao_pertence_ao_curso(): void
     {
+        Mail::fake();
+
         [$cursoA, $modalidadeA] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'EAD');
         [$cursoB] = $this->criarCursoComModalidade('Habilitação ao Diaconato', 'Presencial');
 
@@ -141,10 +236,13 @@ class ApplicationBatchApiTest extends TestCase
         $this->assertArrayHasKey('inscricoes', $details);
 
         $this->assertDatabaseCount('applications', 0);
+        Mail::assertNothingSent();
     }
 
     public function test_dois_erros_em_indices_diferentes_sao_preservados_e_nada_e_gravado(): void
     {
+        Mail::fake();
+
         [$cursoA, $modalidadeA] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'EAD');
         [$cursoB, $modalidadeB] = $this->criarCursoComModalidade('Habilitação ao Diaconato', 'Presencial');
         [$cursoC] = $this->criarCursoComModalidade('Liderança Cristã Ministerial', 'Híbrido');
@@ -182,10 +280,13 @@ class ApplicationBatchApiTest extends TestCase
         $this->assertDatabaseCount('applications', 1);
         $this->assertDatabaseMissing('applications', ['curso_id' => $cursoB->id]);
         $this->assertDatabaseMissing('applications', ['curso_id' => $cursoC->id]);
+        Mail::assertSentCount(1);
     }
 
     public function test_impede_inscricao_duplicada_para_o_mesmo_curso_com_o_mesmo_cpf(): void
     {
+        Mail::fake();
+
         [$cursoA, $modalidadeA] = $this->criarCursoComModalidade('Curso Médio em Teologia', 'EAD');
         [$cursoB, $modalidadeB] = $this->criarCursoComModalidade('Habilitação ao Diaconato', 'Presencial');
 
@@ -220,6 +321,8 @@ class ApplicationBatchApiTest extends TestCase
 
         // Continua existindo apenas a inscrição original
         $this->assertDatabaseCount('applications', 1);
+        Mail::assertSent(InscricaoConfirmacaoMail::class, 1);
+        Mail::assertSentCount(1);
     }
 
     public function test_permite_mesmo_cpf_em_cursos_diferentes_via_endpoint_unico(): void
