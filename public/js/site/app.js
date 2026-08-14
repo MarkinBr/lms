@@ -284,6 +284,13 @@ window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.
 totop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 let toastTimer;
 function toast(msg){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
+function primeiraMensagemPublica(valor){
+  if(valor==null)return null;
+  if(typeof valor==='string')return valor.trim()||null;
+  if(Array.isArray(valor)){for(const item of valor){const msg=primeiraMensagemPublica(item);if(msg)return msg;}return null;}
+  if(typeof valor==='object'){for(const chave of Object.keys(valor)){const msg=primeiraMensagemPublica(valor[chave]);if(msg)return msg;}}
+  return null;
+}
 /* inscrição: envio em lote para /api/v1/applications/batch */
 (function(){
   const form=document.getElementById('inscForm');
@@ -465,7 +472,19 @@ function toast(msg){const t=document.getElementById('toast');document.getElement
 })();
 document.getElementById('loginSecForm').addEventListener('submit',e=>{e.preventDefault();toast('Acesso concedido. Carregando secretaria...');setTimeout(()=>go('dash-secretaria'),500);});
 document.getElementById('loginAluForm').addEventListener('submit',e=>{e.preventDefault();toast('Acesso concedido. Carregando portal...');setTimeout(()=>go('dash-aluno'),500);});
-const nlForm=document.getElementById('nlForm');if(nlForm)nlForm.addEventListener('submit',e=>{e.preventDefault();toast('Inscrição na newsletter confirmada! Que Deus abençoe.');nlForm.reset();});
-const contactForm=document.getElementById('contactForm');if(contactForm)contactForm.addEventListener('submit',e=>{e.preventDefault();toast('Mensagem enviada! Retornaremos em até 24h úteis.');contactForm.reset();});
+async function enviarFormularioPublico(form, sucesso, falha){
+  const btn=form.querySelector('button[type="submit"]');
+  const original=btn?btn.innerHTML:'';
+  if(btn){btn.disabled=true;btn.innerHTML='Enviando…';}
+  try{
+    const resposta=await fetch(form.action,{method:'POST',headers:{Accept:'application/json','X-Requested-With':'XMLHttpRequest'},body:new FormData(form)});
+    let dados=null;try{dados=await resposta.json();}catch(_){ }
+    if(resposta.ok&&dados&&dados.success){toast(dados.message||sucesso);form.reset();}
+    else{toast((dados&&dados.message)||primeiraMensagemPublica(dados&&dados.errors)||falha);}
+  }catch(_){toast('Falha de conexão. Verifique sua internet e tente novamente.');}
+  finally{if(btn){btn.disabled=false;btn.innerHTML=original;}}
+}
+const nlForm=document.getElementById('nlForm');if(nlForm)nlForm.addEventListener('submit',e=>{e.preventDefault();if(!nlForm.reportValidity())return;enviarFormularioPublico(nlForm,'Inscrição na newsletter confirmada! Que Deus abençoe.','Não foi possível concluir a inscrição agora. Tente novamente.');});
+const contactForm=document.getElementById('contactForm');if(contactForm)contactForm.addEventListener('submit',e=>{e.preventDefault();if(!contactForm.reportValidity())return;enviarFormularioPublico(contactForm,'Mensagem enviada! Retornaremos em até 24h úteis.','Não foi possível enviar sua mensagem agora. Tente novamente.');});
 document.querySelectorAll('.lfield .si[data-ic], .cfg-field .si[data-ic]').forEach(btn=>{btn.addEventListener('click',()=>{const inp=btn.parentElement.querySelector('input');if(inp.type==='password'){inp.type='text';btn.innerHTML=svg('eye');}else{inp.type='password';btn.innerHTML=svg('eyeoff');}});});
 go('home');
