@@ -110,6 +110,16 @@ class Matricula extends Model
     }
 
     /**
+     * Notas legadas são vinculadas ao aluno (user_id), não à matrícula.
+     * Mantemos a relação por compatibilidade até a matriz de avaliações
+     * acadêmicas passar a ter uma chave própria de matrícula/disciplina.
+     */
+    public function notas(): HasMany
+    {
+        return $this->hasMany(Nota::class, 'user_id', 'user_id');
+    }
+
+    /**
      * Resumo de frequência da matrícula por chamadas concluídas.
      * Pode ser recortado por turma e/ou disciplina. Nunca gera dados:
      * somente leitura. Percentual = (presentes + faltas justificadas) /

@@ -1,6 +1,8 @@
 @extends('layouts.aluno')
 
 @section('title', 'Documentos da inscrição')
+@section('header_title', 'Documentos da inscrição')
+@section('header_subtitle', 'Envie os documentos solicitados pela Secretaria')
 
 @section('content')
     @php

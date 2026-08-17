@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Nota extends Model
 {
@@ -37,6 +37,34 @@ class Nota extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    // Os templates antigos usam estes nomes enquanto a tabela real utiliza
+    // o vocabulário acadêmico legado abaixo. Os accessors evitam que o portal
+    // quebre ao exibir notas já cadastradas.
+    public function getNotaAttribute(): ?float
+    {
+        return $this->media_final !== null ? (float) $this->media_final : null;
+    }
+
+    public function getTipoAvaliacaoAttribute(): string
+    {
+        return (string) ($this->disciplina ?: 'Avaliação');
+    }
+
+    public function getDescricaoAttribute(): ?string
+    {
+        return $this->observacoes;
+    }
+
+    public function getDataAvaliacaoAttribute()
+    {
+        return $this->created_at;
+    }
+
+    public function getPesoAttribute(): int
+    {
+        return 1;
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -61,7 +89,7 @@ class Nota extends Model
                 $nota->situacao = 'Reprovado';
             } else {
                 // Caso não caia nas condições acima (ex: média entre 5 e 7), fica em recuperação/exame
-                $nota->situacao = 'Recuperação'; 
+                $nota->situacao = 'Recuperação';
             }
         });
     }

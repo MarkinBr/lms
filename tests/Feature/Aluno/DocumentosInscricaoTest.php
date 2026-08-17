@@ -9,6 +9,7 @@ use App\Models\Application;
 use App\Models\ApplicationDocument;
 use App\Models\CourseModality;
 use App\Models\Curso;
+use App\Models\Matricula;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -304,6 +305,52 @@ class DocumentosInscricaoTest extends TestCase
         $this->actingAs($aluno);
 
         $this->assertFalse(DocumentosPendentesWidget::canView());
+    }
+
+    public function test_dashboard_web_exibe_aviso_e_link_para_documentos_pendentes(): void
+    {
+        $aluno = $this->alunoAtivo();
+        $this->inscricaoDe($aluno);
+
+        $resposta = $this->actingAs($aluno)->get(route('aluno.dashboard'));
+
+        $resposta->assertOk()
+            ->assertSee('Documentos da inscrição')
+            ->assertSee('Enviar documentos')
+            ->assertSee(route('aluno.documentos-inscricao'));
+    }
+
+    public function test_atalho_legado_de_documentos_redireciona_para_a_central(): void
+    {
+        $aluno = $this->alunoAtivo();
+        $this->inscricaoDe($aluno);
+
+        $this->actingAs($aluno)
+            ->get(route('aluno.documentos'))
+            ->assertRedirect(route('aluno.documentos-inscricao'));
+    }
+
+    public function test_portal_renderiza_frequencia_e_notas_com_matricula_sem_turma(): void
+    {
+        $aluno = $this->alunoAtivo();
+        $inscricao = $this->inscricaoDe($aluno);
+
+        Matricula::create([
+            'user_id' => $aluno->id,
+            'curso_id' => $inscricao->curso_id,
+            'application_id' => $inscricao->id,
+            'status' => Matricula::STATUS_ATIVA,
+        ]);
+
+        $this->actingAs($aluno)
+            ->get(route('aluno.frequencia'))
+            ->assertOk()
+            ->assertSee('Curso de Teologia');
+
+        $this->actingAs($aluno)
+            ->get(route('aluno.notas'))
+            ->assertOk()
+            ->assertSee('Curso de Teologia');
     }
 
     // 13. HTML da central não expõe CPF, endereço, caminho físico nem URL pública.

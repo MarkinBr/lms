@@ -6,6 +6,11 @@
 
 @section('content')
 
+    @php
+        /** @var \App\Support\ApplicationDocuments\DocumentosInscricaoService $documentosService */
+        $documentosInscricao = app(\App\Support\ApplicationDocuments\DocumentosInscricaoService::class)->resumoDo(Auth::user());
+    @endphp
+
     <div class="space-y-6">
         {{-- Header de Boas-vindas Personalizado --}}
         <div class="bg-gradient-to-r from-[#003366] via-[#004488] to-[#003366] rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
@@ -25,6 +30,34 @@
                 </div>
             </div>
         </div>
+
+        @if(($documentosInscricao['tem_inscricao'] ?? false) && (($documentosInscricao['pendentes'] ?? 0) > 0 || ($documentosInscricao['rejeitados'] ?? 0) > 0))
+            <section class="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-orange-50 p-6 shadow-sm" aria-labelledby="documentos-pendentes-titulo">
+                <div class="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-amber-200/30"></div>
+                <div class="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-start gap-4">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">
+                            <i class="fa-solid fa-file-circle-exclamation text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div>
+                            <h2 id="documentos-pendentes-titulo" class="text-lg font-black text-slate-800">Documentos da inscrição</h2>
+                            <p class="mt-1 text-sm text-slate-600">
+                                @if(($documentosInscricao['rejeitados'] ?? 0) > 0)
+                                    Há documentos que precisam ser reenviados pela Central.
+                                @else
+                                    Sua inscrição tem {{ $documentosInscricao['pendentes'] }} documento(s) pendente(s) de envio.
+                                @endif
+                            </p>
+                            <p class="mt-2 text-xs font-semibold text-slate-500">{{ $documentosInscricao['enviados'] }} de {{ $documentosInscricao['total'] }} documentos enviados</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('aluno.documentos-inscricao') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#003366] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#002244] focus:outline-none focus:ring-2 focus:ring-[#003366] focus:ring-offset-2">
+                        Enviar documentos
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </section>
+        @endif
         
         {{-- Cards de Estatísticas Rápidas --}}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">

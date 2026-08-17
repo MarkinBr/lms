@@ -61,17 +61,27 @@
         <h3 class="text-lg font-black text-slate-800">Detalhamento por Curso</h3>
 
         @forelse($matriculas as $matricula)
+        @php
+            $curso = $matricula->turma?->curso ?? $matricula->curso;
+            $nomeCurso = $curso?->titulo ?? 'Curso em organização';
+        @endphp
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
             
             {{-- Cabeçalho do Card do Curso --}}
             <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-xl">
-                        {{ substr($matricula->turma->curso->nome, 0, 1) }}
+                        {{ substr($nomeCurso, 0, 1) }}
                     </div>
                     <div>
-                        <h4 class="font-bold text-slate-800 text-lg">{{ $matricula->turma->curso->nome }}</h4>
-                        <p class="text-sm text-slate-500">Turma: {{ $matricula->turma->nome }}</p>
+                        <h4 class="font-bold text-slate-800 text-lg">{{ $nomeCurso }}</h4>
+                        <p class="text-sm text-slate-500">
+                            @if($matricula->turma)
+                                Turma: {{ $matricula->turma->nome ?? 'Sem identificação' }}
+                            @else
+                                Matrícula ativa · turma em organização
+                            @endif
+                        </p>
                     </div>
                 </div>
                 

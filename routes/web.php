@@ -151,7 +151,10 @@ Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function ()
     Route::post('/certificados/solicitar/{matricula}', [CertificadosController::class, 'solicitar'])->name('certificados.solicitar');
 
     // Documentos
-    Route::get('/documentos', [DocumentosController::class, 'index'])->name('documentos');
+    // A entrada principal do portal é a Central de Documentos da Inscrição.
+    // A tela legada de declarações continua disponível em /documentos/emitidos.
+    Route::get('/documentos', fn () => redirect()->route('aluno.documentos-inscricao'))->name('documentos');
+    Route::get('/documentos/emitidos', [DocumentosController::class, 'index'])->name('documentos.emitidos');
     Route::post('/documentos/solicitar-declaracao', [DocumentosController::class, 'solicitarDeclaracao'])->name('documentos.solicitar-declaracao');
     Route::get('/documentos/declaracao/{id}/download', [DocumentosController::class, 'download'])->name('documentos.download');
     Route::get('/documentos/historico/{matricula}', [DocumentosController::class, 'historicoEscolar'])->name('documentos.historico');
