@@ -14,11 +14,11 @@
 
     <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8" aria-labelledby="titulo-central">
         <header class="mb-8">
-            <p class="text-sm font-medium text-emerald-700">Portal do aluno</p>
-            <h1 id="titulo-central" class="mt-1 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-[#003366]">Central acadêmica</p>
+            <h1 id="titulo-central" class="mt-1 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                 Documentos da inscrição
             </h1>
-            <p class="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-300">
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-gray-300">
                 Envie e acompanhe os documentos exigidos pela secretaria para concluir sua inscrição.
                 Todos os arquivos ficam armazenados em ambiente privado e só podem ser vistos por você
                 e pela equipe autorizada.
@@ -53,7 +53,7 @@
         @else
             {{-- Cartão de progresso --}}
             <section aria-labelledby="titulo-progresso"
-                     class="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                     class="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-md dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 id="titulo-progresso" class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -78,22 +78,26 @@
                     </div>
                 </div>
 
-                <dl class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div class="rounded-lg bg-gray-50 p-3 text-center dark:bg-gray-800">
-                        <dt class="text-xs text-gray-500 dark:text-gray-400">Enviados</dt>
-                        <dd class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{{ $resumo['enviados'] }}</dd>
+                <dl class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center">
+                        <dt class="text-xs font-semibold text-amber-800">Pendentes</dt>
+                        <dd class="mt-1 text-xl font-black text-amber-900">{{ $resumo['pendentes'] }}</dd>
                     </div>
-                    <div class="rounded-lg bg-blue-50 p-3 text-center dark:bg-blue-500/10">
+                    <div class="rounded-xl border border-sky-200 bg-sky-50 p-3 text-center">
+                        <dt class="text-xs font-semibold text-sky-800">Enviados</dt>
+                        <dd class="mt-1 text-xl font-black text-sky-900">{{ $resumo['enviados'] }}</dd>
+                    </div>
+                    <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-center">
                         <dt class="text-xs text-blue-700 dark:text-blue-300">Em análise</dt>
-                        <dd class="mt-1 text-xl font-semibold text-blue-800 dark:text-blue-200">{{ $resumo['em_analise'] }}</dd>
+                        <dd class="mt-1 text-xl font-black text-indigo-900">{{ $resumo['em_analise'] }}</dd>
                     </div>
-                    <div class="rounded-lg bg-emerald-50 p-3 text-center dark:bg-emerald-500/10">
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
                         <dt class="text-xs text-emerald-700 dark:text-emerald-300">Aprovados</dt>
-                        <dd class="mt-1 text-xl font-semibold text-emerald-800 dark:text-emerald-200">{{ $resumo['aprovados'] }}</dd>
+                        <dd class="mt-1 text-xl font-black text-emerald-900">{{ $resumo['aprovados'] }}</dd>
                     </div>
-                    <div class="rounded-lg bg-red-50 p-3 text-center dark:bg-red-500/10">
+                    <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-center">
                         <dt class="text-xs text-red-700 dark:text-red-300">Rejeitados</dt>
-                        <dd class="mt-1 text-xl font-semibold text-red-800 dark:text-red-200">{{ $resumo['rejeitados'] }}</dd>
+                        <dd class="mt-1 text-xl font-black text-rose-900">{{ $resumo['rejeitados'] }}</dd>
                     </div>
                 </dl>
             </section>
@@ -105,12 +109,12 @@
                 @foreach ($resumo['documentos'] as $documento)
                     @php
                         $cores = [
-                            'pendente' => ['bg' => 'bg-gray-100 text-gray-700', 'chip' => 'bg-gray-500'],
-                            'enviado' => ['bg' => 'bg-blue-100 text-blue-800', 'chip' => 'bg-blue-500'],
-                            'em_analise' => ['bg' => 'bg-blue-100 text-blue-800', 'chip' => 'bg-blue-500'],
-                            'aprovado' => ['bg' => 'bg-emerald-100 text-emerald-800', 'chip' => 'bg-emerald-500'],
-                            'rejeitado' => ['bg' => 'bg-red-100 text-red-800', 'chip' => 'bg-red-500'],
-                        ][$documento['status']] ?? ['bg' => 'bg-gray-100 text-gray-700', 'chip' => 'bg-gray-500'];
+                            'pendente' => ['bg' => 'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300', 'chip' => 'bg-amber-600', 'border' => 'border-l-amber-500'],
+                            'enviado' => ['bg' => 'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-300', 'chip' => 'bg-sky-600', 'border' => 'border-l-sky-500'],
+                            'em_analise' => ['bg' => 'bg-indigo-100 text-indigo-900 ring-1 ring-inset ring-indigo-300', 'chip' => 'bg-indigo-600', 'border' => 'border-l-indigo-500'],
+                            'aprovado' => ['bg' => 'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-300', 'chip' => 'bg-emerald-600', 'border' => 'border-l-emerald-500'],
+                            'rejeitado' => ['bg' => 'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-300', 'chip' => 'bg-rose-600', 'border' => 'border-l-rose-500'],
+                        ][$documento['status']] ?? ['bg' => 'bg-slate-100 text-slate-800 ring-1 ring-inset ring-slate-300', 'chip' => 'bg-slate-600', 'border' => 'border-l-slate-500'];
 
                         $idForm = 'form-doc-'.$documento['tipo'];
                         $idInput = 'input-doc-'.$documento['tipo'];
@@ -118,7 +122,7 @@
 
                     <article
                         aria-labelledby="titulo-doc-{{ $documento['tipo'] }}"
-                        class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+                        class="rounded-2xl border border-slate-200 border-l-4 {{ $cores['border'] }} bg-white p-5 shadow-md transition-shadow hover:shadow-lg dark:border-gray-800 dark:bg-gray-900"
                     >
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div class="min-w-0">
@@ -167,7 +171,7 @@
                                 @if ($resumo['pode_enviar'] && $documento['status'] !== 'aprovado')
                                     <button
                                         type="button"
-                                        class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                                        class="inline-flex items-center gap-2 rounded-lg bg-[#003366] px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-[#002244] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003366] focus-visible:ring-offset-2"
                                         onclick="document.getElementById('{{ $idForm }}').classList.toggle('hidden'); document.getElementById('{{ $idInput }}').focus();"
                                         aria-expanded="false"
                                         aria-controls="{{ $idForm }}"

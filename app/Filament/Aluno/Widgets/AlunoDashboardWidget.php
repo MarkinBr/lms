@@ -106,7 +106,7 @@ class AlunoDashboardWidget extends Widget
         return \DB::table('matriculas')
             ->join('cursos', 'cursos.id', '=', 'matriculas.curso_id')
             ->where('matriculas.user_id', Auth::id())
-            ->where('matriculas.status', 'ativo')
+            ->whereRaw("LOWER(COALESCE(matriculas.status, '')) IN ('ativo', 'ativa', 'cursando')")
             ->select('cursos.*', 'matriculas.data_matricula')
             ->get()
             ->map(function($curso) {

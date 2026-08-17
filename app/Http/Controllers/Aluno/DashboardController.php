@@ -16,7 +16,7 @@ class DashboardController extends Controller
         // --- 1. CURSOS E PROGRESSO ---
         $matriculas = Matricula::with(['curso.modulos.aulas'])
             ->where('user_id', $userId)
-            ->where('status', 'ativo')
+            ->whereRaw("LOWER(COALESCE(status, '')) IN ('ativo', 'ativa', 'cursando')")
             ->take(4)
             ->get();
             
@@ -51,7 +51,7 @@ class DashboardController extends Controller
                      ->where('aula_progresso.aluno_id', '=', $userId);
             })
             ->where('matriculas.user_id', $userId)
-            ->where('matriculas.status', 'ativo')
+            ->whereRaw("LOWER(COALESCE(matriculas.status, '')) IN ('ativo', 'ativa', 'cursando')")
             ->whereNull('aula_progresso.concluida')
             ->count();
 

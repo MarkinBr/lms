@@ -320,6 +320,25 @@ class DocumentosInscricaoTest extends TestCase
             ->assertSee(route('aluno.documentos-inscricao'));
     }
 
+    public function test_dashboard_considera_matricula_ativa_como_curso_ativo(): void
+    {
+        $aluno = $this->alunoAtivo();
+        $inscricao = $this->inscricaoDe($aluno);
+
+        Matricula::create([
+            'user_id' => $aluno->id,
+            'curso_id' => $inscricao->curso_id,
+            'application_id' => $inscricao->id,
+            'status' => Matricula::STATUS_ATIVA,
+        ]);
+
+        $this->actingAs($aluno)
+            ->get(route('aluno.dashboard'))
+            ->assertOk()
+            ->assertSee('Cursos Ativos')
+            ->assertSee('Curso de Teologia');
+    }
+
     public function test_atalho_legado_de_documentos_redireciona_para_a_central(): void
     {
         $aluno = $this->alunoAtivo();
