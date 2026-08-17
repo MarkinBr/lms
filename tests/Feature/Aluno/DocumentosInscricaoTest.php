@@ -317,7 +317,13 @@ class DocumentosInscricaoTest extends TestCase
         $resposta->assertOk()
             ->assertSee('Documentos da inscrição')
             ->assertSee('Enviar documentos')
-            ->assertSee(route('aluno.documentos-inscricao'));
+            ->assertSee(route('aluno.documentos-inscricao'))
+            ->assertSee('Aulas ainda não concluídas')
+            ->assertDontSee('Semestre Atual')
+            ->assertDontSee('Próximos 7 dias')
+            ->assertDontSee('Suporte Acadêmico')
+            ->assertDontSee('Biblioteca Virtual')
+            ->assertDontSee('Comunidade');
     }
 
     public function test_dashboard_considera_matricula_ativa_como_curso_ativo(): void
