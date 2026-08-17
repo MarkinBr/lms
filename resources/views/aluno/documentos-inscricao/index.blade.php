@@ -15,10 +15,10 @@
     <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8" aria-labelledby="titulo-central">
         <header class="mb-8">
             <p class="text-xs font-black uppercase tracking-[0.18em] text-[#003366]">Central acadêmica</p>
-            <h1 id="titulo-central" class="mt-1 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            <h1 id="titulo-central" class="mt-1 text-3xl font-black tracking-tight text-[#0f172a]">
                 Documentos da inscrição
             </h1>
-            <p class="mt-2 max-w-2xl text-sm font-medium leading-7 text-slate-800 dark:text-gray-200">
+            <p class="mt-2 max-w-2xl text-sm font-medium leading-7 text-[#334155]">
                 Envie e acompanhe os documentos exigidos pela secretaria para concluir sua inscrição.
                 Todos os arquivos ficam armazenados em ambiente privado e só podem ser vistos por você
                 e pela equipe autorizada.
