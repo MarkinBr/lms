@@ -18,7 +18,7 @@
             <h1 id="titulo-central" class="mt-1 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                 Documentos da inscrição
             </h1>
-            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-gray-300">
+            <p class="mt-2 max-w-2xl text-sm font-medium leading-7 text-slate-800 dark:text-gray-200">
                 Envie e acompanhe os documentos exigidos pela secretaria para concluir sua inscrição.
                 Todos os arquivos ficam armazenados em ambiente privado e só podem ser vistos por você
                 e pela equipe autorizada.
