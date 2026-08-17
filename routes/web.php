@@ -16,6 +16,7 @@ use App\Http\Controllers\Aluno\PerfilController;
 use App\Http\Controllers\Aluno\SecretariaController;
 // Controllers do Portal do Aluno
 use App\Http\Controllers\Auth\AlunoLoginController;
+use App\Http\Controllers\Auth\AdminAccessTokenController;
 use App\Http\Controllers\DREController;
 use App\Http\Controllers\ExtratoAlunoController;
 use App\Http\Controllers\MatriculaReportController;
@@ -55,6 +56,21 @@ Route::get('/acompanhar-inscricao/{application}', [AcompanhamentoInscricaoLinkCo
 
 // === 2. AUTENTICAÇÃO E REDIRECIONAMENTOS ===
 Route::get('/login', fn () => redirect()->route('aluno.login'))->name('login');
+
+// Token temporário do administrador: frase de 24 palavras, uso único e
+// validade curta. As respostas do controller são genéricas para não enumerar
+// contas administrativas.
+Route::prefix('admin/token')->name('admin.token.')->group(function () {
+    Route::get('/', [AdminAccessTokenController::class, 'create'])
+        ->middleware(['guest', 'throttle:10,1'])
+        ->name('create');
+    Route::post('/request', [AdminAccessTokenController::class, 'request'])
+        ->middleware(['guest', 'throttle:3,10'])
+        ->name('request');
+    Route::post('/authenticate', [AdminAccessTokenController::class, 'authenticate'])
+        ->middleware(['guest', 'throttle:5,10'])
+        ->name('authenticate');
+});
 
 Route::middleware('guest')->group(function () {
     Route::get('/portal/login', [AlunoLoginController::class, 'showLoginForm'])->name('aluno.login');
