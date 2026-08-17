@@ -8,6 +8,7 @@ use App\Http\Controllers\Aluno\ComunicacaoController;
 use App\Http\Controllers\Aluno\CursosController;
 use App\Http\Controllers\Aluno\DashboardController;
 use App\Http\Controllers\Aluno\DocumentosController;
+use App\Http\Controllers\Aluno\DocumentosInscricaoController;
 use App\Http\Controllers\Aluno\FinanceiroController;
 use App\Http\Controllers\Aluno\FrequenciaController;
 use App\Http\Controllers\Aluno\NotasController;
@@ -154,6 +155,16 @@ Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function ()
     Route::post('/documentos/solicitar-declaracao', [DocumentosController::class, 'solicitarDeclaracao'])->name('documentos.solicitar-declaracao');
     Route::get('/documentos/declaracao/{id}/download', [DocumentosController::class, 'download'])->name('documentos.download');
     Route::get('/documentos/historico/{matricula}', [DocumentosController::class, 'historicoEscolar'])->name('documentos.historico');
+
+    // Issue #53: Central de Documentos da Inscrição (documentos enviados
+    // pelo candidato, disco privado `applications`). Não confundir com o
+    // bloco acima, que trata documentos emitidos pela instituição.
+    Route::get('/documentos-inscricao', [DocumentosInscricaoController::class, 'index'])
+        ->middleware('aluno')
+        ->name('documentos-inscricao');
+    Route::post('/documentos-inscricao', [DocumentosInscricaoController::class, 'store'])
+        ->middleware(['aluno', 'throttle:10,1'])
+        ->name('documentos-inscricao.store');
 
     // Perfil
     Route::get('/perfil', [PerfilController::class, 'index'])->name('perfil');
