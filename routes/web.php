@@ -8,6 +8,7 @@ use App\Http\Controllers\Aluno\ComunicacaoController;
 use App\Http\Controllers\Aluno\CursosController;
 use App\Http\Controllers\Aluno\DashboardController;
 use App\Http\Controllers\Aluno\DocumentosController;
+use App\Http\Controllers\Aluno\DocumentosInscricaoController;
 use App\Http\Controllers\Aluno\FinanceiroController;
 use App\Http\Controllers\Aluno\FrequenciaController;
 use App\Http\Controllers\Aluno\NotasController;
@@ -150,10 +151,23 @@ Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function ()
     Route::post('/certificados/solicitar/{matricula}', [CertificadosController::class, 'solicitar'])->name('certificados.solicitar');
 
     // Documentos
-    Route::get('/documentos', [DocumentosController::class, 'index'])->name('documentos');
+    // A entrada principal do portal é a Central de Documentos da Inscrição.
+    // A tela legada de declarações continua disponível em /documentos/emitidos.
+    Route::get('/documentos', fn () => redirect()->route('aluno.documentos-inscricao'))->name('documentos');
+    Route::get('/documentos/emitidos', [DocumentosController::class, 'index'])->name('documentos.emitidos');
     Route::post('/documentos/solicitar-declaracao', [DocumentosController::class, 'solicitarDeclaracao'])->name('documentos.solicitar-declaracao');
     Route::get('/documentos/declaracao/{id}/download', [DocumentosController::class, 'download'])->name('documentos.download');
     Route::get('/documentos/historico/{matricula}', [DocumentosController::class, 'historicoEscolar'])->name('documentos.historico');
+
+    // Issue #53: Central de Documentos da Inscrição (documentos enviados
+    // pelo candidato, disco privado `applications`). Não confundir com o
+    // bloco acima, que trata documentos emitidos pela instituição.
+    Route::get('/documentos-inscricao', [DocumentosInscricaoController::class, 'index'])
+        ->middleware('aluno')
+        ->name('documentos-inscricao');
+    Route::post('/documentos-inscricao', [DocumentosInscricaoController::class, 'store'])
+        ->middleware(['aluno', 'throttle:10,1'])
+        ->name('documentos-inscricao.store');
 
     // Perfil
     Route::get('/perfil', [PerfilController::class, 'index'])->name('perfil');

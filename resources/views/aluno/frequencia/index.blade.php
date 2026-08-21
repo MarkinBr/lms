@@ -37,17 +37,27 @@
         <h3 class="text-lg font-black text-slate-800">Detalhamento por Curso</h3>
 
         @forelse($dadosFrequencia as $dados)
+        @php
+            $curso = $dados['matricula']->turma?->curso ?? $dados['matricula']->curso;
+            $nomeCurso = $curso?->titulo ?? 'Curso em organização';
+        @endphp
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
             
             {{-- Cabeçalho do Card --}}
             <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-xl">
-                        {{ substr($dados['matricula']->turma->curso->nome, 0, 1) }}
+                        {{ substr($nomeCurso, 0, 1) }}
                     </div>
                     <div>
-                        <h4 class="font-bold text-slate-800 text-lg">{{ $dados['matricula']->turma->curso->nome }}</h4>
-                        <p class="text-sm text-slate-500">Turma: {{ $dados['matricula']->turma->nome }}</p>
+                        <h4 class="font-bold text-slate-800 text-lg">{{ $nomeCurso }}</h4>
+                        <p class="text-sm text-slate-500">
+                            @if($dados['matricula']->turma)
+                                Turma: {{ $dados['matricula']->turma->nome ?? 'Sem identificação' }}
+                            @else
+                                Matrícula ativa · turma em organização
+                            @endif
+                        </p>
                     </div>
                 </div>
 
@@ -56,10 +66,12 @@
                         {{ $dados['percentual'] >= 75 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
                         {{ $dados['percentual'] }}% - {{ $dados['status']['label'] }}
                     </span>
-                    <a href="{{ route('aluno.frequencia.curso', $dados['matricula']->id) }}" 
-                       class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
-                        Detalhes <i class="fa-solid fa-arrow-right ml-1"></i>
-                    </a>
+                    @if($dados['matricula']->turma)
+                        <a href="{{ route('aluno.frequencia.curso', $dados['matricula']->id) }}"
+                           class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">
+                            Detalhes <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </a>
+                    @endif
                 </div>
             </div>
 

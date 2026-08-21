@@ -90,11 +90,19 @@ class FrequenciaController extends Controller
         // Issue #49: 404 para matrícula de terceiros (não confirma existência).
         $matricula = Matricula::where('id', $matriculaId)
             ->where('user_id', $aluno->id) // CORREÇÃO: user_id em vez de aluno_id
-            ->with(['turma.curso.modulos.aulas'])
+            ->with(['curso.modulos.aulas', 'turma.curso.modulos.aulas'])
             ->firstOrFail();
 
         // Issue #49: camada adicional via Policy (defesa em profundidade).
         Gate::authorize('view', $matricula);
+
+        $curso = $matricula->turma?->curso ?? $matricula->curso;
+
+        if (! $curso) {
+            return redirect()
+                ->route('aluno.frequencia')
+                ->with('info', 'A turma desta matrícula ainda não foi vinculada pela Secretaria.');
+        }
 
         // Buscar progressos do aluno
         $progressos = AulaProgresso::where('aluno_id', $aluno->id)->get();
@@ -102,7 +110,7 @@ class FrequenciaController extends Controller
         // Detalhar frequência por módulo
         $modulosFrequencia = [];
 
-        foreach ($matricula->turma->curso->modulos as $modulo) {
+        foreach ($curso->modulos as $modulo) {
             $totalAulasModulo = $modulo->aulas->count();
             $aulasAssitidasModulo = 0;
             $detalhesAulas = [];
