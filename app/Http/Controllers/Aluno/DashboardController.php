@@ -12,43 +12,43 @@ class DashboardController extends Controller
     public function index()
     {
         $userId = Auth::id();
-        
+
         // --- 1. CURSOS E PROGRESSO ---
         $matriculas = Matricula::with(['curso.modulos.aulas'])
             ->where('user_id', $userId)
             ->whereRaw("LOWER(COALESCE(status, '')) IN ('ativo', 'ativa', 'cursando')")
             ->take(4)
             ->get();
-            
+
         $cursos = $matriculas->map(function ($matricula) use ($userId) {
             $curso = $matricula->curso;
-            $totalAulas = $curso->modulos->sum(fn($m) => $m->aulas->count());
-            
+            $totalAulas = $curso->modulos->sum(fn ($m) => $m->aulas->count());
+
             $aulasAssistidas = DB::table('aula_progresso')
                 ->whereIn('aula_id', $curso->modulos->pluck('aulas')->flatten()->pluck('id'))
-                ->where('aluno_id', $userId) 
+                ->where('aluno_id', $userId)
                 ->where('concluida', true)
                 ->count();
-            
+
             $curso->progresso = $totalAulas > 0 ? round(($aulasAssistidas / $totalAulas) * 100) : 0;
             $curso->aulas_assistidas = $aulasAssistidas;
             $curso->total_aulas = $totalAulas;
             $curso->instrutor = 'Corpo Docente';
-            
+
             return $curso;
         });
 
         // --- 2. ESTATÍSTICAS DO TOPO ---
         $cursosAtivos = $matriculas->count();
         $progressoMedio = $cursos->count() > 0 ? round($cursos->avg('progresso')) : 0;
-        
+
         // Contagem de próximas aulas (não concluídas)
         $proximasAulas = DB::table('matriculas')
             ->join('modulos', 'modulos.curso_id', '=', 'matriculas.curso_id')
             ->join('aulas', 'aulas.modulo_id', '=', 'modulos.id')
-            ->leftJoin('aula_progresso', function($join) use ($userId) {
+            ->leftJoin('aula_progresso', function ($join) use ($userId) {
                 $join->on('aula_progresso.aula_id', '=', 'aulas.id')
-                     ->where('aula_progresso.aluno_id', '=', $userId);
+                    ->where('aula_progresso.aluno_id', '=', $userId);
             })
             ->where('matriculas.user_id', $userId)
             ->whereRaw("LOWER(COALESCE(matriculas.status, '')) IN ('ativo', 'ativa', 'cursando')")
@@ -80,9 +80,9 @@ class DashboardController extends Controller
         $percentualGeral = $totalAulasGeral > 0 ? round(($totalAssistidasGeral / $totalAulasGeral) * 100) : 0;
 
         return view('aluno.dashboard', compact(
-            'cursos', 
-            'cursosAtivos', 
-            'progressoMedio', 
+            'cursos',
+            'cursosAtivos',
+            'progressoMedio',
             'proximasAulas',
             'statusFinanceiro',
             'avisos',

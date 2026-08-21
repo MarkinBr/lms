@@ -8,13 +8,15 @@ use Illuminate\Support\Facades\Auth;
 class AlunoDashboardWidget extends Widget
 {
     protected static string $view = 'filament.aluno.widgets.aluno-dashboard-widget';
-    protected int | string | array $columnSpan = 'full';
+
+    protected int|string|array $columnSpan = 'full';
+
     protected static ?int $sort = 1;
 
     public function getData(): array
     {
         $aluno = Auth::user();
-        
+
         return [
             'aluno' => $aluno,
             'ultimaAula' => $this->getUltimaAulaAssistida(),
@@ -75,15 +77,16 @@ class AlunoDashboardWidget extends Widget
     protected function getMensalidadePendente()
     {
         $user = auth()->user();
+
         // Verifica mensalidades vencendo nos próximos 3 dias
         return \DB::table('mensalidades')
-    ->join('matriculas', 'matriculas.id', '=', 'mensalidades.matricula_id')
-    ->where('matriculas.user_id', $user->id) // Filtra pelo User ID na matrícula
-    ->where('mensalidades.status', '!=', 'Pago') // Ajuste conforme seus status ('Pendente', 'Atrasado')
-    ->whereBetween('mensalidades.data_vencimento', [now(), now()->addDays(7)]) // Exemplo de data
-    ->orderBy('mensalidades.data_vencimento', 'asc')
-    ->select('mensalidades.*')
-    ->first();
+            ->join('matriculas', 'matriculas.id', '=', 'mensalidades.matricula_id')
+            ->where('matriculas.user_id', $user->id) // Filtra pelo User ID na matrícula
+            ->where('mensalidades.status', '!=', 'Pago') // Ajuste conforme seus status ('Pendente', 'Atrasado')
+            ->whereBetween('mensalidades.data_vencimento', [now(), now()->addDays(7)]) // Exemplo de data
+            ->orderBy('mensalidades.data_vencimento', 'asc')
+            ->select('mensalidades.*')
+            ->first();
     }
 
     protected function getAvisosImportantes()
@@ -91,9 +94,9 @@ class AlunoDashboardWidget extends Widget
         // Busca avisos ativos da secretaria
         return \DB::table('avisos')
             ->where('ativo', true)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereNull('data_expiracao')
-                      ->orWhere('data_expiracao', '>=', now());
+                    ->orWhere('data_expiracao', '>=', now());
             })
             ->orderBy('created_at', 'desc')
             ->limit(2)
@@ -109,7 +112,7 @@ class AlunoDashboardWidget extends Widget
             ->whereRaw("LOWER(COALESCE(matriculas.status, '')) IN ('ativo', 'ativa', 'cursando')")
             ->select('cursos.*', 'matriculas.data_matricula')
             ->get()
-            ->map(function($curso) {
+            ->map(function ($curso) {
                 // Calcula progresso de cada curso
                 $totalAulas = \DB::table('modulos')
                     ->join('aulas', 'aulas.modulo_id', '=', 'modulos.id')
