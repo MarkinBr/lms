@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\DisciplinaResource\Pages;
 
+use App\Filament\Concerns\UsesGestaoAcademicaLayout;
 use App\Filament\Resources\DisciplinaResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDisciplinas extends ListRecords
 {
+    use UsesGestaoAcademicaLayout;
+
     protected static string $resource = DisciplinaResource::class;
 
     protected function getHeaderActions(): array

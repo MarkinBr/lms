@@ -41,6 +41,8 @@ class AdminPanelProvider extends PanelProvider
             // Issue #57 — carregado somente no painel administrativo.
             ->assets([
                 Css::make('gestao-academica', resource_path('css/filament/admin/gestao-academica.css')),
+                // Issue #61 — tema acadêmico das páginas de Resources.
+                Css::make('gestao-academica-recursos', resource_path('css/filament/admin/gestao-academica-recursos.css')),
             ])
             ->navigationGroups([
                 NavigationGroup::make('Acadêmico')->collapsed(false),

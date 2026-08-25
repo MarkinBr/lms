@@ -10,7 +10,7 @@
         $periodoLetivoResource = \App\Filament\Resources\PeriodoLetivoResource::class;
         $turmaResource = \App\Filament\Resources\TurmaResource::class;
         $matriculaResource = \App\Filament\Resources\MatriculaResource::class;
-        $alunoResource = \App\Filament\Resources\AlunoResource::class;
+        $alunoResource = \App\Filament\Resources\PessoaResource::class;
         $userResource = \App\Filament\Resources\UserResource::class;
         $aulaAoVivoResource = \App\Filament\Resources\AulaAoVivoResource::class;
 
@@ -246,7 +246,7 @@
                                 <span class="ga-stat-hint">professores ativos</span>
                                 <span class="ga-stat-cta">Gerenciar professores</span>
                             </a>
-                            <a href="{{ $alunoResource::getUrl('index') }}" class="ga-stat-box">
+                            <a href="{{ $alunoResource::getUrl('index', ['activeTab' => 'aluno'], panel: 'admin') }}" class="ga-stat-box">
                                 <x-filament::icon icon="heroicon-o-user" class="ga-stat-icon" />
                                 <span class="ga-stat-name">Alunos</span>
                                 <span class="ga-stat-num">{{ $estatisticas['alunos'] }}</span>
@@ -627,7 +627,7 @@
                                     <span>{{ $estatisticas['alunos'] }} ativo(s)</span>
                                 </div>
                                 <p class="ga-card-text">Alunos ativos da instituição.</p>
-                                <a class="ga-link ga-link--gold" href="{{ $alunoResource::getUrl('index') }}">Gerenciar alunos →</a>
+                                <a class="ga-link ga-link--gold" href="{{ $alunoResource::getUrl('index', ['activeTab' => 'aluno'], panel: 'admin') }}">Gerenciar alunos →</a>
                             </div>
                         </div>
                     </section>

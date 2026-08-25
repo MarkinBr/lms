@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\MatriculaResource\Pages;
 
+use App\Filament\Concerns\UsesGestaoAcademicaLayout;
 use App\Filament\Resources\MatriculaResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListMatriculas extends ListRecords
 {
+    use UsesGestaoAcademicaLayout;
+
     protected static string $resource = MatriculaResource::class;
 
     protected function getHeaderActions(): array
