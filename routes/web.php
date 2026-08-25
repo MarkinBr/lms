@@ -62,7 +62,7 @@ Route::get('/login', fn () => redirect()->route('aluno.login'))->name('login');
 // contas administrativas.
 Route::prefix('admin/token')->name('admin.token.')->group(function () {
     Route::get('/', [AdminAccessTokenController::class, 'create'])
-        ->middleware(['guest', 'throttle:10,1'])
+        ->middleware(['throttle:10,1'])
         ->name('create');
     Route::post('/request', [AdminAccessTokenController::class, 'request'])
         ->middleware(['guest', 'throttle:3,10'])

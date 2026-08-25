@@ -7,7 +7,7 @@ use LogicException;
 /**
  * Gera e normaliza as frases temporárias de acesso administrativo.
  *
- * A lista possui 128 palavras; 24 escolhas independentes fornecem 168 bits
+ * A lista possui 144 palavras; 24 escolhas independentes fornecem mais de 172 bits
  * de entropia. A frase nunca é persistida: somente seu HMAC-SHA-256 é
  * armazenado, usando a chave da aplicação como segredo adicional.
  */

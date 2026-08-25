@@ -8,19 +8,37 @@ use App\Models\User;
 use App\Services\AdminAccessTokenService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\Validator;
 
+/**
+ * Fluxo de token temporário de acesso administrativo.
+ *
+ * Os endpoints de solicitação e autenticação são anônimos (middleware
+ * `guest`); o GET permite que o controller redirecione sessões existentes.
+ * O fluxo não vaza informação: respostas idênticas para e-mail existente e
+ * inexistente, sem logs sensíveis, sem token em URL/HTML/JS.
+ */
 class AdminAccessTokenController
 {
     public function __construct(
         private readonly AdminAccessTokenService $tokens,
     ) {}
 
-    public function create(): View|RedirectResponse
+    /**
+     * Renderiza a tela de acesso por token.
+     *
+     * A resposta usa `Cache-Control: no-store, private` porque a página
+     * exibe estados de sessão sensíveis (mensagens de solicitação enviada)
+     * que não podem ser servidos por caches intermediários. Para preservar
+     * esses cabeçalhos usamos `response()->view()`, o que produz um
+     * `Illuminate\Http\Response` — daí a assinatura estendida.
+     */
+    public function create(): Response|RedirectResponse
     {
         if (Auth::guard('web')->check()) {
             return redirect()->intended('/admin');
@@ -29,7 +47,8 @@ class AdminAccessTokenController
         return response()
             ->view('filament.admin.auth.token')
             ->header('Cache-Control', 'no-store, private')
-            ->header('Pragma', 'no-cache');
+            ->header('Pragma', 'no-cache')
+            ->header('X-Robots-Tag', 'noindex, nofollow, noarchive');
     }
 
     public function request(Request $request): RedirectResponse
@@ -65,6 +84,9 @@ class AdminAccessTokenController
             } catch (\Throwable $exception) {
                 $token->delete();
 
+                // Nunca registrar e-mail, frase, token ou stack completo:
+                // apenas a classe da exceção e o id interno bastam para
+                // triagem sem expor dados do administrador.
                 Log::warning('Falha ao enviar token temporário de acesso administrativo.', [
                     'exception' => $exception::class,
                     'user_id' => $user->id,
@@ -72,16 +94,28 @@ class AdminAccessTokenController
             }
         }
 
-        // Resposta idêntica para e-mail existente e inexistente.
+        // Resposta idêntica para e-mail existente e inexistente. Devolvemos
+        // apenas o campo de e-mail em `withInput` para que a UI possa
+        // preservá-lo — a frase nunca é ecoada.
         return back()->with('token_requested', true)->withInput(['email' => $email]);
     }
 
     public function authenticate(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->only(['email', 'phrase']), [
             'email' => ['required', 'email:rfc', 'max:255'],
             'phrase' => ['required', 'string', 'max:512'],
         ]);
+
+        if ($validator->fails()) {
+            return back()
+                ->withErrors($validator)
+                ->withInput([
+                    'email' => mb_strtolower(trim((string) $request->input('email'))),
+                ]);
+        }
+
+        $data = $validator->validated();
 
         $email = mb_strtolower(trim($data['email']));
         $phrase = (string) $data['phrase'];
