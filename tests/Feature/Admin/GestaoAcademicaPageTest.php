@@ -58,6 +58,25 @@ class GestaoAcademicaPageTest extends TestCase
             ->assertOk();
     }
 
+    public function test_central_usa_layout_proprio_sem_menu_global_do_filament(): void
+    {
+        $resposta = $this->actingAs($this->admin())
+            ->get(GestaoAcademica::getUrl(panel: 'admin'))
+            ->assertOk()
+            ->assertSee('ga-standalone-layout', false)
+            ->assertSee('Central de Gestão Acadêmica')
+            ->assertSee('Voltar ao painel')
+            ->assertDontSee('fi-main-sidebar', false)
+            ->assertDontSee('fi-topbar', false);
+
+        $this->assertStringNotContainsString(
+            'x-filament-panels::page',
+            file_get_contents(resource_path('views/filament/pages/gestao-academica.blade.php')),
+        );
+
+        $this->assertStringContainsString('ga-standalone-body', $resposta->getContent());
+    }
+
     public function test_perfis_nao_autorizados_nao_acessam(): void
     {
         $url = GestaoAcademica::getUrl(panel: 'admin');

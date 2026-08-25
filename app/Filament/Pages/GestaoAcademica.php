@@ -20,6 +20,16 @@ use Filament\Pages\Page;
  */
 class GestaoAcademica extends Page
 {
+    /**
+     * Usa apenas a base de assets/autenticação do Filament. A interface da
+     * Central possui navegação e cabeçalho próprios, sem o chrome do painel.
+     */
+    protected static string $layout = 'filament-panels::components.layout.base';
+
+    protected array $extraBodyAttributes = [
+        'class' => 'ga-standalone-body',
+    ];
+
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
 
     protected static ?string $navigationLabel = 'Gestão Acadêmica';

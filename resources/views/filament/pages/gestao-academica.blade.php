@@ -1,4 +1,8 @@
-<x-filament-panels::page>
+<div
+    class="ga-canvas ga-standalone-layout"
+    x-data="{ menuOpen: false }"
+    x-on:keydown.escape.window="menuOpen = false"
+>
     @php
         $cursoResource = \App\Filament\Resources\CursoResource::class;
         $moduloResource = \App\Filament\Resources\ModuloResource::class;
@@ -23,62 +27,135 @@
         $gruposNav = collect($secoes)->groupBy('grupo');
         $secaoAtiva = $this->secao;
         $totalPendencias = collect($pendencias)->sum('count');
+        $secaoAtual = collect($secoes)->firstWhere('slug', $secaoAtiva) ?? $secoes[0];
+        $nomeAdministrador = auth()->user()?->name ?? 'Administrador';
+        $iniciaisAdministrador = collect(preg_split('/\s+/', trim($nomeAdministrador)))
+            ->filter()
+            ->take(2)
+            ->map(fn (string $parte) => mb_strtoupper(mb_substr($parte, 0, 1)))
+            ->implode('');
     @endphp
 
-    <div class="ga-canvas">
-        {{-- Cabeçalho da central --}}
-        <header class="ga-hero">
-            <div class="ga-hero-body">
-                <p class="ga-eyebrow">Painel do administrador</p>
-                <h2 class="ga-title">Central de Gestão Acadêmica</h2>
-                <p class="ga-subtitle">
-                    Cursos, módulos, disciplinas, aulas, turmas e matrículas — toda a gestão
-                    acadêmica do CETSADP em um único ambiente. Todos os cursos são híbridos
-                    (on-line + presencial).
-                </p>
+    <a class="ga-skip-link" href="#ga-conteudo">Pular para o conteúdo</a>
+
+    {{-- Navegação exclusiva da Central: não é a sidebar global do Filament. --}}
+    <aside
+        id="ga-navegacao"
+        class="ga-localnav"
+        x-bind:class="{ 'is-open': menuOpen }"
+        aria-label="Navegação da gestão acadêmica"
+    >
+        <a class="ga-brand" href="{{ filament()->getUrl() }}" aria-label="Voltar ao painel administrativo">
+            <span class="ga-brand-mark" aria-hidden="true">
+                <x-filament::icon icon="heroicon-o-academic-cap" />
+            </span>
+            <span class="ga-brand-copy">
+                <span class="ga-brand-title">Gestão Acadêmica</span>
+                <span class="ga-brand-subtitle">CETSADP · Ambiente administrativo</span>
+            </span>
+        </a>
+
+        <div class="ga-localnav-scroll">
+            @foreach ($gruposNav as $grupo => $itens)
+                <div class="ga-localnav-section">
+                    <p class="ga-localnav-title">{{ $grupo }}</p>
+                    @foreach ($itens as $item)
+                        @php $ativo = $secaoAtiva === $item['slug']; @endphp
+                        <button
+                            type="button"
+                            wire:click="trocarSecao('{{ $item['slug'] }}')"
+                            wire:loading.attr="disabled"
+                            wire:target="trocarSecao"
+                            x-on:click="menuOpen = false"
+                            class="ga-localnav-item {{ $ativo ? 'is-active' : '' }}"
+                            @if ($ativo) aria-current="page" @endif
+                        >
+                            <x-filament::icon icon="{{ $item['icone'] }}" class="ga-localnav-icon" />
+                            <span>{{ $item['titulo'] }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            @endforeach
+        </div>
+
+        <div class="ga-sidebar-foot">
+            <span class="ga-status-dot" aria-hidden="true"></span>
+            <span>Sistema acadêmico conectado</span>
+        </div>
+    </aside>
+
+    <button
+        type="button"
+        class="ga-nav-overlay"
+        x-cloak
+        x-show="menuOpen"
+        x-on:click="menuOpen = false"
+        aria-label="Fechar menu da gestão acadêmica"
+    ></button>
+
+    <div class="ga-main">
+        <header class="ga-topbar">
+            <div class="ga-topbar-leading">
+                <button
+                    type="button"
+                    class="ga-menu-toggle"
+                    x-on:click="menuOpen = ! menuOpen"
+                    x-bind:aria-expanded="menuOpen.toString()"
+                    aria-controls="ga-navegacao"
+                    aria-label="Abrir menu da gestão acadêmica"
+                >
+                    <x-filament::icon icon="heroicon-o-bars-3" />
+                </button>
+                <div class="ga-topbar-heading">
+                    <h1>Central de Gestão Acadêmica</h1>
+                    <p>{{ $secaoAtual['titulo'] }} · Dados institucionais em tempo real</p>
+                </div>
             </div>
-            <div class="ga-hero-actions">
-                <a href="{{ $cursoResource::getUrl('create') }}" class="ga-btn ga-btn--gold">
-                    <x-filament::icon icon="heroicon-o-plus" class="ga-btn-icon" />
-                    Novo curso
+
+            <div class="ga-topbar-actions">
+                <a class="ga-back-link" href="{{ filament()->getUrl() }}">
+                    <x-filament::icon icon="heroicon-o-arrow-left" />
+                    <span>Voltar ao painel</span>
                 </a>
-                <a href="{{ $matriculaResource::getUrl('create') }}" class="ga-btn ga-btn--ghost">
-                    <x-filament::icon icon="heroicon-o-identification" class="ga-btn-icon" />
-                    Nova matrícula
-                </a>
+                <div class="ga-admin-profile" aria-label="Administrador autenticado">
+                    <span class="ga-admin-avatar" aria-hidden="true">{{ $iniciaisAdministrador ?: 'AD' }}</span>
+                    <span class="ga-admin-copy">
+                        <strong>{{ $nomeAdministrador }}</strong>
+                        <small>Administrador</small>
+                    </span>
+                </div>
             </div>
         </header>
 
-        <div class="ga-shell">
-            {{-- Navegação acadêmica local (não duplica a navegação global do Filament) --}}
-            <nav class="ga-localnav" aria-label="Navegação da gestão acadêmica">
-                @foreach ($gruposNav as $grupo => $itens)
-                    <div class="ga-localnav-section">
-                        <p class="ga-localnav-title">{{ $grupo }}</p>
-                        @foreach ($itens as $item)
-                            @php $ativo = $secaoAtiva === $item['slug']; @endphp
-                            <button
-                                type="button"
-                                wire:click="trocarSecao('{{ $item['slug'] }}')"
-                                wire:loading.attr="disabled"
-                                wire:target="trocarSecao"
-                                class="ga-localnav-item {{ $ativo ? 'is-active' : '' }}"
-                                @if ($ativo) aria-current="page" @endif
-                            >
-                                <x-filament::icon icon="{{ $item['icone'] }}" class="ga-localnav-icon" />
-                                <span>{{ $item['titulo'] }}</span>
-                            </button>
-                        @endforeach
-                    </div>
-                @endforeach
-            </nav>
+        <main
+            id="ga-conteudo"
+            class="ga-content"
+            wire:loading.class="ga-content--loading"
+            wire:target="trocarSecao"
+        >
+            {{-- Cabeçalho institucional da seção --}}
+            <section class="ga-hero" aria-labelledby="ga-titulo-secao">
+                <div class="ga-hero-body">
+                    <p class="ga-eyebrow">Painel do administrador</p>
+                    <h2 id="ga-titulo-secao" class="ga-title">Gestão acadêmica integrada</h2>
+                    <p class="ga-subtitle">
+                        Cursos, módulos, disciplinas, aulas, turmas e matrículas — toda a gestão
+                        acadêmica do CETSADP em um único ambiente. Todos os cursos são híbridos
+                        (on-line + presencial).
+                    </p>
+                </div>
+                <div class="ga-hero-actions">
+                    <a href="{{ $cursoResource::getUrl('create') }}" class="ga-btn ga-btn--gold">
+                        <x-filament::icon icon="heroicon-o-plus" class="ga-btn-icon" />
+                        Novo curso
+                    </a>
+                    <a href="{{ $matriculaResource::getUrl('create') }}" class="ga-btn ga-btn--ghost">
+                        <x-filament::icon icon="heroicon-o-identification" class="ga-btn-icon" />
+                        Nova matrícula
+                    </a>
+                </div>
+            </section>
 
-            {{-- Conteúdo da seção ativa --}}
-            <div
-                class="ga-content"
-                wire:loading.class="ga-content--loading"
-                wire:target="trocarSecao"
-            >
                 <div
                     class="ga-section-loading"
                     wire:loading.flex
@@ -650,7 +727,6 @@
                         </div>
                     </section>
                 @endif
-            </div>
-        </div>
+        </main>
     </div>
-</x-filament-panels::page>
+</div>
