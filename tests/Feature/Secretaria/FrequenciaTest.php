@@ -8,6 +8,7 @@ use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Models\Frequencia;
 use App\Models\Matricula;
+use App\Models\Modulo;
 use App\Models\Turma;
 use App\Models\User;
 use App\Services\VincularMatriculaTurmaService;
@@ -48,8 +49,14 @@ class FrequenciaTest extends TestCase
 
     private function disciplina(Curso $curso, string $nome = 'Hermenêutica'): Disciplina
     {
+        $modulo = Modulo::query()->firstOrCreate(
+            ['curso_id' => $curso->id, 'ordem' => 1],
+            ['titulo' => 'Módulo de frequência'],
+        );
+
         return Disciplina::query()->create([
             'curso_id' => $curso->id,
+            'modulo_id' => $modulo->id,
             'codigo' => 'DIS-'.uniqid(),
             'nome' => $nome,
             'carga_horaria' => 40,
