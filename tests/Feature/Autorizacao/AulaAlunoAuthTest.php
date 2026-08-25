@@ -4,6 +4,7 @@ namespace Tests\Feature\Autorizacao;
 
 use App\Models\Aula;
 use App\Models\Curso;
+use App\Models\Disciplina;
 use App\Models\Matricula;
 use App\Models\Modulo;
 use App\Models\User;
@@ -17,6 +18,8 @@ use Tests\TestCase;
 class AulaAlunoAuthTest extends TestCase
 {
     use RefreshDatabase;
+
+    private int $sequenciaDisciplina = 1;
 
     private function usuario(string $nivel, bool $ativo = true): User
     {
@@ -43,10 +46,28 @@ class AulaAlunoAuthTest extends TestCase
         ]);
     }
 
+    private function disciplina(Modulo $modulo): Disciplina
+    {
+        $sequencia = $this->sequenciaDisciplina++;
+
+        return Disciplina::query()->create([
+            'curso_id' => $modulo->curso_id,
+            'modulo_id' => $modulo->id,
+            'codigo' => sprintf('AULA-%03d', $sequencia),
+            'nome' => 'Disciplina da aula',
+            'carga_horaria' => 40,
+            'ordem' => $sequencia,
+            'ativa' => true,
+        ]);
+    }
+
     private function aula(Modulo $modulo, bool $liberada = true): Aula
     {
+        $disciplina = $this->disciplina($modulo);
+
         return Aula::query()->create([
             'modulo_id' => $modulo->id,
+            'disciplina_id' => $disciplina->id,
             'titulo' => 'Aula teste',
             'ordem' => 1,
             'liberada' => $liberada,

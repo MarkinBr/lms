@@ -3,17 +3,23 @@
 namespace App\Filament\Resources\MatriculaResource\Pages;
 
 use App\Filament\Resources\MatriculaResource;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditMatricula extends EditRecord
 {
     protected static string $resource = MatriculaResource::class;
 
-    protected function getHeaderActions(): array
+    /** @param array<string, mixed> $data */
+    protected function mutateFormDataBeforeFill(array $data): array
     {
-        return [
-            Actions\DeleteAction::make(),
-        ];
+        $data['status'] = MatriculaResource::normalizarStatus($data['status'] ?? null);
+
+        return $data;
+    }
+
+    /** @param array<string, mixed> $data */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return MatriculaResource::prepararDadosAcademicos($data, $this->record);
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Secretaria;
 
 use App\Models\Curso;
 use App\Models\Disciplina;
+use App\Models\Modulo;
 use App\Models\Turma;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -21,10 +22,20 @@ class DisciplinaTest extends TestCase
         ]);
     }
 
+    private function modulo(Curso $curso): Modulo
+    {
+        return Modulo::query()->create([
+            'curso_id' => $curso->id,
+            'titulo' => 'Módulo curricular '.uniqid(),
+            'ordem' => 1,
+        ]);
+    }
+
     private function disciplina(Curso $curso, array $override = []): Disciplina
     {
         return Disciplina::query()->create(array_merge([
             'curso_id' => $curso->id,
+            'modulo_id' => $this->modulo($curso)->id,
             'codigo' => 'TEO01',
             'nome' => 'Introdução à Teologia',
             'carga_horaria' => 40,
