@@ -89,9 +89,8 @@ class DisciplinaSecretariaResource extends Resource
                             })
                             ->searchable()
                             ->preload()
-                            ->nullable()
-                            ->placeholder('Sem módulo')
-                            ->helperText('Opcional. Só lista módulos do curso selecionado.')
+                            ->required()
+                            ->helperText('Obrigatório. Só lista módulos do curso selecionado.')
                             ->disabled(fn (Get $get) => ! $get('curso_id'))
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('codigo')
@@ -170,13 +169,9 @@ class DisciplinaSecretariaResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn (Disciplina $record) => ! $record->turmas()->exists()),
+                    ->visible(fn (Disciplina $record): bool => $record->podeSerExcluida()),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('ordem');
     }
 

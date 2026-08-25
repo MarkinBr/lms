@@ -33,6 +33,12 @@ class Disciplina extends Model
     protected static function booted(): void
     {
         static::saving(function (Disciplina $disciplina) {
+            if (blank($disciplina->codigo)) {
+                throw ValidationException::withMessages([
+                    'codigo' => 'Informe o código da disciplina.',
+                ]);
+            }
+
             if (filled($disciplina->codigo) && filled($disciplina->curso_id)) {
                 $query = static::query()
                     ->where('curso_id', $disciplina->curso_id)
@@ -49,30 +55,52 @@ class Disciplina extends Model
                 }
             }
 
-            if ($disciplina->carga_horaria !== null && (int) $disciplina->carga_horaria < 1) {
+            if ($disciplina->carga_horaria === null || (int) $disciplina->carga_horaria < 1) {
                 throw ValidationException::withMessages([
                     'carga_horaria' => 'A carga horária deve ser um inteiro positivo.',
                 ]);
             }
 
-            if ($disciplina->ordem !== null && (int) $disciplina->ordem < 1) {
+            if ($disciplina->ordem === null || (int) $disciplina->ordem < 1) {
                 throw ValidationException::withMessages([
                     'ordem' => 'A ordem deve ser um inteiro positivo.',
                 ]);
             }
 
-            if (filled($disciplina->modulo_id)) {
-                $modulo = Modulo::query()->find($disciplina->modulo_id);
-
-                if (! $modulo || (int) $modulo->curso_id !== (int) $disciplina->curso_id) {
+            if ($disciplina->exists && ($disciplina->isDirty('modulo_id') || $disciplina->isDirty('curso_id'))) {
+                if ($disciplina->aulas()->exists() || $disciplina->turmas()->exists()) {
                     throw ValidationException::withMessages([
-                        'modulo_id' => 'O módulo selecionado não pertence ao curso da disciplina.',
+                        'modulo_id' => 'Não é possível mover uma disciplina que possui aulas ou turmas.',
                     ]);
                 }
+            }
+
+            if (! filled($disciplina->modulo_id)) {
+                if (! $disciplina->exists || $disciplina->isDirty('modulo_id')) {
+                    throw ValidationException::withMessages([
+                        'modulo_id' => 'Informe o módulo da disciplina.',
+                    ]);
+                }
+
+                return;
+            }
+
+            $modulo = Modulo::query()->find($disciplina->modulo_id);
+
+            if (! $modulo || (int) $modulo->curso_id !== (int) $disciplina->curso_id) {
+                throw ValidationException::withMessages([
+                    'modulo_id' => 'O módulo selecionado não pertence ao curso da disciplina.',
+                ]);
             }
         });
 
         static::deleting(function (Disciplina $disciplina) {
+            if ($disciplina->aulas()->exists()) {
+                throw ValidationException::withMessages([
+                    'id' => 'Não é possível excluir uma disciplina com aulas vinculadas.',
+                ]);
+            }
+
             if ($disciplina->turmas()->exists()) {
                 throw ValidationException::withMessages([
                     'id' => 'Não é possível excluir uma disciplina com turmas vinculadas.',
@@ -96,6 +124,11 @@ class Disciplina extends Model
         return $this->hasMany(Turma::class);
     }
 
+    public function aulas(): HasMany
+    {
+        return $this->hasMany(Aula::class)->orderBy('ordem');
+    }
+
     public function scopeAtivas(Builder $query): Builder
     {
         return $query->where('ativa', true);
@@ -113,6 +146,6 @@ class Disciplina extends Model
 
     public function podeSerExcluida(): bool
     {
-        return ! $this->turmas()->exists();
+        return ! $this->turmas()->exists() && ! $this->aulas()->exists();
     }
 }

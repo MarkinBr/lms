@@ -6,33 +6,35 @@ use App\Filament\Resources\CursoResource\Pages;
 use App\Filament\Resources\CursoResource\RelationManagers;
 use App\Models\Curso;
 use Filament\Forms;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Tabs;
 use Filament\Forms\Form;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Tabs;
-use Filament\Tables\Filters\TrashedFilter;
-use Filament\Support\Enums\FontWeight;
-use Filament\Infolists;
-use Filament\Infolists\Infolist;
 
 class CursoResource extends Resource
 {
     protected static ?string $model = Curso::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
-    
+
     protected static ?string $navigationLabel = 'Cursos';
-    
+
     protected static ?string $modelLabel = 'Curso';
-    
+
     protected static ?string $pluralModelLabel = 'Cursos';
-    
+
     protected static ?string $navigationGroup = 'Acadêmico';
-    
+
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
@@ -253,12 +255,12 @@ class CursoResource extends Resource
                     ]),
 
                 Tables\Filters\SelectFilter::make('categoria')
-    ->label('Categoria')
-    ->options(fn () => Curso::distinct()
-        ->whereNotNull('categoria') // <--- ADICIONE ESTA LINHA
-        ->where('categoria', '!=', '') // Opcional: para evitar strings vazias
-        ->pluck('categoria', 'categoria')
-        ->toArray()),
+                    ->label('Categoria')
+                    ->options(fn () => Curso::distinct()
+                        ->whereNotNull('categoria') // <--- ADICIONE ESTA LINHA
+                        ->where('categoria', '!=', '') // Opcional: para evitar strings vazias
+                        ->pluck('categoria', 'categoria')
+                        ->toArray()),
 
                 Tables\Filters\TernaryFilter::make('ativo')
                     ->label('Status')

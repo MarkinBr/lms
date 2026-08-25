@@ -17,6 +17,9 @@ class AulaAoVivoResource extends Resource
 {
     protected static ?string $model = AulaAoVivo::class;
 
+    /** Issue #57 — entrada única no menu: central Gestão Acadêmica. */
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $navigationIcon = 'heroicon-o-video-camera';
 
     protected static ?string $navigationLabel = 'Aulas ao Vivo';
