@@ -24,7 +24,8 @@
     font-display: swap;
 }
 
-.ga-canvas {
+.ga-canvas,
+.ga-resource-body {
     --ga-navy: #0b1c3f;
     --ga-navy-deep: #050f24;
     --ga-navy-sidebar: #081630;
@@ -53,6 +54,9 @@
     --ga-neutral-bg: #f1f5f9;
     --ga-neutral-text: #475569;
 
+}
+
+.ga-canvas {
     display: flex;
     width: 100%;
     min-height: 100vh;
@@ -70,7 +74,8 @@
     overflow: hidden;
 }
 
-.dark .ga-canvas {
+.dark .ga-canvas,
+.dark .ga-resource-body {
     --ga-surface: #111c33;
     --ga-text: #e5eaf3;
     --ga-muted: #94a3b8;
