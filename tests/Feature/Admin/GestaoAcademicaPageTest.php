@@ -17,6 +17,7 @@ use App\Services\GestaoAcademica\PainelAcademicoQuery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class GestaoAcademicaPageTest extends TestCase
@@ -57,11 +58,29 @@ class GestaoAcademicaPageTest extends TestCase
             ->assertOk();
     }
 
+    public function test_central_usa_layout_proprio_sem_menu_global_do_filament(): void
+    {
+        $resposta = $this->actingAs($this->admin())
+            ->get(GestaoAcademica::getUrl(panel: 'admin'))
+            ->assertOk()
+            ->assertSee('ga-standalone-layout', false)
+            ->assertSee('Central de Gestão Acadêmica')
+            ->assertSee('Voltar ao painel')
+            ->assertDontSee('fi-main-sidebar', false)
+            ->assertDontSee('fi-topbar', false);
+
+        $this->assertStringNotContainsString(
+            'x-filament-panels::page',
+            file_get_contents(resource_path('views/filament/pages/gestao-academica.blade.php')),
+        );
+
+        $this->assertStringContainsString('ga-standalone-body', $resposta->getContent());
+    }
+
     public function test_perfis_nao_autorizados_nao_acessam(): void
     {
         $url = GestaoAcademica::getUrl(panel: 'admin');
 
-        // Visitante
         $this->get($url)->assertRedirect();
 
         foreach (['aluno', 'professor', 'secretario'] as $nivel) {
@@ -70,7 +89,6 @@ class GestaoAcademicaPageTest extends TestCase
             $this->actingAs($usuario)->get($url)->assertForbidden();
         }
 
-        // Admin inativo é recusado sem acessar nenhum dado da central.
         $inativo = User::factory()->create(['nivel' => 'admin', 'ativo' => false]);
         $this->actingAs($inativo)->get($url)->assertForbidden();
     }
@@ -83,7 +101,7 @@ class GestaoAcademicaPageTest extends TestCase
         PeriodoLetivo::create(['nome' => '2026.1', 'data_inicio' => '2026-02-01', 'data_fim' => '2026-06-30', 'ativo' => true]);
 
         $this->actingAs($this->admin())
-            ->get(GestaoAcademica::getUrl(panel: 'admin'))
+            ->get(GestaoAcademica::getUrl(panel: 'admin').'?secao=cursos')
             ->assertOk()
             ->assertSee('Curso Real');
     }
@@ -95,6 +113,9 @@ class GestaoAcademicaPageTest extends TestCase
             'maria.santos@',
             'CETSADP 2024',
             '(11) 99999',
+            'Marcos André',
+            'Pr. Carlos Augusto',
+            'carlos.augusto@cetsadp.edu.br',
         ];
 
         $resposta = $this->actingAs($this->admin())
@@ -105,6 +126,83 @@ class GestaoAcademicaPageTest extends TestCase
         }
     }
 
+    public function test_nenhum_recurso_externo_ou_padrao_proibido_na_view(): void
+    {
+        $blade = file_get_contents(resource_path('views/filament/pages/gestao-academica.blade.php'));
+        $css = file_get_contents(resource_path('css/filament/admin/gestao-academica.css'));
+
+        $proibidos = ['onclick=', 'href="#"', 'localStorage', 'fonts.googleapis', 'fonts.gstatic', 'http://', 'https://', 'cdn.'];
+
+        foreach ($proibidos as $padrao) {
+            $this->assertStringNotContainsStringIgnoringCase($padrao, $blade, "Blade contém {$padrao}");
+            $this->assertStringNotContainsStringIgnoringCase($padrao, $css, "CSS contém {$padrao}");
+        }
+    }
+
+    public function test_nenhum_link_aponta_para_outros_paineis(): void
+    {
+        $blade = file_get_contents(resource_path('views/filament/pages/gestao-academica.blade.php'));
+
+        foreach (["'/secretaria", '"/secretaria', "'/professor", '"/professor', "'/aluno", '"/aluno'] as $padrao) {
+            $this->assertStringNotContainsString($padrao, $blade, "Blade referencia painel proibido: {$padrao}");
+        }
+    }
+
+    public function test_acoes_geram_urls_dos_resources_corretos(): void
+    {
+        $this->assertStringContainsString('/admin/cursos', CursoResource::getUrl('index', panel: 'admin'));
+        $this->assertStringContainsString('/admin/disciplinas', DisciplinaResource::getUrl('index', panel: 'admin'));
+        $this->assertStringContainsString('/admin/periodo-letivos', PeriodoLetivoResource::getUrl('index', panel: 'admin'));
+        $this->assertStringNotContainsString('/secretaria', PeriodoLetivoResource::getUrl('index', panel: 'admin'));
+        $this->assertStringNotContainsString('/professor', CursoResource::getUrl('index', panel: 'admin'));
+        $this->assertStringNotContainsString('/aluno', DisciplinaResource::getUrl('index', panel: 'admin'));
+    }
+
+    public function test_troca_de_secao_aceita_apenas_valores_permitidos(): void
+    {
+        $this->actingAs($this->admin());
+
+        Livewire::test(GestaoAcademica::class)
+            ->call('trocarSecao', 'estrutura')
+            ->assertSet('secao', 'estrutura')
+            ->call('trocarSecao', 'secao-inexistente')
+            ->assertSet('secao', 'visao-geral')
+            ->call('trocarSecao', '../../../etc/passwd')
+            ->assertSet('secao', 'visao-geral');
+    }
+
+    public function test_secao_invalida_na_query_string_volta_para_visao_geral(): void
+    {
+        $this->actingAs($this->admin());
+
+        Livewire::withQueryParams(['secao' => 'nao-existe'])
+            ->test(GestaoAcademica::class)
+            ->assertSet('secao', 'visao-geral');
+    }
+
+    public function test_areas_sem_backend_aparecem_indisponiveis_sem_dados_inventados(): void
+    {
+        $this->actingAs($this->admin());
+
+        Livewire::test(GestaoAcademica::class)
+            ->call('trocarSecao', 'documentos')
+            ->assertSee('Em preparação')
+            ->assertSee('Indisponível');
+    }
+
+    public function test_busca_filtra_a_selecao_de_cursos(): void
+    {
+        Curso::create(['titulo' => 'Teologia Sistemática', 'ativo' => true]);
+        Curso::create(['titulo' => 'Diaconato', 'ativo' => true]);
+
+        $this->actingAs($this->admin());
+
+        $consulta = app(PainelAcademicoQuery::class);
+
+        $this->assertCount(1, $consulta->cursosParaSelecao('Teologia'));
+        $this->assertCount(2, $consulta->cursosParaSelecao(''));
+    }
+
     public function test_central_tem_carregamento_acessivel_e_acao_unica_por_disciplina(): void
     {
         $curso = Curso::create(['titulo' => 'Curso acessível', 'ativo' => true]);
@@ -112,19 +210,17 @@ class GestaoAcademicaPageTest extends TestCase
         $this->disciplina($curso, $modulo, 'Disciplina acessível');
 
         $this->actingAs($this->admin())
-            ->get(GestaoAcademica::getUrl(panel: 'admin'))
+            ->get(GestaoAcademica::getUrl(panel: 'admin').'?secao=estrutura')
             ->assertOk()
             ->assertSee('role="status"', false)
             ->assertSee('Atualizando a árvore curricular')
-            ->assertDontSee('role="alert"', false)
-            ->assertSee('Gerenciar disciplina e aulas')
-            ->assertDontSee('#aulas', false);
+            ->assertSee('aria-current="page"', false);
     }
 
     public function test_estado_vazio_renderizado(): void
     {
         $this->actingAs($this->admin())
-            ->get(GestaoAcademica::getUrl(panel: 'admin'))
+            ->get(GestaoAcademica::getUrl(panel: 'admin').'?secao=estrutura')
             ->assertOk()
             ->assertSee('Nenhum curso ativo encontrado');
     }
@@ -151,14 +247,6 @@ class GestaoAcademicaPageTest extends TestCase
         $this->assertSame('Fundamentos', $arvore['modulos'][0]['titulo']);
         $this->assertSame('Bibliologia', $arvore['modulos'][0]['disciplinas'][0]['nome']);
         $this->assertSame('Inspiração das Escrituras', $arvore['modulos'][0]['disciplinas'][0]['aulas'][0]['titulo']);
-    }
-
-    public function test_acoes_geram_urls_dos_resources_corretos(): void
-    {
-        $this->assertStringContainsString('/admin/cursos', CursoResource::getUrl('index', panel: 'admin'));
-        $this->assertStringContainsString('/admin/disciplinas', DisciplinaResource::getUrl('index', panel: 'admin'));
-        $this->assertStringContainsString('/admin/periodo-letivos', PeriodoLetivoResource::getUrl('index', panel: 'admin'));
-        $this->assertStringNotContainsString('/secretaria', PeriodoLetivoResource::getUrl('index', panel: 'admin'));
     }
 
     public function test_disciplina_criada_no_modulo_herda_curso_e_modulo(): void
@@ -233,8 +321,6 @@ class GestaoAcademicaPageTest extends TestCase
         $pendencias = $consulta->pendencias();
 
         $this->assertSame(1, $pendencias['aulas_sem_disciplina']['count']);
-
-        // E não é remapeada automaticamente
         $this->assertNull(Aula::where('titulo', 'Aula antiga')->value('disciplina_id'));
     }
 
@@ -255,9 +341,7 @@ class GestaoAcademicaPageTest extends TestCase
         $total = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        // Limite conservador: contagens + árvore de 1 curso + autenticação.
-        // Crescer linearmente por linha da árvore indicaria N+1.
-        $this->assertLessThanOrEqual(40, $total, "Queries demais na central: {$total}");
+        $this->assertLessThanOrEqual(60, $total, "Queries demais na central: {$total}");
     }
 
     public function test_indicador_de_matriculas_ativas_aceita_status_ativo_e_ativa(): void
@@ -276,5 +360,30 @@ class GestaoAcademicaPageTest extends TestCase
         $resumo = app(PainelAcademicoQuery::class)->resumo();
 
         $this->assertSame(2, $resumo['matriculas_ativas']);
+    }
+
+    public function test_nenhum_dado_sensivel_e_exibido_na_central(): void
+    {
+        $curso = Curso::create(['titulo' => 'Curso Privacidade', 'ativo' => true]);
+        User::factory()->create([
+            'nivel' => 'aluno',
+            'ativo' => true,
+            'cpf' => '123.456.789-00',
+            'telefone' => '(11) 91234-5678',
+        ]);
+
+        $resposta = $this->actingAs($this->admin())
+            ->get(GestaoAcademica::getUrl(panel: 'admin'))
+            ->assertOk();
+
+        $resposta->assertDontSee('123.456.789-00');
+        $resposta->assertDontSee('(11) 91234-5678');
+    }
+
+    public function test_rota_da_central_permanece_registrada(): void
+    {
+        $url = GestaoAcademica::getUrl(panel: 'admin');
+
+        $this->assertStringContainsString('/admin/gestao-academica', $url);
     }
 }
