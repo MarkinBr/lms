@@ -387,12 +387,12 @@ class AprovarInscricaoService
             // Não relançamos: a matrícula não pode ser desfeita por falha de e-mail.
             Log::error('Falha ao enviar link de definição de senha para novo aluno.', [
                 'user_id' => $user->id,
-                'exception' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             $this->registrarAuditoria('usuario.link_definicao_senha_falhou', [
                 'user_id' => $user->id,
-                'erro' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
         }
     }
