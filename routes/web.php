@@ -16,6 +16,7 @@ use App\Http\Controllers\Aluno\PerfilController;
 use App\Http\Controllers\Aluno\SecretariaController;
 // Controllers do Portal do Aluno
 use App\Http\Controllers\Auth\AlunoLoginController;
+use App\Http\Controllers\Auth\RedefinirSenhaController;
 use App\Http\Controllers\DREController;
 use App\Http\Controllers\ExtratoAlunoController;
 use App\Http\Controllers\MatriculaReportController;
@@ -58,10 +59,25 @@ Route::get('/login', fn () => redirect()->route('aluno.login'))->name('login');
 
 Route::middleware('guest')->group(function () {
     Route::get('/portal/login', [AlunoLoginController::class, 'showLoginForm'])->name('aluno.login');
-    Route::post('/portal/login', [AlunoLoginController::class, 'login'])->name('aluno.login.submit');
+    Route::post('/portal/login', [AlunoLoginController::class, 'login'])
+        ->middleware('throttle:20,1')
+        ->name('aluno.login.submit');
+
+    Route::get('/senha/esqueci', [RedefinirSenhaController::class, 'esqueci'])
+        ->name('password.request');
+    Route::post('/senha/esqueci', [RedefinirSenhaController::class, 'enviarLink'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+    Route::get('/senha/redefinir/{token}', [RedefinirSenhaController::class, 'redefinir'])
+        ->name('password.reset');
+    Route::post('/senha/redefinir', [RedefinirSenhaController::class, 'atualizar'])
+        ->middleware('throttle:10,1')
+        ->name('password.update');
 });
 
-Route::post('/portal/logout', [AlunoLoginController::class, 'logout'])->name('aluno.logout');
+Route::post('/portal/logout', [AlunoLoginController::class, 'logout'])
+    ->middleware(['auth', 'aluno'])
+    ->name('aluno.logout');
 
 Route::post('/aluno/logout', function () {
     auth()->logout();
@@ -104,7 +120,7 @@ Route::prefix('validar')->group(function () {
 });
 
 // === 5. PORTAL DO ALUNO ===
-Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function () {
+Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -119,15 +135,9 @@ Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function ()
     Route::get('/curso/{id}', [CursosController::class, 'show'])->name('curso.show');
     Route::get('/aula/{id}', [AulaController::class, 'show'])->name('aula');
 
-    // Issue #49: interações de aula exigem perfil de aluno ativo.
-    // As três rotas legadas abaixo saíram do grupo aberto 'auth' e passaram
-    // a compartilhar o middleware 'aluno' (mesmos nomes de rota, sem quebrar
-    // os contratos já usados pelo portal).
-    Route::middleware(['aluno'])->group(function () {
-        Route::post('/aula/{id}/concluir', [AulaController::class, 'concluir'])->name('aula.concluir');
-        Route::post('/aula/{id}/progresso', [AulaController::class, 'atualizarProgresso'])->name('aula.progresso');
-        Route::post('/aula/{id}/comentar', [AulaController::class, 'comentar'])->name('aula.comentar');
-    });
+    Route::post('/aula/{id}/concluir', [AulaController::class, 'concluir'])->name('aula.concluir');
+    Route::post('/aula/{id}/progresso', [AulaController::class, 'atualizarProgresso'])->name('aula.progresso');
+    Route::post('/aula/{id}/comentar', [AulaController::class, 'comentar'])->name('aula.comentar');
 
     // Calendário
     Route::get('/calendario', [CalendarioController::class, 'index'])->name('calendario');
@@ -163,10 +173,9 @@ Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function ()
     // pelo candidato, disco privado `applications`). Não confundir com o
     // bloco acima, que trata documentos emitidos pela instituição.
     Route::get('/documentos-inscricao', [DocumentosInscricaoController::class, 'index'])
-        ->middleware('aluno')
         ->name('documentos-inscricao');
     Route::post('/documentos-inscricao', [DocumentosInscricaoController::class, 'store'])
-        ->middleware(['aluno', 'throttle:10,1'])
+        ->middleware('throttle:10,1')
         ->name('documentos-inscricao.store');
 
     // Perfil
@@ -188,15 +197,12 @@ Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function ()
     Route::get('/configuracoes', fn () => view('aluno.configuracoes.index'))->name('configuracoes');
     Route::get('/forum', fn () => view('aluno.forum.index'))->name('forum');
 
-    // Sub-grupo Aluno
-    Route::middleware(['auth', 'aluno'])->group(function () {
-        Route::get('/aula-v2/{aula}', [AulaController::class, 'show'])->name('aula.show.nova');
-        Route::post('/aula-v2/{aula}/concluir', [AulaController::class, 'concluir'])->name('aula.concluir.nova');
-        Route::post('/aula-v2/{aula}/progresso', [AulaController::class, 'atualizarProgresso'])->name('aula.progresso.nova');
-        Route::post('/aula-v2/{aula}/tempo', [AulaController::class, 'registrarTempo'])->name('aula.tempo');
-        Route::post('/aula-v2/{aula}/quiz', [AulaController::class, 'salvarQuiz'])->name('aula.quiz');
-        Route::post('/aula-v2/{aula}/notas', [AulaController::class, 'salvarNotas'])->name('aula.notas');
-    });
+    Route::get('/aula-v2/{aula}', [AulaController::class, 'show'])->name('aula.show.nova');
+    Route::post('/aula-v2/{aula}/concluir', [AulaController::class, 'concluir'])->name('aula.concluir.nova');
+    Route::post('/aula-v2/{aula}/progresso', [AulaController::class, 'atualizarProgresso'])->name('aula.progresso.nova');
+    Route::post('/aula-v2/{aula}/tempo', [AulaController::class, 'registrarTempo'])->name('aula.tempo');
+    Route::post('/aula-v2/{aula}/quiz', [AulaController::class, 'salvarQuiz'])->name('aula.quiz');
+    Route::post('/aula-v2/{aula}/notas', [AulaController::class, 'salvarNotas'])->name('aula.notas');
 
 });
 // === SSO INTEGRATION (Etapa 4) ===
