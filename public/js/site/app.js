@@ -119,7 +119,7 @@ document.getElementById('header-root').innerHTML = `<div class="wrap">
     <li class="dd">
       <a class="dd-toggle" data-nav="cursos">${cmsText("menu.cursos","CURSOS")} ${svg('chevrondown')}</a>
       <div class="dropdown">
-        <a data-go="teologia"><b>${cmsText("teologia.nome","Curso Médio em Teologia")}</b><small>${cmsText("menu.teologia_sub","Formação bíblica completa · 2 anos")}</small></a>
+        <a data-go="teologia"><b>${cmsText("teologia.nome","Curso Médio em Teologia")}</b><small>Formação bíblica completa · 3 anos</small></a>
         <a data-go="diaconato"><b>${cmsText("diaconato.nome","Habilitação ao Diaconato")}</b><small>${cmsText("menu.diaconato_sub","Sirva com excelência · 7 meses")}</small></a>
         <a data-go="lideranca"><b>${cmsText("lideranca.nome","Liderança Cristã Ministerial")}</b><small>${cmsText("menu.lideranca_sub","Forme líderes · 2 anos")}</small></a>
       </div>
