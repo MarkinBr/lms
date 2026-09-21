@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   pint:
-    if: github.event.head_commit.message != 'style: apply Pint fixes'
+    if: "${{ github.event.head_commit.message != 'style: apply Pint fixes' }}"
     runs-on: ubuntu-24.04
     env:
       APP_ENV: testing
