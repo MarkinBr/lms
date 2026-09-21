@@ -20,7 +20,7 @@ class SecretariaStatsWidget extends BaseWidget
         $alunosAtivos = User::where('nivel', 'aluno')->where('ativo', true)->count();
         
         $totalMatriculas = Matricula::count();
-        $matriculasAtivas = Matricula::where('status', 'ativo')->count();
+        $matriculasAtivas = Matricula::ativas()->count();
         
         $mensalidadesAtrasadas = Mensalidade::where('status', 'Atrasado')->count();
         $totalMensalidadesAtrasadas = Mensalidade::where('status', 'Atrasado')->sum('valor');
@@ -68,7 +68,7 @@ class SecretariaStatsWidget extends BaseWidget
                 ->color('warning'),
 
             // MATRÍCULAS TRANCADAS
-            Stat::make('Matrículas Trancadas', Matricula::where('status', 'trancado')->count())
+            Stat::make('Matrículas Trancadas', Matricula::trancadas()->count())
                 ->description('Requerem atenção')
                 ->descriptionIcon('heroicon-m-pause-circle')
                 ->color('warning'),

@@ -14,16 +14,45 @@ class Matricula extends Model
     use HasFactory;
 
     /**
-     * Status canônicos utilizados pelo fluxo de aprovação/matrícula.
-     * Valores em minúsculas para bater com os scopes existentes (LOWER()).
+     * Status canônicos persistidos em banco.
+     *
+     * O sistema historicamente misturou formas masculinas e femininas
+     * (ativo/ativa, trancado/trancada...). As views SQL e o fluxo da
+     * secretaria já usam a forma masculina, que passa a ser a canônica.
+     * Os aliases antigos são mantidos para compatibilidade de código.
      */
-    public const STATUS_ATIVA = 'ativa';
+    public const STATUS_ATIVO = 'ativo';
 
-    public const STATUS_TRANCADA = 'trancada';
+    public const STATUS_TRANCADO = 'trancado';
 
-    public const STATUS_CONCLUIDA = 'concluida';
+    public const STATUS_CONCLUIDO = 'concluido';
 
-    public const STATUS_CANCELADA = 'cancelada';
+    public const STATUS_CANCELADO = 'cancelado';
+
+    public const STATUS_ATIVA = self::STATUS_ATIVO;
+
+    public const STATUS_TRANCADA = self::STATUS_TRANCADO;
+
+    public const STATUS_CONCLUIDA = self::STATUS_CONCLUIDO;
+
+    public const STATUS_CANCELADA = self::STATUS_CANCELADO;
+
+    /**
+     * Normaliza qualquer variante histórica antes de persistir.
+     */
+    public function setStatusAttribute(?string $value): void
+    {
+        $status = mb_strtolower(trim((string) $value));
+        $status = str_replace(['á', 'à', 'â', 'ã', 'é', 'ê', 'í', 'ó', 'ô', 'õ', 'ú', 'ç'], ['a', 'a', 'a', 'a', 'e', 'e', 'i', 'o', 'o', 'o', 'u', 'c'], $status);
+
+        $this->attributes['status'] = match ($status) {
+            'ativo', 'ativa' => self::STATUS_ATIVO,
+            'trancado', 'trancada' => self::STATUS_TRANCADO,
+            'concluido', 'concluida' => self::STATUS_CONCLUIDO,
+            'cancelado', 'cancelada' => self::STATUS_CANCELADO,
+            default => $status,
+        };
+    }
 
     protected $fillable = [
         'user_id',
@@ -164,6 +193,16 @@ class Matricula extends Model
     public function scopeAtivas($query)
     {
         return $query->whereRaw("LOWER(COALESCE(status, '')) IN ('ativo','ativa')");
+    }
+
+    public function scopeTrancadas($query)
+    {
+        return $query->whereRaw("LOWER(COALESCE(status, '')) IN ('trancado','trancada')");
+    }
+
+    public function scopeConcluidas($query)
+    {
+        return $query->whereRaw("LOWER(COALESCE(status, '')) IN ('concluido','concluida','concluída')");
     }
 
     public function scopeExpiradas($query)

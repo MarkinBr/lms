@@ -75,7 +75,7 @@ class CreateCadastroRapido extends CreateRecord
                 'numero_matricula' => $numeroMatricula,
                 'data_matricula' => $data['data_matricula'] ?? now(),
                 'dia_vencimento' => $data['dia_vencimento'] ?? 10,
-                'status' => $data['status_matricula'] ?? 'ativo',
+                'status' => $data['status_matricula'] ?? Matricula::STATUS_ATIVO,
                 'observacoes' => $data['observacoes_matricula'] ?? null,
             ]);
 

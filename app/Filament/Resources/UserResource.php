@@ -29,7 +29,7 @@ class UserResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('nivel', 'Professor');
+        return parent::getEloquentQuery()->whereRaw("LOWER(COALESCE(nivel, '')) = 'professor'");
     }
 
     public static function form(Form $form): Form
@@ -137,17 +137,8 @@ class UserResource extends Resource
                                     ->hiddenOn('edit'),
                             ]),
 
-                        Forms\Components\Select::make('nivel')
-    ->label('Função / Acesso')
-    ->options([
-        'admin' => '👑 Administrador',
-        'secretario' => '📚 Secretaria',
-        'professor' => '🎓 Professor',
-        'aluno' => '🎒 Aluno',
-    ])
-    ->required()
-    ->native(false)
-    ->default('aluno'),
+                        Forms\Components\Hidden::make('nivel')
+                            ->default('professor'),
                         
                         Forms\Components\Hidden::make('password')
                             ->default(fn () => bcrypt('mudar@123'))
@@ -392,7 +383,7 @@ class UserResource extends Resource
                 Tables\Filters\SelectFilter::make('estado')
                     ->label('Estado')
                     ->options(fn () => User::query()
-                        ->where('nivel', 'Professor')
+                        ->whereRaw("LOWER(COALESCE(nivel, '')) = 'professor'")
                         ->whereNotNull('estado') // <--- FIX IS HERE: Filter out nulls
                         ->where('estado', '!=', '') // <--- AND HERE: Filter out empty strings
                         ->distinct()
@@ -541,7 +532,7 @@ class UserResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('nivel', 'Professor')->where('ativo', true)->count();
+        return static::getModel()::whereRaw("LOWER(COALESCE(nivel, '')) = 'professor'")->where('ativo', true)->count();
     }
 
     public static function getNavigationBadgeColor(): ?string

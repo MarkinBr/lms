@@ -45,7 +45,7 @@ class CreateAlunoSecretaria extends CreateRecord
                     'numero_matricula' => $numeroMatricula,
                     'data_matricula' => $data['data_matricula_nova'] ?? now(),
                     'dia_vencimento' => $data['dia_vencimento_nova'] ?? 10,
-                    'status' => 'ativo',
+                    'status' => Matricula::STATUS_ATIVO,
                 ]);
 
                 // 2️⃣ GERAR MENSALIDADES (se solicitado)

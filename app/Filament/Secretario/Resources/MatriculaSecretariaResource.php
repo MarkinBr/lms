@@ -79,12 +79,12 @@ class MatriculaSecretariaResource extends Resource
                         Forms\Components\Select::make('status')
                             ->label('Status')
                             ->options([
-                                'ativo' => '✅ Ativo',
-                                'trancado' => '⏸️ Trancado',
-                                'concluido' => '🎓 Concluído',
-                                'cancelado' => '❌ Cancelado',
+                                Matricula::STATUS_ATIVO => '✅ Ativo',
+                                Matricula::STATUS_TRANCADO => '⏸️ Trancado',
+                                Matricula::STATUS_CONCLUIDO => '🎓 Concluído',
+                                Matricula::STATUS_CANCELADO => '❌ Cancelado',
                             ])
-                            ->default('ativo')
+                            ->default(Matricula::STATUS_ATIVO)
                             ->required()
                             ->native(false),
                         
@@ -145,10 +145,10 @@ class MatriculaSecretariaResource extends Resource
                         'danger' => 'cancelado',
                     ])
                     ->formatStateUsing(fn ($state) => match($state) {
-                        'ativo' => '✅ Ativo',
-                        'trancado' => '⏸️ Trancado',
-                        'concluido' => '🎓 Concluído',
-                        'cancelado' => '❌ Cancelado',
+                        Matricula::STATUS_ATIVO => '✅ Ativo',
+                        Matricula::STATUS_TRANCADO => '⏸️ Trancado',
+                        Matricula::STATUS_CONCLUIDO => '🎓 Concluído',
+                        Matricula::STATUS_CANCELADO => '❌ Cancelado',
                         default => $state,
                     })
                     ->toggleable(),
@@ -190,10 +190,10 @@ class MatriculaSecretariaResource extends Resource
                     ->label('Status da Matrícula')
                     ->multiple()
                     ->options([
-                        'ativo' => '✅ Ativo',
-                        'trancado' => '⏸️ Trancado',
-                        'concluido' => '🎓 Concluído',
-                        'cancelado' => '❌ Cancelado',
+                        Matricula::STATUS_ATIVO => '✅ Ativo',
+                        Matricula::STATUS_TRANCADO => '⏸️ Trancado',
+                        Matricula::STATUS_CONCLUIDO => '🎓 Concluído',
+                        Matricula::STATUS_CANCELADO => '❌ Cancelado',
                     ])
                     ->native(false),
                 

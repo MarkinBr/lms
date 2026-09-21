@@ -165,7 +165,7 @@ class CursoResource extends Resource
 
                                         Forms\Components\Placeholder::make('total_alunos_ativos')
                                             ->label('Alunos Ativos')
-                                            ->content(fn ($record) => $record->matriculas()->where('status', 'ativo')->count()),
+                                            ->content(fn ($record) => $record->matriculas()->ativas()->count()),
 
                                         Forms\Components\Placeholder::make('created_at')
                                             ->label('Criado em')
@@ -348,7 +348,7 @@ class CursoResource extends Resource
 
                         Infolists\Components\TextEntry::make('alunos_ativos')
                             ->label('Alunos Ativos')
-                            ->state(fn ($record) => $record->matriculas()->where('status', 'ativo')->count()),
+                            ->state(fn ($record) => $record->matriculas()->ativas()->count()),
                     ])
                     ->columns(4),
 

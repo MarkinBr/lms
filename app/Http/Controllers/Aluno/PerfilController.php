@@ -448,9 +448,9 @@ class PerfilController extends Controller
         
         return [
             'total_cursos' => $matriculas->count(),
-            'cursos_concluidos' => $matriculas->where('status', 'concluida')->count(),
-            'cursos_em_andamento' => $matriculas->where('status', 'ativa')->count(),
-            'cursos_trancados' => $matriculas->where('status', 'trancada')->count(),
+            'cursos_concluidos' => $matriculas->filter(fn ($m) => in_array(mb_strtolower((string) $m->status), ['concluido', 'concluida'], true))->count(),
+            'cursos_em_andamento' => $matriculas->filter(fn ($m) => in_array(mb_strtolower((string) $m->status), ['ativo', 'ativa'], true))->count(),
+            'cursos_trancados' => $matriculas->filter(fn ($m) => in_array(mb_strtolower((string) $m->status), ['trancado', 'trancada'], true))->count(),
             'certificados' => $aluno->certificados()->count(),
             'total_horas_estudo' => $matriculas->sum('tempo_estudo') ?? 0,
             'media_progresso' => round($matriculas->avg('progresso') ?? 0, 1),

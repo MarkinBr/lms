@@ -42,8 +42,10 @@ Schedule::command('sanctum:prune-expired')
     ->withoutOverlapping();
 
 // 4. Otimização do banco (VACUUM ANALYZE) — semanal domingo 04:00
-Schedule::exec('php artisan db:vacuum 2>/dev/null || true')
-    ->weeklyOn(0, '04:00');
+Schedule::command('db:vacuum')
+    ->weeklyOn(0, '04:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/db-vacuum.log'));
 
 // === MENSALIDADES (Auditoria v2026.06) ===
 

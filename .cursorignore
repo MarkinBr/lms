@@ -1,0 +1,27 @@
+# Dependências / artefatos gerados
+vendor/
+node_modules/
+public/build/
+bootstrap/cache/
+storage/logs/
+storage/framework/
+storage/app/tmp/
+backups/
+tests/e2e/.report/
+tests/e2e/.artifacts/
+
+# Dados e segredos locais
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.sql
+cetsadp_lms
+
+# Arquivos compactados / temporários
+*.zip
+*.tar.gz
+*.bak
+*.bak.*
+*-backup.php

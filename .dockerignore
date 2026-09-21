@@ -1,52 +1,62 @@
-# ============================================================
-# CETSADP LMS v9.3.6 — Docker Ignore
-# Evita copiar arquivos desnecessários para a imagem Docker
-# ============================================================
-
-# Controle de versão
+# Controle de versão / metadados
 .git
 .gitignore
 .gitattributes
+.github
+.cursorignore
 
-# Ambiente local
+# Segredos e ambientes locais
 .env
-.env.backup
-.env.local
+.env.*
+!.env.example
+*.pem
+*.key
 
-# Dependências (serão instaladas no build)
+# Dependências (instaladas no build)
 node_modules
 vendor
 
-# Testes (não necessários em produção)
-tests
+# Dados locais / dumps / backups
+cetsadp_lms
+*.sqlite
+*.sqlite3
+*.sql
+backups/
+
+# Runtime e artefatos gerados
+public/build/
+bootstrap/cache/*
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/tmp/*
+.npm
+.cache
+
+# Testes e relatórios (não necessários na imagem de produção)
+tests/
 phpunit.xml
 .phpunit.result.cache
+tests/e2e/.report/
+tests/e2e/.artifacts/
 
-# IDE e editor
+# IDE / SO / temporários
 .idea
 .vscode
 *.swp
 *.swo
 *~
-
-# Build artifacts
-.npm
-.cache
+*.tmp
+*.bak
+*.bak.*
+*-backup.php
+*.zip
+*.tar.gz
+*.bat
+.DS_Store
+Thumbs.db
 
 # Documentação de desenvolvimento
 *.md
 !README.md
-
-# Backups locais
-backups/*.sql.gz
-backups/*.tar.gz
-
-# Logs (serão criados pelo container)
-storage/logs/*.log
-
-# Windows scripts
-*.bat
-
-# OS files
-.DS_Store
-Thumbs.db

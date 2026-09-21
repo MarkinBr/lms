@@ -3,6 +3,7 @@
 namespace App\Filament\Secretario\Resources\MatriculaSecretariaResource\Pages;
 
 use App\Filament\Secretario\Resources\MatriculaSecretariaResource;
+use App\Models\Matricula;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -100,9 +101,9 @@ class EditMatriculaSecretaria extends EditRecord
                 ->icon('heroicon-o-pause-circle')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->status === 'ativo')
+                ->visible(fn () => in_array(mb_strtolower((string) $this->record->status), ['ativo', 'ativa'], true))
                 ->action(function () {
-                    $this->record->update(['status' => 'trancado']);
+                    $this->record->update(['status' => Matricula::STATUS_TRANCADO]);
                     
                     \Filament\Notifications\Notification::make()
                         ->title('Matrícula trancada!')
@@ -115,9 +116,9 @@ class EditMatriculaSecretaria extends EditRecord
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->status === 'trancado')
+                ->visible(fn () => in_array(mb_strtolower((string) $this->record->status), ['trancado', 'trancada'], true))
                 ->action(function () {
-                    $this->record->update(['status' => 'ativo']);
+                    $this->record->update(['status' => Matricula::STATUS_ATIVO]);
                     
                     \Filament\Notifications\Notification::make()
                         ->title('Matrícula reativada!')

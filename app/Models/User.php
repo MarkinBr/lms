@@ -15,6 +15,15 @@ class User extends Authenticatable implements FilamentUser
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
+     * Perfis de acesso são persistidos sempre em minúsculas para evitar
+     * divergências entre autenticação, filtros e recursos do Filament.
+     */
+    public function setNivelAttribute(?string $value): void
+    {
+        $this->attributes['nivel'] = strtolower(trim((string) $value));
+    }
+
+    /**
      * Os atributos que podem ser preenchidos em massa.
      *
      * CORREÇÃO v9.3.2: Adicionados campos SSO (username, last_sso_at, sso_provider)
