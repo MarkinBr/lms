@@ -5,10 +5,10 @@ namespace App\Filament\Secretario\Resources\AlunoSecretariaResource\Pages;
 use App\Filament\Secretario\Resources\AlunoSecretariaResource;
 use App\Models\Matricula;
 use App\Models\Mensalidade;
-use Filament\Resources\Pages\CreateRecord;
-use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Facades\DB;
 
 class CreateAlunoSecretaria extends CreateRecord
 {
@@ -25,9 +25,9 @@ class CreateAlunoSecretaria extends CreateRecord
         $data = $this->form->getRawState();
 
         // Verificar se há dados de matrícula para criar
-        $deveCriarMatricula = !empty($data['criar_matricula']) && 
-                              !empty($data['curso_id_matricula']) && 
-                              !empty($data['turma_id_matricula']);
+        $deveCriarMatricula = ! empty($data['criar_matricula']) &&
+                              ! empty($data['curso_id_matricula']) &&
+                              ! empty($data['turma_id_matricula']);
 
         if ($deveCriarMatricula) {
             try {
@@ -36,7 +36,7 @@ class CreateAlunoSecretaria extends CreateRecord
                 // 1️⃣ CRIAR MATRÍCULA
                 $ano = date('Y');
                 $ultimaMatricula = Matricula::whereYear('created_at', $ano)->max('id') ?? 0;
-                $numeroMatricula = $ano . '-' . str_pad($ultimaMatricula + 1, 4, '0', STR_PAD_LEFT);
+                $numeroMatricula = $ano.'-'.str_pad($ultimaMatricula + 1, 4, '0', STR_PAD_LEFT);
 
                 $matricula = Matricula::create([
                     'user_id' => $aluno->id,
@@ -49,10 +49,10 @@ class CreateAlunoSecretaria extends CreateRecord
                 ]);
 
                 // 2️⃣ GERAR MENSALIDADES (se solicitado)
-                if (!empty($data['gerar_mensalidades'])) {
+                if (! empty($data['gerar_mensalidades'])) {
                     $valorMensalidade = $data['valor_mensalidade_nova'];
                     $qtdParcelas = $data['qtd_parcelas_nova'] ?? 12;
-                    $primeiraMensalidade = !empty($data['primeira_mensalidade_nova']) 
+                    $primeiraMensalidade = ! empty($data['primeira_mensalidade_nova'])
                         ? Carbon::parse($data['primeira_mensalidade_nova'])
                         : now()->addMonth()->day($data['dia_vencimento_nova'] ?? 10);
 
@@ -60,7 +60,7 @@ class CreateAlunoSecretaria extends CreateRecord
 
                     for ($i = 0; $i < $qtdParcelas; $i++) {
                         $dataVencimento = $primeiraMensalidade->copy()->addMonths($i);
-                        
+
                         $status = $dataVencimento->isPast() ? 'Atrasado' : 'Pendente';
 
                         Mensalidade::create([
@@ -81,17 +81,17 @@ class CreateAlunoSecretaria extends CreateRecord
                     ->title('✅ Aluno cadastrado com sucesso!')
                     ->body("
                         👤 Aluno: {$aluno->name}
-                        " . ($deveCriarMatricula ? "📝 Matrícula: {$numeroMatricula}" : "") . "
-                        " . (!empty($mensalidadesCriadas) ? "💰 {$mensalidadesCriadas} mensalidades geradas" : "") . "
+                        ".($deveCriarMatricula ? "📝 Matrícula: {$numeroMatricula}" : '').'
+                        '.(! empty($mensalidadesCriadas) ? "💰 {$mensalidadesCriadas} mensalidades geradas" : '').'
                         🔑 Senha padrão: aluno@123
-                    ")
+                    ')
                     ->success()
                     ->duration(8000)
                     ->send();
 
             } catch (\Exception $e) {
                 DB::rollBack();
-                
+
                 Notification::make()
                     ->title('⚠️ Aluno criado, mas houve erro na matrícula')
                     ->body("Aluno cadastrado, mas erro ao criar matrícula: {$e->getMessage()}")

@@ -3,28 +3,33 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers\DocumentosRelationManager;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\HtmlString;
-use App\Filament\Resources\UserResource\RelationManagers\DocumentosRelationManager;
-
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
+
     protected static ?string $modelLabel = 'Professor';
+
     protected static ?string $pluralModelLabel = 'Professores';
+
     protected static ?string $navigationLabel = 'Professores';
+
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
+
     protected static ?string $navigationGroup = 'Gestão Acadêmica';
+
     protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder
@@ -97,8 +102,7 @@ class UserResource extends Resource
                                         Forms\Components\Actions\Action::make('testar_whatsapp')
                                             ->icon('heroicon-o-chat-bubble-left-right')
                                             ->color('success')
-                                            ->url(fn (Get $get) => 
-                                                "https://api.whatsapp.com/send?phone=55" . 
+                                            ->url(fn (Get $get) => 'https://api.whatsapp.com/send?phone=55'.
                                                 preg_replace('/[^0-9]/', '', $get('telefone') ?? '')
                                             )
                                             ->openUrlInNewTab()
@@ -139,7 +143,7 @@ class UserResource extends Resource
 
                         Forms\Components\Hidden::make('nivel')
                             ->default('professor'),
-                        
+
                         Forms\Components\Hidden::make('password')
                             ->default(fn () => bcrypt('mudar@123'))
                             ->dehydrated(fn ($state) => filled($state)),
@@ -165,12 +169,13 @@ class UserResource extends Resource
                                             ->icon('heroicon-o-magnifying-glass')
                                             ->action(function (Get $get, Forms\Set $set) {
                                                 $cep = preg_replace('/[^0-9]/', '', $get('cep') ?? '');
-                                                
+
                                                 if (strlen($cep) !== 8) {
                                                     Notification::make()
                                                         ->title('CEP inválido')
                                                         ->danger()
                                                         ->send();
+
                                                     return;
                                                 }
 
@@ -181,6 +186,7 @@ class UserResource extends Resource
                                                         ->title('CEP não encontrado')
                                                         ->danger()
                                                         ->send();
+
                                                     return;
                                                 }
 
@@ -196,13 +202,17 @@ class UserResource extends Resource
                                             })
                                     )
                                     ->afterStateUpdated(function ($state, callable $set) {
-                                        if (!$state) return;
+                                        if (! $state) {
+                                            return;
+                                        }
                                         $cep = preg_replace('/[^0-9]/', '', $state);
-                                        if (strlen($cep) !== 8) return;
+                                        if (strlen($cep) !== 8) {
+                                            return;
+                                        }
 
                                         $response = Http::get("https://viacep.com.br/ws/$cep/json/")->json();
 
-                                        if (!isset($response['erro'])) {
+                                        if (! isset($response['erro'])) {
                                             $set('endereco', $response['logradouro'] ?? '');
                                             $set('bairro', $response['bairro'] ?? '');
                                             $set('cidade', $response['localidade'] ?? '');
@@ -287,7 +297,7 @@ class UserResource extends Resource
 
                                 Forms\Components\TextInput::make('chave_pix')
                                     ->label('Chave PIX')
-                                    ->placeholder(fn (Get $get) => match($get('tipo_chave')) {
+                                    ->placeholder(fn (Get $get) => match ($get('tipo_chave')) {
                                         'CPF' => '000.000.000-00',
                                         'CNPJ' => '00.000.000/0000-00',
                                         'Email' => 'email@exemplo.com',
@@ -342,9 +352,8 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('cidade')
                     ->label('Localização')
                     ->searchable()
-                    ->formatStateUsing(fn ($record) => 
-                        $record->cidade && $record->estado 
-                            ? "{$record->cidade}/{$record->estado}" 
+                    ->formatStateUsing(fn ($record) => $record->cidade && $record->estado
+                            ? "{$record->cidade}/{$record->estado}"
                             : 'Não informado'
                     )
                     ->icon('heroicon-m-map-pin')
@@ -430,8 +439,7 @@ class UserResource extends Resource
                         ->label('WhatsApp')
                         ->icon('heroicon-o-chat-bubble-left-right')
                         ->color('success')
-                        ->url(fn (User $record) => 
-                            "https://api.whatsapp.com/send?phone=55" . 
+                        ->url(fn (User $record) => 'https://api.whatsapp.com/send?phone=55'.
                             preg_replace('/[^0-9]/', '', $record->telefone)
                         )
                         ->openUrlInNewTab(),
@@ -452,9 +460,9 @@ class UserResource extends Resource
                             $novo = $record->replicate();
                             $novo->email = null;
                             $novo->cpf = null;
-                            $novo->name = $novo->name . ' (Cópia)';
+                            $novo->name = $novo->name.' (Cópia)';
                             $novo->save();
-                            
+
                             Notification::make()
                                 ->title('Professor duplicado com sucesso!')
                                 ->body('Email e CPF foram limpos para evitar conflitos.')
@@ -464,11 +472,11 @@ class UserResource extends Resource
 
                     Tables\Actions\DeleteAction::make(),
                 ])
-                ->label('Ações')
-                ->icon('heroicon-m-ellipsis-vertical')
-                ->size('sm')
-                ->color('gray')
-                ->button(),
+                    ->label('Ações')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('gray')
+                    ->button(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
