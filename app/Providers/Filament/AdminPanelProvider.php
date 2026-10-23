@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\AdminLogin;
+use App\Filament\Pages\Auth\AdminRequestPasswordReset;
+use App\Filament\Pages\Auth\AdminResetPassword;
 use App\Filament\Widgets\CadastrosRecentesWidget;
 use App\Filament\Widgets\DistribuicaoUsuariosChart;
 // Seus Widgets
@@ -17,6 +20,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Assets\Css;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -33,7 +37,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(AdminLogin::class)
+            ->passwordReset(AdminRequestPasswordReset::class, AdminResetPassword::class)
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => '<meta name="robots" content="noindex,nofollow,noarchive">')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Amber,

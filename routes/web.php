@@ -16,6 +16,8 @@ use App\Http\Controllers\Aluno\PerfilController;
 use App\Http\Controllers\Aluno\SecretariaController;
 // Controllers do Portal do Aluno
 use App\Http\Controllers\Auth\AlunoLoginController;
+use App\Http\Controllers\Auth\AdminAccessTokenController;
+use App\Http\Controllers\Auth\RedefinirSenhaController;
 use App\Http\Controllers\DREController;
 use App\Http\Controllers\ExtratoAlunoController;
 use App\Http\Controllers\MatriculaReportController;
@@ -56,12 +58,22 @@ Route::get('/acompanhar-inscricao/{application}', [AcompanhamentoInscricaoLinkCo
 // === 2. AUTENTICAÇÃO E REDIRECIONAMENTOS ===
 Route::get('/login', fn () => redirect()->route('aluno.login'))->name('login');
 
-Route::middleware('guest')->group(function () {
-    Route::get('/portal/login', [AlunoLoginController::class, 'showLoginForm'])->name('aluno.login');
-    Route::post('/portal/login', [AlunoLoginController::class, 'login'])->name('aluno.login.submit');
+Route::prefix('admin/token')->name('admin.token.')->group(function () {
+    Route::get('/', [AdminAccessTokenController::class, 'create'])->middleware('throttle:10,1')->name('create');
+    Route::post('/request', [AdminAccessTokenController::class, 'request'])->middleware(['guest', 'throttle:3,10'])->name('request');
+    Route::post('/authenticate', [AdminAccessTokenController::class, 'authenticate'])->middleware(['guest', 'throttle:5,10'])->name('authenticate');
 });
 
-Route::post('/portal/logout', [AlunoLoginController::class, 'logout'])->name('aluno.logout');
+Route::middleware('guest')->group(function () {
+    Route::get('/portal/login', [AlunoLoginController::class, 'showLoginForm'])->name('aluno.login');
+    Route::post('/portal/login', [AlunoLoginController::class, 'login'])->middleware('throttle:20,1')->name('aluno.login.submit');
+    Route::get('/senha/esqueci', [RedefinirSenhaController::class, 'esqueci'])->name('password.request');
+    Route::post('/senha/esqueci', [RedefinirSenhaController::class, 'enviarLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/senha/redefinir/{token}', [RedefinirSenhaController::class, 'redefinir'])->name('password.reset');
+    Route::post('/senha/redefinir', [RedefinirSenhaController::class, 'atualizar'])->middleware('throttle:10,1')->name('password.update');
+});
+
+Route::post('/portal/logout', [AlunoLoginController::class, 'logout'])->middleware(['auth','aluno'])->name('aluno.logout');
 
 Route::post('/aluno/logout', function () {
     auth()->logout();
@@ -104,7 +116,7 @@ Route::prefix('validar')->group(function () {
 });
 
 // === 5. PORTAL DO ALUNO ===
-Route::middleware(['auth'])->prefix('portal')->name('aluno.')->group(function () {
+Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

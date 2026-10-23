@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\SecretariaLogin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -26,7 +27,7 @@ class SecretarioPanelProvider extends PanelProvider
         return $panel
             ->id('secretario')
             ->path('secretaria')
-            ->login()
+            ->login(SecretariaLogin::class)
             
             // === CORES ===
             ->colors([
