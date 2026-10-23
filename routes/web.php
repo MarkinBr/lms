@@ -15,8 +15,8 @@ use App\Http\Controllers\Aluno\NotasController;
 use App\Http\Controllers\Aluno\PerfilController;
 use App\Http\Controllers\Aluno\SecretariaController;
 // Controllers do Portal do Aluno
-use App\Http\Controllers\Auth\AlunoLoginController;
 use App\Http\Controllers\Auth\AdminAccessTokenController;
+use App\Http\Controllers\Auth\AlunoLoginController;
 use App\Http\Controllers\Auth\RedefinirSenhaController;
 use App\Http\Controllers\DREController;
 use App\Http\Controllers\ExtratoAlunoController;
@@ -73,7 +73,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/senha/redefinir', [RedefinirSenhaController::class, 'atualizar'])->middleware('throttle:10,1')->name('password.update');
 });
 
-Route::post('/portal/logout', [AlunoLoginController::class, 'logout'])->middleware(['auth','aluno'])->name('aluno.logout');
+Route::post('/portal/logout', [AlunoLoginController::class, 'logout'])->middleware(['auth', 'aluno'])->name('aluno.logout');
 
 Route::post('/aluno/logout', function () {
     auth()->logout();
