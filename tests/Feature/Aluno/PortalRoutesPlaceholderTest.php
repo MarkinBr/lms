@@ -4,6 +4,7 @@ namespace Tests\Feature\Aluno;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class PortalRoutesPlaceholderTest extends TestCase
@@ -33,7 +34,7 @@ class PortalRoutesPlaceholderTest extends TestCase
     public function test_mensagens_nao_e_capturada_pela_rota_de_aviso_por_id(): void
     {
         $rota = app('router')->getRoutes()->match(
-            \Illuminate\Http\Request::create('/portal/comunicacao/mensagens', 'GET')
+            Request::create('/portal/comunicacao/mensagens', 'GET')
         );
 
         $this->assertSame('aluno.comunicacao.mensagens', $rota->getName());
