@@ -7,7 +7,8 @@ async function abrirPagina(page, pagina) {
 
 test.describe('site público CETSADP', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/');
+        // Recursos externos (ex.: Google Fonts/Unsplash) não devem bloquear a navegação.
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
         await expect(page.locator('.page[data-page="home"].active')).toBeVisible();
     });
 
