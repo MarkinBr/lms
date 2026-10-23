@@ -153,9 +153,10 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
 
     // Comunicação
     Route::get('/comunicacao', [ComunicacaoController::class, 'index'])->name('comunicacao');
-    Route::get('/comunicacao/{id}', [ComunicacaoController::class, 'show'])->name('comunicacao.show');
+    // Rotas literais devem vir antes de /comunicacao/{id}, que captura caminhos dinâmicos.
     Route::get('/comunicacao/mensagens', [ComunicacaoController::class, 'mensagens'])->name('comunicacao.mensagens');
     Route::post('/comunicacao/marcar-lido', [ComunicacaoController::class, 'marcarComoLido'])->name('comunicacao.marcar-lido');
+    Route::get('/comunicacao/{id}', [ComunicacaoController::class, 'show'])->name('comunicacao.show');
 
     // Certificados
     Route::get('/certificados', [CertificadosController::class, 'index'])->name('certificados');
