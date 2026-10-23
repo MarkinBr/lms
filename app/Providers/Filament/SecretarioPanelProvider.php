@@ -72,9 +72,9 @@ class SecretarioPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Secretario/Widgets'), for: 'App\\Filament\\Secretario\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                \App\Filament\Secretario\Widgets\SecretariaStatsWidget::class,
-                \App\Filament\Secretario\Widgets\SecretariaMatriculasChartWidget::class,
-                \App\Filament\Secretario\Widgets\SecretariaInadimplentesWidget::class,
+                SecretariaStatsWidget::class,
+                SecretariaMatriculasChartWidget::class,
+                SecretariaInadimplentesWidget::class,
             ])
             
             // === RECURSOS AVANÇADOS ===
