@@ -31,7 +31,7 @@ class SecretarioPanelProvider extends PanelProvider
             ->id('secretario')
             ->path('secretaria')
             ->login(SecretariaLogin::class)
-            
+
             // === CORES ===
             ->colors([
                 'primary' => Color::Orange,
@@ -40,11 +40,11 @@ class SecretarioPanelProvider extends PanelProvider
                 'danger' => Color::Red,
                 'info' => Color::Blue,
             ])
-            
+
             // === IDENTIDADE VISUAL ===
             ->brandName('Secretaria CETSADP')
             ->darkMode(true)
-            
+
             // === NAVEGAÇÃO ===
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('17rem')
@@ -60,14 +60,14 @@ class SecretarioPanelProvider extends PanelProvider
                 NavigationGroup::make('⚙️ Configurações')
                     ->collapsed(true),
             ])
-            
+
             // === RECURSOS ===
             ->discoverResources(in: app_path('Filament/Secretario/Resources'), for: 'App\\Filament\\Secretario\\Resources')
             ->discoverPages(in: app_path('Filament/Secretario/Pages'), for: 'App\\Filament\\Secretario\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
-            
+
             // === WIDGETS ===
             ->discoverWidgets(in: app_path('Filament/Secretario/Widgets'), for: 'App\\Filament\\Secretario\\Widgets')
             ->widgets([
@@ -76,7 +76,7 @@ class SecretarioPanelProvider extends PanelProvider
                 SecretariaMatriculasChartWidget::class,
                 SecretariaInadimplentesWidget::class,
             ])
-            
+
             // === RECURSOS AVANÇADOS ===
             ->spa()
             ->databaseNotifications()
@@ -87,7 +87,7 @@ class SecretarioPanelProvider extends PanelProvider
             ->breadcrumbs(true)
             ->maxContentWidth('full')
             ->font('Inter')
-            
+
             // === MIDDLEWARE ===
             ->middleware([
                 EncryptCookies::class,
