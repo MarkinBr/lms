@@ -3,9 +3,15 @@
 namespace App\Filament\Secretario\Resources\MatriculaSecretariaResource\Pages;
 
 use App\Filament\Secretario\Resources\MatriculaSecretariaResource;
-use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
+use App\Models\Matricula;
+use App\Models\Mensalidade;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Filament\Actions;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 
 class EditMatriculaSecretaria extends EditRecord
 {
@@ -19,7 +25,7 @@ class EditMatriculaSecretaria extends EditRecord
                 ->icon('heroicon-o-user')
                 ->color('info')
                 ->url(fn () => route('filament.secretario.resources.aluno-secretarias.edit', [
-                    'record' => $this->record->user_id
+                    'record' => $this->record->user_id,
                 ]))
                 ->visible(fn () => $this->record->user_id),
 
@@ -29,8 +35,8 @@ class EditMatriculaSecretaria extends EditRecord
                 ->color('success')
                 ->url(fn () => route('filament.secretario.resources.mensalidade-secretarias.index', [
                     'tableFilters' => [
-                        'matricula_id' => ['values' => [$this->record->id]]
-                    ]
+                        'matricula_id' => ['values' => [$this->record->id]],
+                    ],
                 ])),
 
             Actions\Action::make('gerar_mensalidades')
@@ -41,19 +47,19 @@ class EditMatriculaSecretaria extends EditRecord
                 ->modalHeading('Gerar Mensalidades')
                 ->modalDescription('Deseja gerar as mensalidades desta matrícula?')
                 ->form([
-                    \Filament\Forms\Components\DatePicker::make('primeira_parcela')
+                    DatePicker::make('primeira_parcela')
                         ->label('Vencimento da 1ª Parcela')
                         ->default(now()->addMonth()->startOfMonth()->addDays(9))
                         ->native(false)
                         ->required(),
-                    
-                    \Filament\Forms\Components\TextInput::make('qtd_parcelas')
+
+                    TextInput::make('qtd_parcelas')
                         ->label('Quantidade de Parcelas')
                         ->numeric()
                         ->default(fn () => $this->record->turma?->qtd_parcelas ?? 12)
                         ->required(),
 
-                    \Filament\Forms\Components\TextInput::make('valor_parcela')
+                    TextInput::make('valor_parcela')
                         ->label('Valor por Parcela')
                         ->numeric()
                         ->prefix('R$')
@@ -61,19 +67,19 @@ class EditMatriculaSecretaria extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data) {
-                    $dataVencimento = \Carbon\Carbon::parse($data['primeira_parcela']);
-                    
+                    $dataVencimento = Carbon::parse($data['primeira_parcela']);
+
                     for ($i = 1; $i <= $data['qtd_parcelas']; $i++) {
-                        \App\Models\Mensalidade::create([
+                        Mensalidade::create([
                             'matricula_id' => $this->record->id,
                             'valor' => $data['valor_parcela'],
                             'data_vencimento' => $dataVencimento->copy()->addMonths($i - 1),
                             'status' => 'Pendente',
-                            'observacao' => 'Parcela ' . $i . '/' . $data['qtd_parcelas'],
+                            'observacao' => 'Parcela '.$i.'/'.$data['qtd_parcelas'],
                         ]);
                     }
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Mensalidades geradas!')
                         ->body("{$data['qtd_parcelas']} mensalidades criadas com sucesso.")
                         ->success()
@@ -87,9 +93,9 @@ class EditMatriculaSecretaria extends EditRecord
                 ->color('primary')
                 ->action(function () {
                     $pdf = Pdf::loadView('.declaracao-matricula', [
-                        'matricula' => $this->record
+                        'matricula' => $this->record,
                     ]);
-                    
+
                     return response()->streamDownload(function () use ($pdf) {
                         echo $pdf->output();
                     }, "declaracao-matricula-{$this->record->numero_matricula}.pdf");
@@ -100,11 +106,11 @@ class EditMatriculaSecretaria extends EditRecord
                 ->icon('heroicon-o-pause-circle')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->status === 'ativo')
+                ->visible(fn () => in_array(mb_strtolower((string) $this->record->status), ['ativo', 'ativa'], true))
                 ->action(function () {
-                    $this->record->update(['status' => 'trancado']);
-                    
-                    \Filament\Notifications\Notification::make()
+                    $this->record->update(['status' => Matricula::STATUS_TRANCADO]);
+
+                    Notification::make()
                         ->title('Matrícula trancada!')
                         ->success()
                         ->send();
@@ -115,11 +121,11 @@ class EditMatriculaSecretaria extends EditRecord
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->status === 'trancado')
+                ->visible(fn () => in_array(mb_strtolower((string) $this->record->status), ['trancado', 'trancada'], true))
                 ->action(function () {
-                    $this->record->update(['status' => 'ativo']);
-                    
-                    \Filament\Notifications\Notification::make()
+                    $this->record->update(['status' => Matricula::STATUS_ATIVO]);
+
+                    Notification::make()
                         ->title('Matrícula reativada!')
                         ->success()
                         ->send();

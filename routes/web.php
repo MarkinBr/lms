@@ -212,6 +212,10 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
     });
 
 });
+// Compatibilidade: o antigo AlunoResource usava a tabela `alunos`, removida do schema.
+// O cadastro atual vive em PessoaResource, filtrado pelo perfil de aluno.
+Route::redirect('/admin/alunos', '/admin/pessoas?activeTab=aluno', 302);
+
 // === SSO INTEGRATION (Etapa 4) ===
 Route::get('/sso/callback', [SsoController::class, 'callback'])
     ->name('sso.callback')

@@ -48,3 +48,8 @@ Thumbs.db
 # Pacotes de revisão e arquivos compactados gerados localmente
 *.zip
 *.tar.gz
+
+# Backups locais de código (o histórico correto fica no Git)
+*.bak
+*.bak.*
+*-backup.php

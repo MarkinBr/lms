@@ -3,13 +3,12 @@
 namespace App\Filament\Secretario\Resources\CadastroRapidoResource\Pages;
 
 use App\Filament\Secretario\Resources\CadastroRapidoResource;
-use App\Models\User;
 use App\Models\Matricula;
 use App\Models\Mensalidade;
-use Filament\Resources\Pages\CreateRecord;
-use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Facades\DB;
 
 class CreateCadastroRapido extends CreateRecord
 {
@@ -31,7 +30,7 @@ class CreateCadastroRapido extends CreateRecord
             'data_nasc' => $data['data_nasc'] ?? null,
             'foto' => $data['foto'] ?? null,
             'documentos' => $data['documentos'] ?? null,
-            
+
             // Endereço
             'cep' => $data['cep'] ?? null,
             'endereco' => $data['endereco'] ?? null,
@@ -40,12 +39,12 @@ class CreateCadastroRapido extends CreateRecord
             'bairro' => $data['bairro'] ?? null,
             'cidade' => $data['cidade'] ?? null,
             'estado' => $data['estado'] ?? null,
-            
+
             // Responsável
             'responsavel_nome' => $data['responsavel_nome'] ?? null,
             'responsavel_telefone' => $data['responsavel_telefone'] ?? null,
             'observacoes' => $data['observacoes_aluno'] ?? null,
-            
+
             // Sistema
             'nivel' => 'aluno',
             'password' => bcrypt('aluno@123'),
@@ -66,7 +65,7 @@ class CreateCadastroRapido extends CreateRecord
             // 1️⃣ CRIAR MATRÍCULA
             $ano = date('Y');
             $ultimaMatricula = Matricula::whereYear('created_at', $ano)->max('id') ?? 0;
-            $numeroMatricula = $ano . '-' . str_pad($ultimaMatricula + 1, 4, '0', STR_PAD_LEFT);
+            $numeroMatricula = $ano.'-'.str_pad($ultimaMatricula + 1, 4, '0', STR_PAD_LEFT);
 
             $matricula = Matricula::create([
                 'user_id' => $aluno->id,
@@ -75,7 +74,7 @@ class CreateCadastroRapido extends CreateRecord
                 'numero_matricula' => $numeroMatricula,
                 'data_matricula' => $data['data_matricula'] ?? now(),
                 'dia_vencimento' => $data['dia_vencimento'] ?? 10,
-                'status' => $data['status_matricula'] ?? 'ativo',
+                'status' => $data['status_matricula'] ?? Matricula::STATUS_ATIVO,
                 'observacoes' => $data['observacoes_matricula'] ?? null,
             ]);
 
@@ -89,10 +88,10 @@ class CreateCadastroRapido extends CreateRecord
 
             for ($i = 0; $i < $qtdParcelas; $i++) {
                 $dataVencimento = $primeiraMensalidade->copy()->addMonths($i);
-                
+
                 // Define o status baseado na data e opção do usuário
                 $status = 'Pendente';
-                if (!$gerarTodasPendentes && $dataVencimento->isPast()) {
+                if (! $gerarTodasPendentes && $dataVencimento->isPast()) {
                     $status = 'Atrasado';
                 }
 
@@ -114,8 +113,11 @@ class CreateCadastroRapido extends CreateRecord
             $totalDocs = count($documentos);
             $docsEnviados = collect($documentos)->filter(function ($doc) {
                 $arquivo = $doc['arquivo'] ?? null;
-                if (is_array($arquivo)) $arquivo = array_values($arquivo)[0] ?? null;
-                return !empty($arquivo);
+                if (is_array($arquivo)) {
+                    $arquivo = array_values($arquivo)[0] ?? null;
+                }
+
+                return ! empty($arquivo);
             })->count();
 
             // 4️⃣ NOTIFICAÇÃO DE SUCESSO DETALHADA
@@ -127,10 +129,10 @@ class CreateCadastroRapido extends CreateRecord
                 📱 **Telefone:** {$aluno->telefone}
                 
                 📋 **Matrícula:** {$numeroMatricula}
-                🎓 **Curso:** " . ($matricula->curso->titulo ?? 'N/A') . "
-                👥 **Turma:** " . ($matricula->turma->nome ?? 'N/A') . "
+                🎓 **Curso:** ".($matricula->curso->titulo ?? 'N/A').'
+                👥 **Turma:** '.($matricula->turma->nome ?? 'N/A')."
                 
-                💰 **{$mensalidadesCriadas} mensalidades** de R$ " . number_format($valorMensalidade, 2, ',', '.') . " geradas
+                💰 **{$mensalidadesCriadas} mensalidades** de R$ ".number_format($valorMensalidade, 2, ',', '.')." geradas
                 📄 **{$docsEnviados}/{$totalDocs} documentos** enviados
                 
                 🔐 **Senha padrão:** aluno@123
@@ -148,7 +150,7 @@ class CreateCadastroRapido extends CreateRecord
             if ($docsEnviados < $totalDocs) {
                 Notification::make()
                     ->title('📄 Documentos Pendentes')
-                    ->body("Ainda faltam " . ($totalDocs - $docsEnviados) . " documento(s) para serem enviados. Você pode completá-los editando o cadastro do aluno.")
+                    ->body('Ainda faltam '.($totalDocs - $docsEnviados).' documento(s) para serem enviados. Você pode completá-los editando o cadastro do aluno.')
                     ->warning()
                     ->duration(8000)
                     ->send();
@@ -156,14 +158,14 @@ class CreateCadastroRapido extends CreateRecord
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             Notification::make()
                 ->title('❌ Erro no Cadastro')
                 ->body("Erro: {$e->getMessage()}")
                 ->danger()
                 ->duration(10000)
                 ->send();
-            
+
             throw $e;
         }
     }

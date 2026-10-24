@@ -41,7 +41,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     bcmath \
     mbstring \
     exif \
-    pcntl
+    pcntl \
+    dom
 
 # v9.3.4: Instalar phpredis via PECL (necessário para queue/cache/session Redis)
 RUN pecl install redis && docker-php-ext-enable redis
@@ -62,8 +63,8 @@ WORKDIR /var/www/html
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # 6. Rodar Instalações
-RUN composer install --no-dev --optimize-autoloader
-RUN npm install && npm run build
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+RUN npm ci --no-audit --no-fund && npm run build
 
 # 7. Permissões
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache

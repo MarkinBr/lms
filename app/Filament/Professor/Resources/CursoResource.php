@@ -183,7 +183,7 @@ class CursoResource extends Resource
 
                                         Forms\Components\Placeholder::make('total_alunos_ativos')
                                             ->label('👥 Alunos Ativos')
-                                            ->content(fn ($record) => $record->matriculas()->where('status', 'ativo')->count()),
+                                            ->content(fn ($record) => $record->matriculas()->ativas()->count()),
 
                                         Forms\Components\Placeholder::make('duracao_calc')
                                             ->label('⏱️ Duração Total Calculada')

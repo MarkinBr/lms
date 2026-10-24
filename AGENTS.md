@@ -12,15 +12,20 @@ CETSADP é o LMS (Learning Management System) de uma instituição de ensino teo
 - **Infra**: Docker (VPS), fila via `queue:listen`, cache/Redis
 - **Integrações**: Mercado Pago (pagamentos), SSO com sistema legado, geração de PDF (declarações/certificados), QR Code de validação
 
-## 2. ⚠️ Estado atual (ler antes de tudo)
+## 2. ⚠️ Estado atual e economia de contexto
 
-Este repositório **ainda não tem Git inicializado nem remoto no GitHub** (verificado — sem pasta `.git`, sem `.github/`). Antes de qualquer Issue/PR fazer sentido, é preciso:
+O repositório **já usa Git e GitHub**, possui remoto configurado e workflow em `.github/workflows/ci.yml`. Preserve sempre as alterações existentes: não use `git reset --hard`, `git checkout .` ou limpezas amplas sem pedido explícito.
 
-1. `git init` e primeiro commit
-2. Criar o repositório no GitHub (via `gh repo create` ou pela interface)
-3. Configurar os labels padrão (script em `scripts/create-github-issues.sh` já cria os que faltam)
+Para reduzir custo e tokens de agentes de IA:
 
-Isso está registrado como Issue #1 em `docs/BACKLOG.md` — é a única tarefa que pode ser feita "fora do fluxo" abaixo, porque o fluxo depende dela existir primeiro.
+- comece por `git status --short`, `git diff --stat` e buscas direcionadas;
+- leia somente arquivos relacionados ao bug/tarefa;
+- **não carregue** `vendor/`, `node_modules/`, `storage/`, `backups/`, `public/build/`, dumps ou logs inteiros;
+- não analise cópias `.bak`/backup como fonte de verdade; o histórico fica no Git;
+- antes de instalar pacote/plugin, confirme que o framework já não fornece a função;
+- mantenha respostas de comandos concisas (falhas e resumo), ampliando só quando necessário.
+
+As regras de exclusão também estão em `.cursorignore` e as orientações curtas do Copilot em `.github/copilot-instructions.md`.
 
 ## 3. Fluxo obrigatório: Issue → Branch → PR → Deploy
 
@@ -83,7 +88,7 @@ Template do PR já está em `.github/pull_request_template.md` e traz esse campo
 | PHP — mutation testing | Infection | Mede se os testes realmente pegam bugs (não só cobertura de linha) |
 | JS — mutation testing | Stryker | Mesma ideia, para `public/js/site/*.js` |
 
-Configs em `docs/QUALIDADE_E_OBSERVABILIDADE.md`, com os comandos de instalação (nada disso está instalado ainda — ver esse arquivo antes de rodar CI).
+A configuração efetivamente disponível no repositório é a fonte de verdade. Consulte `docs/QUALIDADE_E_OBSERVABILIDADE.md` antes de adicionar novas ferramentas; não instale toda a lista apenas por existir na documentação.
 
 ## 5. Testes
 

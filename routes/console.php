@@ -2,10 +2,10 @@
 
 /**
  * CETSADP v9.3.5 — Console Routes / Scheduled Tasks
- * 
+ *
  * CORREÇÃO D02: O agendamento foi reportado como entregue via Kernel.php na v9.3.2,
  * mas NÃO EXISTIA. No Laravel 12, scheduling é configurado em routes/console.php.
- * 
+ *
  * Tarefas agendadas:
  *   1. sso:cleanup-tokens  — Limpeza de tokens SSO expirados (a cada hora)
  *   2. queue:prune-failed   — Limpar jobs falhos com mais de 7 dias (diário)
@@ -42,8 +42,10 @@ Schedule::command('sanctum:prune-expired')
     ->withoutOverlapping();
 
 // 4. Otimização do banco (VACUUM ANALYZE) — semanal domingo 04:00
-Schedule::exec('php artisan db:vacuum 2>/dev/null || true')
-    ->weeklyOn(0, '04:00');
+Schedule::command('db:vacuum')
+    ->weeklyOn(0, '04:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/db-vacuum.log'));
 
 // === MENSALIDADES (Auditoria v2026.06) ===
 

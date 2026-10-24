@@ -1,28 +1,23 @@
 #!/bin/bash
 # ============================================================
-# CETSADP v9.5.0 — LMS Entrypoint Script
-# Etapa 4.3: Inicialização robusta do container LMS
-#
-# Este script substitui o CMD inline do Dockerfile.
-# Garante que migrations, cache e permissões estejam corretos
-# antes de iniciar o Apache.
+# CETSADP LMS — Entrypoint de produção
+# Falha cedo quando banco/cache essenciais não estão disponíveis.
 # ============================================================
-set -e
+set -Eeuo pipefail
 
 echo ""
 echo "============================================"
 echo "  🎓 CETSADP LMS — Inicializando..."
-echo "  📦 Versão: v9.5.0"
 echo "============================================"
 echo ""
 
 # === 1. Verificar variáveis obrigatórias ===
-if [ -z "$APP_KEY" ]; then
+if [ -z "${APP_KEY:-}" ]; then
     echo "❌ ERRO: APP_KEY não definida. Abortando."
     exit 1
 fi
 
-if [ -z "$DB_PASSWORD" ]; then
+if [ -z "${DB_PASSWORD:-}" ]; then
     echo "❌ ERRO: DB_PASSWORD não definida. Abortando."
     exit 1
 fi
@@ -33,7 +28,7 @@ MAX_ATTEMPTS=30
 ATTEMPT=0
 until pg_isready -h "${DB_HOST:-postgres}" -p "${DB_PORT:-5432}" -U "${DB_USERNAME:-cetsadp_user}" -q 2>/dev/null; do
     ATTEMPT=$((ATTEMPT + 1))
-    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+    if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
         echo "❌ PostgreSQL não ficou pronto após ${MAX_ATTEMPTS} tentativas. Abortando."
         exit 1
     fi
@@ -42,56 +37,69 @@ until pg_isready -h "${DB_HOST:-postgres}" -p "${DB_PORT:-5432}" -U "${DB_USERNA
 done
 echo "✅ PostgreSQL está pronto."
 
-# === 3. Aguardar Redis ficar pronto ===
-echo "⏳ Aguardando Redis (${REDIS_HOST:-redis}:${REDIS_PORT:-6379})..."
+# === 3. Aguardar Redis quando ele for dependência configurada ===
+REDIS_REQUIRED=false
+for value in "${CACHE_STORE:-}" "${CACHE_DRIVER:-}" "${SESSION_DRIVER:-}" "${QUEUE_CONNECTION:-}"; do
+    if [ "${value,,}" = "redis" ]; then
+        REDIS_REQUIRED=true
+        break
+    fi
+done
+
+echo "⏳ Verificando Redis (${REDIS_HOST:-redis}:${REDIS_PORT:-6379})..."
 ATTEMPT=0
 until timeout 2 bash -c "</dev/tcp/${REDIS_HOST:-redis}/${REDIS_PORT:-6379}" 2>/dev/null; do
     ATTEMPT=$((ATTEMPT + 1))
-    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
-        echo "⚠️  Redis não ficou pronto. Continuando sem cache Redis..."
+    if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+        if [ "$REDIS_REQUIRED" = true ]; then
+            echo "❌ Redis é obrigatório pela configuração atual e não ficou disponível. Abortando."
+            exit 1
+        fi
+        echo "⚠️  Redis indisponível, mas não está configurado como dependência obrigatória."
         break
     fi
     echo "  ⏳ Tentativa ${ATTEMPT}/${MAX_ATTEMPTS}..."
     sleep 2
 done
-if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+
+if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
     echo "✅ Redis está pronto."
 fi
 
-# === 4. Garantir permissões de diretórios ===
 echo "📁 Configurando permissões..."
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# === 5. Executar migrations ===
 echo "🗄️  Executando migrations..."
-php artisan migrate --force --no-interaction 2>&1 || {
-    echo "⚠️  Algumas migrations podem ter falhado. Verificando status..."
-    php artisan migrate:status 2>&1 | tail -10
-}
-
-# === 6. Criar link simbólico do storage ===
-echo "🔗 Criando link de storage..."
-php artisan storage:link 2>/dev/null || true
-
-# === 7. Otimizar para produção ===
-if [ "${APP_ENV}" = "production" ]; then
-    echo "🚀 Otimizando para produção..."
-    php artisan config:cache 2>/dev/null || true
-    php artisan route:cache 2>/dev/null || true
-    php artisan view:cache 2>/dev/null || true
-    echo "✅ Cache de configurações, rotas e views gerado."
+if ! php artisan migrate --force --no-interaction; then
+    echo "❌ Migration falhou. Estado atual:"
+    php artisan migrate:status || true
+    exit 1
 fi
 
-# === 8. Healthcheck endpoint (escrever arquivo para o healthcheck) ===
+echo "🔗 Verificando link de storage..."
+if [ ! -L /var/www/html/public/storage ]; then
+    php artisan storage:link || echo "⚠️  Não foi possível criar o link de storage."
+fi
+
+if [ "${APP_ENV:-}" = "production" ]; then
+    echo "🚀 Otimizando para produção..."
+    php artisan config:cache
+    if ! php artisan route:cache; then
+        echo "⚠️  Route cache não pôde ser gerado; limpando cache de rotas e continuando."
+        php artisan route:clear
+    fi
+    php artisan view:cache
+    echo "✅ Cache de configuração/views gerado e rotas validadas."
+fi
+
 echo "ok" > /tmp/lms-ready
 
 echo ""
 echo "============================================"
-echo "  ✅ CETSADP LMS v9.5.0 pronto!"
+echo "  ✅ CETSADP LMS pronto!"
 echo "  🌐 Iniciando Apache..."
 echo "============================================"
 echo ""
 
-# === 9. Iniciar Apache em foreground ===
 exec apache2-foreground

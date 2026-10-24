@@ -31,7 +31,7 @@ class FrequenciaController extends Controller
         // Certifique-se de que o Model Matricula tem o relacionamento 'progressos' definido
         $matriculas = $aluno->matriculas()
             ->with(['turma.curso.modulos.aulas'])
-            ->where('status', 'ativa')
+            ->ativas()
             ->get();
 
         // Calcular frequência para cada matrícula
