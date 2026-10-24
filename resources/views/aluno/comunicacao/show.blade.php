@@ -8,7 +8,7 @@
 <div class="space-y-6 max-w-4xl mx-auto">
     
     {{-- Botão Voltar --}}
-    <a href="{{ route('aluno.comunicacao') }}" class="inline-flex items-center text-sm text-slate-500 hover:text-[#003366] font-bold transition-colors">
+    <a href="{{ route('aluno.comunicacao') }}" class="inline-flex items-center text-sm text-slate-500 hover:text-[#061a30] font-bold transition-colors">
         <i class="fa-solid fa-arrow-left mr-2"></i> Voltar para o mural
     </a>
 

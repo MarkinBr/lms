@@ -1,42 +1,39 @@
 @extends('layouts.aluno')
-
 @section('title', 'Meus Cursos')
 @section('header_title', 'Meus Cursos')
-@section('header_subtitle', 'Continue seus estudos sem erros e com acesso direto às aulas')
-
+@section('header_subtitle', 'Sua jornada de conhecimento')
 @section('content')
-<div class="space-y-8">
-    <section class="bg-gradient-to-r from-[#003366] via-blue-800 to-indigo-700 rounded-3xl p-6 md:p-8 text-white shadow-2xl overflow-hidden relative">
-        <div class="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10"></div>
-        <div class="absolute -left-10 -bottom-10 w-48 h-48 rounded-full bg-white/5"></div>
-        <div class="relative z-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div class="max-w-2xl">
-                <p class="text-blue-200 text-xs font-black uppercase tracking-[0.35em] mb-3">Área Acadêmica</p>
-                <h1 class="text-3xl md:text-4xl font-black mb-3">Continue firme na sua jornada</h1>
-                <p class="text-blue-100 text-sm md:text-base">Seus cursos estão disponíveis para ajudar no seu crescimento espiritual e no conhecimento da Palavra. Acesse e siga avançando.</p>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full lg:w-auto">
-                <div class="bg-white/10 backdrop-blur rounded-2xl px-4 py-4 min-w-[130px]">
-                    <p class="text-[11px] uppercase tracking-widest text-blue-200 font-bold">Total</p>
-                    <p class="text-3xl font-black mt-1">{{ $resumo['total_cursos'] }}</p>
-                </div>
-                <div class="bg-white/10 backdrop-blur rounded-2xl px-4 py-4 min-w-[130px]">
-                    <p class="text-[11px] uppercase tracking-widest text-blue-200 font-bold">Ativos</p>
-                    <p class="text-3xl font-black mt-1">{{ $resumo['ativos'] }}</p>
-                </div>
-                <div class="bg-white/10 backdrop-blur rounded-2xl px-4 py-4 min-w-[130px]">
-                    <p class="text-[11px] uppercase tracking-widest text-blue-200 font-bold">Concluídos</p>
-                    <p class="text-3xl font-black mt-1">{{ $resumo['concluidos'] }}</p>
-                </div>
-                <div class="bg-white/10 backdrop-blur rounded-2xl px-4 py-4 min-w-[130px]">
-                    <p class="text-[11px] uppercase tracking-widest text-blue-200 font-bold">Média</p>
-                    <p class="text-3xl font-black mt-1">{{ $resumo['progresso_medio'] }}%</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    @if($proximasAulasAoVivo->isNotEmpty())
+<div class="portal-courses-page" x-data="{ filtro: 'todos' }">
+    <section class="portal-page-intro"><span class="portal-eyebrow">Área acadêmica</span><h2>Meus cursos</h2><p>Conhecimento que fortalece a fé e transforma o seu ministério.</p><div class="portal-course-summary"><span><b>{{ $resumo['total_cursos'] }}</b> cursos</span><span><b>{{ $resumo['ativos'] }}</b> ativos</span><span><b>{{ $resumo['concluidos'] }}</b> concluídos</span><span><b>{{ $resumo['progresso_medio'] }}%</b> de progresso médio</span></div></section>
+    <div class="portal-filter-bar" role="group" aria-label="Filtrar os cursos desta página">
+        <button type="button" @click="filtro = 'todos'" :class="{ 'is-active': filtro === 'todos' }" :aria-pressed="filtro === 'todos'">Todos</button>
+        <button type="button" @click="filtro = 'andamento'" :class="{ 'is-active': filtro === 'andamento' }" :aria-pressed="filtro === 'andamento'">Em andamento</button>
+        <button type="button" @click="filtro = 'concluidos'" :class="{ 'is-active': filtro === 'concluidos' }" :aria-pressed="filtro === 'concluidos'">Concluídos</button>
+        <small>Filtrar esta página</small>
+    </div>
+    @if($matriculas->count())
+        <section class="portal-enrolled-list" aria-label="Cursos matriculados">
+            @foreach($matriculas as $matricula)
+                @php
+                    $curso = $matricula->curso;
+                    $progresso = max(0, min(100, (float) ($matricula->progresso ?? 0)));
+                    $status = strtolower((string) $matricula->status);
+                    $concluido = $status === 'concluido';
+                @endphp
+                <article class="portal-enrolled-card" x-show="filtro === 'todos' || filtro === '{{ $concluido ? 'concluidos' : 'andamento' }}'">
+                    <div class="portal-enrolled-main"><a href="{{ route('aluno.curso.show', $curso->id) }}" class="portal-course-cover portal-enrolled-cover" aria-label="Acessar {{ $curso->titulo ?? 'curso' }}">
+                        @if(!empty($curso?->capa))<img src="{{ asset('storage/' . $curso->capa) }}" alt="" loading="lazy" width="160" height="110">@else<img src="{{ asset('assets/portal/biblia-banner.webp') }}" alt="" loading="lazy" width="160" height="110"><span>{{ $curso->titulo ?? 'Curso' }}</span>@endif
+                    </a><div class="portal-enrolled-copy"><div class="portal-enrolled-labels"><span class="portal-pill {{ $concluido ? 'portal-pill--blue' : '' }}">{{ $concluido ? 'Concluído' : 'Em andamento' }}</span>@if($curso?->categoria)<small>{{ $curso->categoria }}</small>@endif</div><h2><a href="{{ route('aluno.curso.show', $curso->id) }}">{{ $curso->titulo ?? 'Curso sem título' }}</a></h2><p>{{ \Illuminate\Support\Str::limit(strip_tags($curso->descricao ?? 'Curso vinculado à sua matrícula.'), 130) }}</p><div class="portal-progress-line"><div class="portal-progress" role="progressbar" aria-label="Progresso de {{ $curso->titulo ?? 'curso' }}" aria-valuenow="{{ $progresso }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ $progresso }}%"></span></div><b>{{ $progresso }}%</b></div><small>{{ $matricula->aulas_concluidas ?? 0 }} de {{ $matricula->total_aulas ?? 0 }} aulas concluídas</small></div></div>
+                    <div class="portal-enrolled-footer"><div class="portal-enrolled-meta"><span><i class="fa-solid fa-layer-group" aria-hidden="true"></i>{{ $curso?->modulos?->count() ?? 0 }} módulos</span><span><i class="fa-regular fa-circle-play" aria-hidden="true"></i>{{ $matricula->total_aulas ?? 0 }} aulas</span><span><i class="fa-regular fa-clock" aria-hidden="true"></i>{{ max(1, (int) ceil(($matricula->tempo_total_minutos ?? 0) / 60)) }}h</span></div><div class="portal-enrolled-actions"><a href="{{ route('aluno.calendario') }}" class="portal-text-link">Ver agenda</a><a href="{{ route('aluno.curso.show', $curso->id) }}" class="portal-button"><i class="fa-solid fa-play" aria-hidden="true"></i>{{ $progresso > 0 ? 'Continuar curso' : 'Acessar curso' }}</a></div></div>
+                </article>
+            @endforeach
+            <div class="portal-empty portal-panel" x-cloak x-show="(filtro === 'concluidos' && {{ $matriculas->filter(fn ($m) => strtolower((string) $m->status) === 'concluido')->count() }} === 0) || (filtro === 'andamento' && {{ $matriculas->filter(fn ($m) => strtolower((string) $m->status) !== 'concluido')->count() }} === 0)"><i class="fa-solid fa-book-open" aria-hidden="true"></i><h3>Nenhum curso neste filtro</h3><p>Não há cursos com este status nesta página. Selecione Todos para voltar à lista.</p></div>
+        </section>
+        @if($matriculas->hasPages())<div class="portal-panel p-4">{{ $matriculas->links() }}</div>@endif
+    @else
+        <section class="portal-panel portal-empty"><i class="fa-solid fa-book-open" aria-hidden="true"></i><h3>Seu próximo capítulo começa aqui</h3><p>Quando sua matrícula estiver ativa, seus cursos aparecerão aqui com acesso direto ao conteúdo, progresso e calendário acadêmico.</p></section>
+    @endif
+        @if($proximasAulasAoVivo->isNotEmpty())
         <section class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
             <div class="flex items-center justify-between gap-3 mb-5">
                 <div>
@@ -63,7 +60,7 @@
                             @endif
                         </div>
                         @if($aula->link_transmissao)
-                            <a href="{{ $aula->link_transmissao }}" target="_blank" class="mt-4 inline-flex items-center justify-center w-full rounded-xl bg-[#003366] text-white px-4 py-2.5 text-sm font-bold hover:bg-[#00264d] transition-colors">
+                            <a href="{{ $aula->link_transmissao }}" target="_blank" class="mt-4 inline-flex items-center justify-center w-full rounded-xl bg-[#061a30] text-white px-4 py-2.5 text-sm font-bold hover:bg-[#102d47] transition-colors">
                                 Entrar na sala
                             </a>
                         @endif
@@ -73,93 +70,6 @@
         </section>
     @endif
 
-    @if($matriculas->count())
-        <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            @foreach($matriculas as $matricula)
-                @php
-                    $curso = $matricula->curso;
-                    $progresso = $matricula->progresso ?? 0;
-                    $status = strtolower((string) $matricula->status);
-                    $statusLabel = $status === 'concluido' ? 'Concluído' : 'Em andamento';
-                @endphp
-                <article class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden hover:shadow-xl hover:border-blue-200 transition-all duration-300">
-                    <div class="p-6 md:p-7">
-                        <div class="flex items-start justify-between gap-4">
-                            <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap items-center gap-2 mb-3">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide {{ $status === 'concluido' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700' }}">
-                                        {{ $statusLabel }}
-                                    </span>
-                                    @if($curso?->categoria)
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">{{ $curso->categoria }}</span>
-                                    @endif
-                                </div>
-                                <h2 class="text-2xl font-black text-slate-800 leading-tight">{{ $curso->titulo ?? 'Curso sem título' }}</h2>
-                                <p class="text-sm text-slate-500 mt-2">{{ \Illuminate\Support\Str::limit(strip_tags($curso->descricao ?? 'Curso vinculado à sua matrícula.'), 130) }}</p>
-                            </div>
-                            <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
-                                @if(!empty($curso?->capa))
-                                    <img src="{{ asset('storage/' . $curso->capa) }}" alt="{{ $curso->titulo }}" class="w-full h-full object-cover">
-                                @else
-                                    <i class="fa-solid fa-graduation-cap text-2xl text-[#003366]"></i>
-                                @endif
-                            </div>
-                        </div>
 
-                        <div class="mt-6">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Progresso</span>
-                                <span class="text-sm font-black text-blue-700">{{ $progresso }}%</span>
-                            </div>
-                            <div class="h-3 rounded-full bg-slate-100 overflow-hidden">
-                                <div class="h-3 rounded-full bg-gradient-to-r {{ $progresso === 100 ? 'from-green-500 to-emerald-500' : 'from-blue-600 to-indigo-600' }}" style="width: {{ $progresso }}%"></div>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2">{{ $matricula->aulas_concluidas ?? 0 }} de {{ $matricula->total_aulas ?? 0 }} aulas concluídas.</p>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-3 mt-5">
-                            <div class="rounded-2xl bg-slate-50 p-4 text-center">
-                                <p class="text-xs uppercase tracking-widest text-slate-400 font-black">Módulos</p>
-                                <p class="text-2xl font-black text-slate-800 mt-1">{{ $curso?->modulos?->count() ?? 0 }}</p>
-                            </div>
-                            <div class="rounded-2xl bg-slate-50 p-4 text-center">
-                                <p class="text-xs uppercase tracking-widest text-slate-400 font-black">Aulas</p>
-                                <p class="text-2xl font-black text-slate-800 mt-1">{{ $matricula->total_aulas ?? 0 }}</p>
-                            </div>
-                            <div class="rounded-2xl bg-slate-50 p-4 text-center">
-                                <p class="text-xs uppercase tracking-widest text-slate-400 font-black">Carga</p>
-                                <p class="text-2xl font-black text-slate-800 mt-1">{{ max(1, (int) ceil(($matricula->tempo_total_minutos ?? 0) / 60)) }}h</p>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 flex flex-col sm:flex-row gap-3">
-                            <a href="{{ route('aluno.curso.show', $curso->id) }}" class="inline-flex items-center justify-center rounded-2xl bg-[#003366] text-white px-5 py-3 text-sm font-black hover:bg-[#00264d] transition-colors flex-1">
-                                <i class="fa-solid fa-arrow-right mr-2"></i>
-                                {{ $progresso > 0 ? 'Continuar curso' : 'Acessar curso' }}
-                            </a>
-                            <a href="{{ route('aluno.calendario') }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 text-slate-700 px-5 py-3 text-sm font-bold hover:border-blue-200 hover:text-blue-700 transition-colors">
-                                <i class="fa-solid fa-calendar-days mr-2"></i>
-                                Ver agenda
-                            </a>
-                        </div>
-                    </div>
-                </article>
-            @endforeach
-        </section>
-
-        @if($matriculas->hasPages())
-            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-                {{ $matriculas->links() }}
-            </div>
-        @endif
-    @else
-        <section class="bg-white border border-dashed border-slate-300 rounded-3xl p-12 text-center shadow-sm">
-            <div class="w-20 h-20 rounded-full bg-slate-100 mx-auto flex items-center justify-center mb-5">
-                <i class="fa-solid fa-book-open text-3xl text-slate-400"></i>
-            </div>
-            <h2 class="text-2xl font-black text-slate-800">Nenhum curso encontrado</h2>
-            <p class="text-slate-500 mt-2 max-w-xl mx-auto">Quando sua matrícula estiver ativa, seus cursos aparecerão aqui com acesso direto ao conteúdo, progresso e calendário acadêmico.</p>
-        </section>
-    @endif
 </div>
 @endsection

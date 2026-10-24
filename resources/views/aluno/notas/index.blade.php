@@ -162,7 +162,7 @@
             </div>
             <h3 class="text-lg font-bold text-slate-800">Nenhuma matrícula ativa</h3>
             <p class="text-slate-500 mb-6">Você não está matriculado em nenhum curso no momento.</p>
-            <a href="{{ route('aluno.cursos') }}" class="px-6 py-3 bg-[#003366] text-white rounded-xl font-bold hover:bg-[#002244] transition-colors">
+            <a href="{{ route('aluno.cursos') }}" class="px-6 py-3 bg-[#061a30] text-white rounded-xl font-bold hover:bg-[#041322] transition-colors">
                 Ver Cursos Disponíveis
             </a>
         </div>

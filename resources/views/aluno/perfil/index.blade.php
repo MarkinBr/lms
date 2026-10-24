@@ -11,7 +11,7 @@
         {{-- ============================= --}}
         {{-- HERO HEADER PROFISSIONAL --}}
         {{-- ============================= --}}
-        <div class="relative bg-gradient-to-r from-[#003366] via-blue-900 to-indigo-900 text-white overflow-hidden">
+        <div class="portal-page-hero relative bg-gradient-to-r from-[#061a30] via-blue-900 to-indigo-900 text-white overflow-hidden">
             {{-- Padrão geométrico de fundo --}}
             <div class="absolute inset-0 opacity-5">
                 <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -215,7 +215,7 @@
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-300">
                         <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
                             <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <i class="fa-solid fa-chart-pie text-[#003366]"></i>
+                                <i class="fa-solid fa-chart-pie text-[#061a30]"></i>
                             </div>
                             Progresso Geral
                         </h3>
@@ -234,13 +234,13 @@
                                             class="transition-all duration-1000"/>
                                     <defs>
                                         <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" style="stop-color:#003366"/>
+                                            <stop offset="0%" style="stop-color:#061a30"/>
                                             <stop offset="100%" style="stop-color:#3B82F6"/>
                                         </linearGradient>
                                     </defs>
                                 </svg>
                                 <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span class="text-4xl font-bold text-[#003366]">{{ $progressoGeral['percentual'] }}%</span>
+                                    <span class="text-4xl font-bold text-[#061a30]">{{ $progressoGeral['percentual'] }}%</span>
                                     <span class="text-xs text-gray-500 mt-1">Completo</span>
                                 </div>
                             </div>
@@ -281,7 +281,7 @@
                         <div class="space-y-4">
                             <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
                                 <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <i class="fa-solid fa-book text-[#003366]"></i>
+                                    <i class="fa-solid fa-book text-[#061a30]"></i>
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs text-gray-600 font-medium uppercase tracking-wide">Total de Cursos</p>
@@ -397,25 +397,25 @@
                         <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
                             <nav class="flex overflow-x-auto">
                                 <button @click="activeTab = 'dados-pessoais'" 
-                                        :class="activeTab === 'dados-pessoais' ? 'border-[#003366] text-[#003366] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
+                                        :class="activeTab === 'dados-pessoais' ? 'border-[#061a30] text-[#061a30] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
                                         class="flex items-center gap-2.5 px-6 py-4 border-b-3 font-semibold text-sm transition-all duration-200 whitespace-nowrap">
                                     <i class="fa-solid fa-user-circle text-lg"></i>
                                     <span>Dados Pessoais</span>
                                 </button>
                                 <button @click="activeTab = 'endereco'" 
-                                        :class="activeTab === 'endereco' ? 'border-[#003366] text-[#003366] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
+                                        :class="activeTab === 'endereco' ? 'border-[#061a30] text-[#061a30] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
                                         class="flex items-center gap-2.5 px-6 py-4 border-b-3 font-semibold text-sm transition-all duration-200 whitespace-nowrap">
                                     <i class="fa-solid fa-map-location-dot text-lg"></i>
                                     <span>Endereço</span>
                                 </button>
                                 <button @click="activeTab = 'preferencias'" 
-                                        :class="activeTab === 'preferencias' ? 'border-[#003366] text-[#003366] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
+                                        :class="activeTab === 'preferencias' ? 'border-[#061a30] text-[#061a30] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
                                         class="flex items-center gap-2.5 px-6 py-4 border-b-3 font-semibold text-sm transition-all duration-200 whitespace-nowrap">
                                     <i class="fa-solid fa-sliders text-lg"></i>
                                     <span>Preferências</span>
                                 </button>
                                 <button @click="activeTab = 'privacidade'" 
-                                        :class="activeTab === 'privacidade' ? 'border-[#003366] text-[#003366] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
+                                        :class="activeTab === 'privacidade' ? 'border-[#061a30] text-[#061a30] bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'"
                                         class="flex items-center gap-2.5 px-6 py-4 border-b-3 font-semibold text-sm transition-all duration-200 whitespace-nowrap">
                                     <i class="fa-solid fa-lock text-lg"></i>
                                     <span>Privacidade</span>
@@ -434,7 +434,7 @@
                                     <div>
                                         <h3 class="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
                                             <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                                                <i class="fa-solid fa-id-card text-[#003366]"></i>
+                                                <i class="fa-solid fa-id-card text-[#061a30]"></i>
                                             </div>
                                             Informações Pessoais
                                         </h3>
@@ -445,76 +445,76 @@
                                         {{-- Nome Completo --}}
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-user text-[#003366]"></i>
+                                                <i class="fa-solid fa-user text-[#061a30]"></i>
                                                 Nome Completo *
                                             </label>
                                             <input type="text" 
                                                    name="name" 
                                                    value="{{ old('name', $aluno->name) }}" 
                                                    required
-                                                   class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                   class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                         </div>
 
                                         {{-- Email --}}
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-envelope text-[#003366]"></i>
+                                                <i class="fa-solid fa-envelope text-[#061a30]"></i>
                                                 E-mail *
                                             </label>
                                             <input type="email" 
                                                    name="email" 
                                                    value="{{ old('email', $aluno->email) }}" 
                                                    required
-                                                   class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                   class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                         </div>
 
                                         {{-- Telefone --}}
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-phone text-[#003366]"></i>
+                                                <i class="fa-solid fa-phone text-[#061a30]"></i>
                                                 Telefone / WhatsApp
                                             </label>
                                             <input type="text" 
                                                    name="telefone" 
                                                    value="{{ old('telefone', $aluno->telefone) }}" 
                                                    x-mask="(99) 99999-9999"
-                                                   class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                   class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                         </div>
 
                                         {{-- CPF --}}
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-id-card text-[#003366]"></i>
+                                                <i class="fa-solid fa-id-card text-[#061a30]"></i>
                                                 CPF
                                             </label>
                                             <input type="text" 
                                                    name="cpf" 
                                                    value="{{ old('cpf', $aluno->cpf) }}" 
                                                    x-mask="999.999.999-99"
-                                                   class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                   class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                         </div>
 
                                         {{-- Data de Nascimento --}}
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-cake-candles text-[#003366]"></i>
+                                                <i class="fa-solid fa-cake-candles text-[#061a30]"></i>
                                                 Data de Nascimento
                                             </label>
                                             <input type="date" 
                                                    name="data_nasc" 
                                                    value="{{ old('data_nasc', $aluno->data_nasc ? $aluno->data_nasc->format('Y-m-d') : '') }}"
                                                    max="{{ now()->format('Y-m-d') }}"
-                                                   class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                   class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                         </div>
 
                                         {{-- Gênero --}}
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-venus-mars text-[#003366]"></i>
+                                                <i class="fa-solid fa-venus-mars text-[#061a30]"></i>
                                                 Gênero
                                             </label>
                                             <select name="genero" 
-                                                    class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                    class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                                 <option value="">Selecione</option>
                                                 <option value="masculino" {{ old('genero', $aluno->genero) == 'masculino' ? 'selected' : '' }}>Masculino</option>
                                                 <option value="feminino" {{ old('genero', $aluno->genero) == 'feminino' ? 'selected' : '' }}>Feminino</option>
@@ -526,23 +526,23 @@
                                         {{-- Profissão --}}
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-briefcase text-[#003366]"></i>
+                                                <i class="fa-solid fa-briefcase text-[#061a30]"></i>
                                                 Profissão
                                             </label>
                                             <input type="text" 
                                                    name="profissao" 
                                                    value="{{ old('profissao', $aluno->profissao) }}"
-                                                   class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                   class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                         </div>
 
                                         {{-- Escolaridade --}}
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-graduation-cap text-[#003366]"></i>
+                                                <i class="fa-solid fa-graduation-cap text-[#061a30]"></i>
                                                 Escolaridade
                                             </label>
                                             <select name="escolaridade" 
-                                                    class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow">
+                                                    class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
                                                 <option value="">Selecione</option>
                                                 <option value="fundamental_incompleto" {{ old('escolaridade', $aluno->escolaridade) == 'fundamental_incompleto' ? 'selected' : '' }}>Fundamental Incompleto</option>
                                                 <option value="fundamental_completo" {{ old('escolaridade', $aluno->escolaridade) == 'fundamental_completo' ? 'selected' : '' }}>Fundamental Completo</option>
@@ -559,21 +559,21 @@
                                         {{-- Biografia --}}
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                                <i class="fa-solid fa-quote-left text-[#003366]"></i>
+                                                <i class="fa-solid fa-quote-left text-[#061a30]"></i>
                                                 Biografia (opcional)
                                             </label>
                                             <textarea name="bio" 
                                                       rows="4" 
                                                       maxlength="500"
                                                       placeholder="Conte um pouco sobre você, suas aspirações e objetivos..."
-                                                      class="w-full rounded-xl border-gray-300 focus:border-[#003366] focus:ring-2 focus:ring-[#003366]/20 transition shadow-sm hover:shadow resize-none">{{ old('bio', $aluno->bio) }}</textarea>
+                                                      class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow resize-none">{{ old('bio', $aluno->bio) }}</textarea>
                                             <p class="text-xs text-gray-500 mt-2">Máximo 500 caracteres</p>
                                         </div>
 
                                         {{-- Foto de Perfil --}}
                                         <div class="md:col-span-2">
                                             <label class="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                                <i class="fa-solid fa-camera text-[#003366]"></i>
+                                                <i class="fa-solid fa-camera text-[#061a30]"></i>
                                                 Foto de Perfil
                                             </label>
                                             <div class="flex items-center gap-6">
@@ -590,7 +590,7 @@
                                                     <input type="file" 
                                                            name="foto" 
                                                            accept="image/*"
-                                                           class="w-full text-sm text-gray-600 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-[#003366] hover:file:bg-blue-100 file:cursor-pointer file:transition-all">
+                                                           class="w-full text-sm text-gray-600 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-[#061a30] hover:file:bg-blue-100 file:cursor-pointer file:transition-all">
                                                     <p class="text-xs text-gray-500 mt-2">JPG, PNG, WEBP. Máximo 5MB</p>
                                                     
                                                     @if($aluno->foto)
@@ -843,7 +843,7 @@
                                         {{-- Informações de Segurança --}}
                                         <div class="bg-gradient-to-br from-slate-50 to-gray-100 border-2 border-gray-200 rounded-2xl p-8">
                                             <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-3">
-                                                <i class="fa-solid fa-shield-halved text-[#003366]"></i>
+                                                <i class="fa-solid fa-shield-halved text-[#061a30]"></i>
                                                 Como Protegemos Seus Dados
                                             </h4>
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -884,11 +884,11 @@
                                 <div x-show="activeTab !== 'privacidade'" 
                                      class="flex items-center justify-between pt-8 mt-8 border-t-2 border-gray-200">
                                     <p class="text-sm text-gray-600 flex items-center gap-2">
-                                        <i class="fa-solid fa-info-circle text-[#003366]"></i>
+                                        <i class="fa-solid fa-info-circle text-[#061a30]"></i>
                                         <span>Campos marcados com <strong class="text-red-500">*</strong> são obrigatórios</span>
                                     </p>
                                     <button type="submit" 
-                                            class="group relative bg-gradient-to-r from-[#003366] via-blue-700 to-indigo-700 hover:from-blue-800 hover:via-blue-900 hover:to-indigo-900 text-white font-bold py-4 px-10 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+                                            class="group relative bg-gradient-to-r from-[#061a30] via-blue-700 to-indigo-700 hover:from-blue-800 hover:via-blue-900 hover:to-indigo-900 text-white font-bold py-4 px-10 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
                                         <span class="relative z-10 flex items-center gap-3">
                                             <i class="fa-solid fa-floppy-disk text-lg"></i>
                                             Salvar Alterações

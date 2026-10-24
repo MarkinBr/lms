@@ -14,7 +14,7 @@
 
     <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8" aria-labelledby="titulo-central">
         <header class="mb-8">
-            <p class="text-xs font-black uppercase tracking-[0.18em] text-[#003366]">Central acadêmica</p>
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-[#061a30]">Central acadêmica</p>
             <h1 id="titulo-central" class="mt-1 text-3xl font-black tracking-tight text-[#0f172a]">
                 Documentos da inscrição
             </h1>
@@ -171,7 +171,7 @@
                                 @if ($resumo['pode_enviar'] && $documento['status'] !== 'aprovado')
                                     <button
                                         type="button"
-                                        class="inline-flex items-center gap-2 rounded-lg bg-[#003366] px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-[#002244] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003366] focus-visible:ring-offset-2"
+                                        class="inline-flex items-center gap-2 rounded-lg bg-[#061a30] px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-[#041322] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#061a30] focus-visible:ring-offset-2"
                                         onclick="document.getElementById('{{ $idForm }}').classList.toggle('hidden'); document.getElementById('{{ $idInput }}').focus();"
                                         aria-expanded="false"
                                         aria-controls="{{ $idForm }}"
