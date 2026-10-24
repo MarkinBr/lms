@@ -8,7 +8,7 @@
 <div class="max-w-5xl mx-auto space-y-6">
     
     {{-- Navegação --}}
-    <a href="{{ route('aluno.secretaria') }}" class="inline-flex items-center text-sm text-slate-500 hover:text-[#003366] font-bold transition-colors">
+    <a href="{{ route('aluno.secretaria') }}" class="inline-flex items-center text-sm text-slate-500 hover:text-[#061a30] font-bold transition-colors">
         <i class="fa-solid fa-arrow-left mr-2"></i> Voltar para a lista
     </a>
 

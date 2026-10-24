@@ -6,9 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Portal do Aluno') — CETSADP</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Mulish:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/portal/fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('css/site/main.css') }}">
     <style>
         .auth-body {
@@ -200,6 +198,7 @@
         }
     </style>
     @stack('styles')
+    <link rel="stylesheet" href="{{ asset('css/portal-auth-redesign.css') }}?v=1">
 </head>
 <body class="auth-body">
     <div class="portal-top">

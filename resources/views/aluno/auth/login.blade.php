@@ -53,7 +53,7 @@
                 </div>
 
                 <div class="login-photo">
-                    <img class="auth-photo-local" src="{{ asset('assets/images/curso1.png') }}" alt="Bíblia aberta sobre uma mesa">
+                    <img class="auth-photo-local" src="{{ asset('assets/portal/biblia-banner.webp') }}" alt="Bíblia aberta sobre uma mesa">
                 </div>
             </div>
 

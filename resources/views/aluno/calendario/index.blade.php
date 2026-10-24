@@ -5,14 +5,14 @@
 @section('header_subtitle', 'Aulas ao vivo, avisos e eventos lançados pela secretaria')
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet" />
+{{-- FullCalendar 6 injeta seus estilos pelo bundle JS local. --}}
 <style>
     .fc {
         --fc-border-color: #e2e8f0;
-        --fc-button-bg-color: #003366;
-        --fc-button-border-color: #003366;
-        --fc-button-hover-bg-color: #00264d;
-        --fc-button-hover-border-color: #00264d;
+        --fc-button-bg-color: #061a30;
+        --fc-button-border-color: #061a30;
+        --fc-button-hover-bg-color: #102d47;
+        --fc-button-hover-border-color: #102d47;
         --fc-button-active-bg-color: #1d4ed8;
         --fc-button-active-border-color: #1d4ed8;
         --fc-today-bg-color: rgba(37, 99, 235, 0.08);
@@ -66,7 +66,7 @@
 @endphp
 
 <div class="space-y-6">
-    <section class="bg-gradient-to-r from-[#003366] via-blue-800 to-indigo-700 rounded-3xl p-6 md:p-8 text-white shadow-2xl overflow-hidden relative">
+    <section class="portal-page-hero bg-gradient-to-r from-[#061a30] via-blue-800 to-indigo-700 rounded-3xl p-6 md:p-8 text-white shadow-2xl overflow-hidden relative">
         <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10"></div>
         <div class="absolute -left-10 -bottom-10 w-48 h-48 rounded-full bg-white/5"></div>
         <div class="relative z-10 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
@@ -271,7 +271,7 @@
                 <p id="calendar-modal-description" class="text-slate-700 leading-relaxed">Sem descrição.</p>
             </div>
             <div class="flex justify-end">
-                <a id="calendar-modal-link" href="#" target="_blank" class="hidden inline-flex items-center justify-center rounded-2xl bg-[#003366] text-white px-5 py-3 text-sm font-black hover:bg-[#00264d] transition-colors">
+                <a id="calendar-modal-link" href="#" target="_blank" class="hidden inline-flex items-center justify-center rounded-2xl bg-[#061a30] text-white px-5 py-3 text-sm font-black hover:bg-[#102d47] transition-colors">
                     Acessar sala <i class="fa-solid fa-arrow-up-right-from-square ml-2 text-xs"></i>
                 </a>
             </div>
@@ -281,8 +281,8 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/locales/pt-br.global.min.js"></script>
+<script src="{{ asset('vendor/portal/fullcalendar.min.js') }}"></script>
+<script src="{{ asset('vendor/portal/fullcalendar-pt-br.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const calendarEl = document.getElementById('calendar');
