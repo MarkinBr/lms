@@ -6,6 +6,7 @@ use App\Services\Telegram\ConfirmacoesTelegram;
 use App\Services\Telegram\TelegramAdministrativo;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 require dirname(__DIR__, 2).'/vendor/autoload.php';
 $app = require dirname(__DIR__, 2).'/bootstrap/app.php';
@@ -43,7 +44,7 @@ if (($argv[1] ?? '') === 'worker') {
             app(ConfirmacoesTelegram::class)->decidir($chatId, 'confirmar', $callback, (int) $updateId);
         }
         exit(0);
-    } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+    } catch (HttpException $e) {
         // Um clique que chegou após a revogação deve ser negado.
         exit($e->getStatusCode() === 403 ? 0 : 4);
     } catch (Throwable $e) {
