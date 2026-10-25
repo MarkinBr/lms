@@ -6,7 +6,6 @@ use App\Models\Application;
 use App\Models\Aula;
 use App\Models\AulaAoVivo;
 use App\Models\Curso;
-use App\Models\Disciplina;
 use App\Models\Matricula;
 use App\Models\Nota;
 use App\Models\Turma;
@@ -101,9 +100,10 @@ class ConsultasAcademicasTelegram
         if (mb_strlen($termo) < 2 || mb_strlen($termo) > 60) {
             return ['text' => 'Informe entre 2 e até 60 caracteres: /buscar NOME'];
         }
-        $escape = addcslashes($termo, '%_\\');
+        // ESCAPE explícito permite busca literal por % e _ tanto em PostgreSQL quanto SQLite.
+        $literal = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($termo));
         $alunos = User::query()->where('nivel', 'aluno')
-            ->where('name', 'like', '%'.$escape.'%')
+            ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", ['%'.$literal.'%'])
             ->orderBy('id')->limit(5)->get(['id', 'name', 'ativo']);
         $lista = $alunos->map(fn ($a) => '#'.$a->id.' • '.$this->curto($a->name)
             .' — '.($a->ativo ? 'ativo' : 'inativo'))->all();
@@ -276,7 +276,6 @@ class ConsultasAcademicasTelegram
 
     public function agendaSemanal(): array
     {
-        $inicio = now()->startOfDay();
         $fim = now()->addDays(7)->startOfDay();
         $eventos = AulaAoVivo::query()->proximas()
             ->where('data_hora', '<', $fim)
