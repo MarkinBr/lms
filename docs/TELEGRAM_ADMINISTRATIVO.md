@@ -59,3 +59,14 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Menu com botões para pendências, agenda e cursos. Sem CPF, telefone, endereço, documentos, dados bancários, valores ou credenciais.
 - Nesta etapa não há escrita acadêmica, migrações, alteração do pareamento, publicação nem deploy. A autorização exclusiva do administrador vinculado continua sendo verificada antes das consultas.
 - Homologação: `php artisan test --filter='TelegramOperacionalTest|TelegramMenuConsultaTest|TelegramAdministrativoTest'` e Pint em SQLite isolado, sem acesso ao banco real. PostgreSQL e Telegram real continuam pendentes de validação segura.
+
+
+## Etapa 3.5 — central de consultas (Issue #90, PR draft)
+
+- `/hoje`: painel diário consolidado usando `PainelAcademicoQuery`, inscrições em análise e encontros próximos; indicadores do banco conectado, inclusive fixtures em homologação.
+- `/agenda7`: cinco encontros programados para os próximos sete dias, sem link privado. `/relatorios`: até cinco cursos ativos e suas matrículas ativas.
+- `/aulaspendentes`: total e até cinco aulas com `liberada=false`; somente informação, sem publicação.
+- `/filtro status ativo`, `/filtro status inativo`, `/filtro curso ID`, `/filtro turma ID`: listas pequenas. O vínculo com turma considera o campo legado e pivô ativo; para detalhes consulte a Secretaria.
+- A busca `/buscar NOME` usa `LOWER` e escape explícito para os caracteres `%` e `_`. Não é um sistema de busca sem acentos; `joao` e `João` permanecem pesquisas diferentes, e o comportamento deve ser homologado em PostgreSQL isolado.
+- **Alertas automáticos permanecem desativados e não implementados**. É necessário decidir preferências, horário, outbox/idempotência e qual consumidor terá rede/credenciais antes de agendar envios. O scheduler piloto permanece heartbeat isolado.
+- Este PR não altera pareamento, dados acadêmicos, Docker, webhook, banco do piloto ou sistema legado; não foi implantado. Homologar com testes SQLite e CI antes de eventual deploy.
