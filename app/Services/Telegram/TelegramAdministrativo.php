@@ -281,7 +281,7 @@ class TelegramAdministrativo
         $usuario = $vinculo ? User::find($vinculo->user_id) : null;
         $userId = $this->podeOperar($usuario) ? (int) $usuario->id : null;
         $codigo = (string) ($this->callbackAtual['data'] ?? '');
-        $editar = $this->callbackAtual !== null && (
+        $editar = $userId !== null && $this->callbackAtual !== null && (
             in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas'], true)
             || preg_match('/^(filtro|ficha|notas|frequencia):/', $codigo) === 1
         );
