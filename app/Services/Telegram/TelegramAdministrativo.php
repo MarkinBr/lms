@@ -54,6 +54,10 @@ class TelegramAdministrativo
         abort_unless($this->podeOperar($usuario), 403);
         DB::transaction(function () use ($usuario) {
             DB::table('telegram_vinculos')->where('user_id', $usuario->id)->delete();
+            DB::table('telegram_confirmacoes')->where('user_id', $usuario->id)
+                ->where('status', 'pendente')->update([
+                    'status' => 'cancelado', 'consumido_em' => now(), 'updated_at' => now(),
+                ]);
             DB::table('telegram_outbox')
                 ->where('user_id', $usuario->id)
                 ->whereIn('status', ['pendente', 'enviando'])
@@ -140,7 +144,9 @@ class TelegramAdministrativo
             return;
         }
 
-        if (preg_match('/^\\/buscar\\s+(.+)$/us', $texto, $m)) {
+        if ($texto === '/testeconfirmacao') {
+            $resposta = app(ConfirmacoesTelegram::class)->preparar($chatId, $this->updateAtual);
+        } elseif (preg_match('/^\\/buscar\\s+(.+)$/us', $texto, $m)) {
             $resposta = $consulta->buscarAluno($m[1]);
         } elseif (preg_match('/^\\/(turma|matricula|aluno|notas|frequencia)\\s+([0-9]{1,12})$/', $texto, $m)) {
             $id = (int) $m[2];
@@ -198,7 +204,9 @@ class TelegramAdministrativo
 
         $codigo = (string) ($callback['data'] ?? '');
         $consulta = app(ConsultasAcademicasTelegram::class);
-        if ($codigo === 'menu') {
+        if (preg_match('/^(confirmar|cancelar):([0-9a-f]{32})$/D', $codigo, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->decidir($chatId, $m[1], $m[2], $this->updateAtual);
+        } elseif ($codigo === 'menu') {
             $resposta = $consulta->menu();
         } elseif ($codigo === 'alertas') {
             $resposta = app(PreferenciasAlertasTelegram::class)->consultar($chatId);
