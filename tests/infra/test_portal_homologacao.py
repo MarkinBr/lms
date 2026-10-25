@@ -143,6 +143,7 @@ class ReleaseTest(unittest.TestCase):
                 'app/Http/Controllers/Api/V1/ApplicationDocumentDownloadController.php': b'private download',
                 '.env': b'DO_NOT_COPY',
                 'database/user.sqlite': b'DO_NOT_COPY',
+                'entrypoint.sh': b'#!/bin/bash\r\nexit 0\r\n',
             }
             with tarfile.open(source, 'w') as tar:
                 for name, content in entries.items():
@@ -157,6 +158,7 @@ class ReleaseTest(unittest.TestCase):
                 self.assertEqual(tar.extractfile(correct).read(), b'private download')
                 self.assertNotIn('.env', tar.getnames())
                 self.assertNotIn('database/user.sqlite', tar.getnames())
+                self.assertEqual(tar.extractfile('entrypoint.sh').read(), b'#!/bin/bash\nexit 0\n')
 
     def test_path_guard_rejects_production_existing_overlap_and_traversal(self):
         module = infra()

@@ -20,7 +20,7 @@ RUN test -s composer.lock && test -s package-lock.json \
     && mkdir -p storage/app/public storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader \
     && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod +x entrypoint.sh
+    && sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 FROM node:22-bookworm-slim AS assets
 WORKDIR /build

@@ -40,6 +40,7 @@ import base64
 import binascii
 import json
 import io
+import copy
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -133,7 +134,7 @@ def prepare_release(repo, root, destination):
     with tempfile.TemporaryDirectory(prefix='portal84-archive-') as directory:
         archive = Path(directory) / 'head.tar'
         with archive.open('wb') as output:
-            result = subprocess.run(['git', '-C', str(repo), 'archive', '--format=tar', 'HEAD'],
+            result = subprocess.run(['git', '-c', 'core.autocrlf=false', '-C', str(repo), 'archive', '--format=tar', 'HEAD'],
                                     stdout=output, stderr=subprocess.PIPE)
         if result.returncode or revision != git('rev-parse', '--verify', 'HEAD'):
             raise ValueError('Archive falhou ou HEAD mudou durante preparação.')
@@ -157,7 +158,13 @@ def package_archive(archive, output, revision):
         selected = [m for m in members if m.isfile() and allowed_release_file(m.name)]
         with output.open('xb') as raw, tarfile.open(fileobj=raw, mode='w:gz') as target:
             for member in selected:
-                target.addfile(member, source.extractfile(member))
+                if member.name.endswith('.sh'):
+                    content = source.extractfile(member).read().replace(b'\r\n', b'\n')
+                    member = copy.copy(member)
+                    member.size = len(content)
+                    target.addfile(member, io.BytesIO(content))
+                else:
+                    target.addfile(member, source.extractfile(member))
             marker = json.dumps({'revision': revision, 'files': len(selected)}).encode() + b'\n'
             info = tarfile.TarInfo('.portal84-release.json')
             info.size = len(marker)
@@ -173,7 +180,7 @@ def package_release(repo, output):
     with tempfile.TemporaryDirectory(prefix='portal84-package-') as directory:
         archive = Path(directory) / 'head.tar'
         with archive.open('wb') as stream:
-            result = subprocess.run(['git', '-C', str(repo), 'archive', '--format=tar', revision], stdout=stream, stderr=subprocess.PIPE)
+            result = subprocess.run(['git', '-c', 'core.autocrlf=false', '-C', str(repo), 'archive', '--format=tar', revision], stdout=stream, stderr=subprocess.PIPE)
         if result.returncode:
             raise ValueError('Git archive falhou; pacote não criado.')
         return package_archive(archive, output, revision)
