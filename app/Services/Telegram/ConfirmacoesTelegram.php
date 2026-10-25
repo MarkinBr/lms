@@ -93,13 +93,29 @@ class ConfirmacoesTelegram
 
     private function estadoHash(Application $inscricao): string
     {
-        return hash('sha256', implode('|', [
-            $inscricao->getKey(),
-            $inscricao->status,
-            $inscricao->updated_at?->format('Y-m-d H:i:s.u'),
-            $inscricao->curso_id,
-            $inscricao->course_modality_id,
-        ]));
+        // Hash apenas: o snapshot não persiste documentos ou dados pessoais.
+        $inscricao->load(['curso:id,titulo', 'courseModality:id,nome']);
+
+        $documentos = $inscricao->documents()->orderBy('id')->get([
+            'id', 'updated_at', 'validado', 'validado_em', 'deleted_at',
+        ])->map(fn ($documento) => [
+            (string) $documento->id,
+            $documento->updated_at?->format('Y-m-d H:i:s.u'),
+            (bool) $documento->validado,
+            $documento->validado_em?->format('Y-m-d H:i:s.u'),
+        ])->all();
+
+        return hash('sha256', json_encode([
+            'inscricao' => (string) $inscricao->getKey(),
+            'status' => $inscricao->status,
+            'atualizada' => $inscricao->updated_at?->format('Y-m-d H:i:s.u'),
+            'nome' => $inscricao->nome_completo,
+            'curso_id' => $inscricao->curso_id,
+            'curso_titulo' => $inscricao->curso?->titulo,
+            'modalidade_id' => $inscricao->course_modality_id,
+            'modalidade_nome' => $inscricao->courseModality?->nome,
+            'documentos' => $documentos,
+        ], JSON_THROW_ON_ERROR));
     }
 
     public function decidir(string $chatId, string $acao, string $codigo, int $updateId): array
