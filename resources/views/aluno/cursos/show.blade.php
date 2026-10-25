@@ -26,6 +26,22 @@
             </ol>
         </nav>
 
+        @if(($materiaisLegados ?? collect())->isNotEmpty())
+            <section class="mb-6 rounded-lg border border-amber-200 bg-white p-5 dark:bg-gray-800" aria-labelledby="materiais-do-curso">
+                <h2 id="materiais-do-curso" class="text-lg font-semibold">Materiais do curso</h2>
+                <ul class="mt-3 space-y-3">
+                    @foreach($materiaisLegados as $materialLegado)
+                        <li>
+                            <a href="{{ $materialLegado->url }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center gap-2 text-blue-700 underline dark:text-blue-300">
+                                {{ $materialLegado->nome }}
+                                <span class="text-xs uppercase">{{ $materialLegado->tipo }} · abre em outra aba</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
+
         <!-- Header do Curso -->
         <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg overflow-hidden mb-8">
             <div class="p-8">

@@ -7,6 +7,7 @@ use App\Models\AulaAoVivo;
 use App\Models\Curso;
 use App\Models\Matricula;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CursosController extends Controller
 {
@@ -19,8 +20,8 @@ class CursosController extends Controller
         $statusValidos = ['ativo', 'ativa', 'concluido'];
 
         $matriculas = Matricula::with([
-                'curso.modulos.aulas' => fn ($query) => $query->orderBy('ordem'),
-            ])
+            'curso.modulos.aulas' => fn ($query) => $query->orderBy('ordem'),
+        ])
             ->where('user_id', $aluno->id)
             ->whereIn(DB::raw('LOWER(status)'), $statusValidos)
             ->orderByDesc('created_at')
@@ -29,11 +30,12 @@ class CursosController extends Controller
         $matriculas->getCollection()->transform(function ($matricula) use ($aluno) {
             $curso = $matricula->curso;
 
-            if (!$curso) {
+            if (! $curso) {
                 $matricula->total_aulas = 0;
                 $matricula->aulas_concluidas = 0;
                 $matricula->progresso = 0;
                 $matricula->tempo_total_minutos = 0;
+
                 return $matricula;
             }
 
@@ -55,6 +57,7 @@ class CursosController extends Controller
 
             $tempoTotalMinutos = $aulas->sum(function ($aula) {
                 preg_match('/(\d+)/', (string) ($aula->duracao ?? ''), $matches);
+
                 return (int) ($matches[1] ?? 0);
             });
 
@@ -133,6 +136,9 @@ class CursosController extends Controller
         $aulasConcluidas = $progressos->where('concluida', true)->count();
         $progresso = $totalAulas > 0 ? (int) round(($aulasConcluidas / $totalAulas) * 100) : 0;
         $modulos = $curso->modulos;
+        $materiaisLegados = Schema::hasTable('legado_materiais')
+            ? DB::table('legado_materiais')->where('curso_id', $curso->id)->orderBy('nome')->get()
+            : collect();
 
         return view('aluno.cursos.show', compact(
             'curso',
@@ -141,6 +147,7 @@ class CursosController extends Controller
             'totalModulos',
             'totalAulas',
             'aulasConcluidas',
+            'materiaisLegados',
             'progresso'
         ));
     }
