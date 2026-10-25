@@ -10,9 +10,10 @@ class ConfirmacoesTelegram
 {
     public function preparar(string $chatId, int $updateId): array
     {
-        $usuario = $this->dono($chatId);
-        $codigo = bin2hex(random_bytes(16));
-        $id = DB::table('telegram_confirmacoes')->insertGetId([
+        return DB::transaction(function () use ($chatId, $updateId) {
+            $usuario = $this->donoComVinculoBloqueado($chatId);
+            $codigo = bin2hex(random_bytes(16));
+            $id = DB::table('telegram_confirmacoes')->insertGetId([
             'user_id' => $usuario->id, 'chat_id' => $chatId,
             'codigo_hash' => hash('sha256', $codigo),
             'acao' => 'simulacao', 'status' => 'pendente',
@@ -34,11 +35,13 @@ class ConfirmacoesTelegram
                 ['text' => 'Cancelar', 'callback_data' => 'cancelar:'.$codigo],
             ]]],
         ];
+        });
     }
 
     public function prepararRevisao(string $chatId, string $inscricaoId, int $updateId): array
     {
-        $usuario = $this->dono($chatId);
+        return DB::transaction(function () use ($chatId, $inscricaoId, $updateId) {
+        $usuario = $this->donoComVinculoBloqueado($chatId);
         if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/D', $inscricaoId) !== 1) {
             return ['text' => 'Identificador de inscrição inválido.'];
         }
@@ -89,6 +92,7 @@ class ConfirmacoesTelegram
                 ['text' => 'Cancelar', 'callback_data' => 'cancelar:'.$codigo],
             ]]],
         ];
+        });
     }
 
     private function estadoHash(Application $inscricao): string
@@ -120,12 +124,12 @@ class ConfirmacoesTelegram
 
     public function decidir(string $chatId, string $acao, string $codigo, int $updateId): array
     {
-        $usuario = $this->dono($chatId);
         if (in_array($acao, ['confirmar', 'cancelar'], true) === false || preg_match('/^[0-9a-f]{32}$/D', $codigo) !== 1) {
             return ['text' => 'Confirmação inválida.'];
         }
 
-        $resultado = DB::transaction(function () use ($chatId, $acao, $codigo, $updateId, $usuario) {
+        $resultado = DB::transaction(function () use ($chatId, $acao, $codigo, $updateId) {
+            $usuario = $this->donoComVinculoBloqueado($chatId);
             $linha = DB::table('telegram_confirmacoes')
                 ->where('codigo_hash', hash('sha256', $codigo))
                 ->lockForUpdate()->first();
@@ -167,10 +171,12 @@ class ConfirmacoesTelegram
         }];
     }
 
-    private function dono(string $chatId): User
+    private function donoComVinculoBloqueado(string $chatId): User
     {
-        $id = DB::table('telegram_vinculos')->where('chat_id', $chatId)->value('user_id');
-        $usuario = $id ? User::find($id) : null;
+        // Ordem de locks: primeiro vínculo, depois proposta. A revogação segue a mesma ordem.
+        $vinculo = DB::table('telegram_vinculos')
+            ->where('chat_id', $chatId)->lockForUpdate()->first();
+        $usuario = $vinculo ? User::find($vinculo->user_id) : null;
         abort_unless(app(TelegramAdministrativo::class)->podeOperar($usuario), 403);
 
         return $usuario;
