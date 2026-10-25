@@ -10,9 +10,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
-use Tests\TestCase;
 
-class RedefinirSenhaAlunoTest extends TestCase
+class RedefinirSenhaAlunoTest extends PortalAuthTestCase
 {
     use RefreshDatabase;
 
@@ -134,12 +133,15 @@ class RedefinirSenhaAlunoTest extends TestCase
 
     private function criarUsuario(array $atributos = []): User
     {
-        return User::query()->create(array_merge([
+        $usuario = User::query()->create(array_merge([
             'name' => 'Aluno de Teste',
             'email' => 'aluno@example.test',
             'password' => Hash::make('SenhaAntiga#2026'),
             'nivel' => 'aluno',
             'ativo' => true,
         ], $atributos));
+        $usuario->forceFill(['email_verified_at' => now()])->save();
+
+        return $usuario;
     }
 }

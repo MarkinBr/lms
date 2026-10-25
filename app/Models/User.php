@@ -27,6 +27,7 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
         'password',
 
         // Identificação e Status
+        'matricula_login',
         'cpf',
         'telefone',
         'foto',
@@ -85,6 +86,7 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
     protected $hidden = [
         'password',
         'remember_token',
+        'email_confirmacao_token',
     ];
 
     /**
@@ -92,6 +94,7 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'email_confirmacao_expira_em' => 'datetime',
         'password' => 'hashed',
         'ativo' => 'boolean',
         'super_admin' => 'boolean',
@@ -148,6 +151,11 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
     | Funções Personalizadas & Relações
     |--------------------------------------------------------------------------
     */
+
+    public function setMatriculaLoginAttribute(?string $valor): void
+    {
+        $this->attributes['matricula_login'] = $valor === null ? null : mb_strtolower(trim($valor));
+    }
 
     public function scopeProfessores($query)
     {

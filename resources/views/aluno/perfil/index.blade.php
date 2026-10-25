@@ -5,6 +5,7 @@
 @section('header_subtitle', 'Atualize seus dados e acompanhe sua jornada')
 
 @section('content')
+    <div class="p-4 bg-blue-50">Matrícula de acesso: {{ $aluno->matricula_login ?? 'Consulte a secretaria' }}. <a class="underline" href="{{ route('aluno.email.index') }}">Gerenciar e-mail pessoal</a>. Você pode estudar sem e-mail.</div>
     {{-- Background Gradiente Moderno --}}
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
         
@@ -459,13 +460,10 @@
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                                 <i class="fa-solid fa-envelope text-[#061a30]"></i>
-                                                E-mail *
+                                                E-mail pessoal (opcional)
                                             </label>
-                                            <input type="email" 
-                                                   name="email" 
-                                                   value="{{ old('email', $aluno->email) }}" 
-                                                   required
-                                                   class="w-full rounded-xl border-gray-300 focus:border-[#061a30] focus:ring-2 focus:ring-[#061a30]/20 transition shadow-sm hover:shadow">
+                                            <p>{{ $aluno->email ?? 'Não cadastrado' }}</p>
+                                            <a href="{{ route('aluno.email.index') }}" class="text-blue-700 underline">Cadastrar, confirmar ou trocar e-mail</a>
                                         </div>
 
                                         {{-- Telefone --}}

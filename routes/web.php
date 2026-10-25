@@ -3,6 +3,7 @@
 use App\Http\Controllers\AcompanhamentoInscricaoLinkController;
 use App\Http\Controllers\AdminTelegramController;
 use App\Http\Controllers\Aluno\AulaController;
+use App\Http\Controllers\Aluno\CadernoAulaController;
 use App\Http\Controllers\Aluno\CalendarioController;
 use App\Http\Controllers\Aluno\CertificadosController;
 use App\Http\Controllers\Aluno\ComunicacaoController;
@@ -10,11 +11,12 @@ use App\Http\Controllers\Aluno\CursosController;
 use App\Http\Controllers\Aluno\DashboardController;
 use App\Http\Controllers\Aluno\DocumentosController;
 use App\Http\Controllers\Aluno\DocumentosInscricaoController;
+use App\Http\Controllers\Aluno\EmailAlunoController;
 use App\Http\Controllers\Aluno\FinanceiroController;
 use App\Http\Controllers\Aluno\FrequenciaController;
 use App\Http\Controllers\Aluno\NotasController;
-use App\Http\Controllers\Aluno\PerfilController;
 // Controllers do Portal do Aluno
+use App\Http\Controllers\Aluno\PerfilController;
 use App\Http\Controllers\Aluno\SecretariaController;
 use App\Http\Controllers\Auth\AdminAccessTokenController;
 use App\Http\Controllers\Auth\AlunoLoginController;
@@ -28,8 +30,8 @@ use App\Http\Controllers\ReciboPublicoController;
 use App\Http\Controllers\RelatorioFinanceiroController;
 use App\Http\Controllers\RelatorioFluxoCaixaController;
 use App\Http\Controllers\RelatorioInadimplenciaController;
-use App\Http\Controllers\SiteController;
 // Controller de Autenticação
+use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SsoController;
 use App\Http\Controllers\ValidacaoDeclaracaoController;
 use Illuminate\Support\Facades\Route;
@@ -131,7 +133,7 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
     Route::get('/cursos', [CursosController::class, 'index'])->name('cursos');
     Route::get('/curso/{id}', [CursosController::class, 'show'])->name('curso.show');
     Route::get('/aula/{id}', [AulaController::class, 'show'])->name('aula');
-    Route::post('/aula/{id}/caderno', [\App\Http\Controllers\Aluno\CadernoAulaController::class, 'salvar'])
+    Route::post('/aula/{id}/caderno', [CadernoAulaController::class, 'salvar'])
         ->middleware('throttle:90,1')->name('aula.caderno');
 
     // Issue #49: interações de aula exigem perfil de aluno ativo.
@@ -184,6 +186,11 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
     Route::post('/documentos-inscricao', [DocumentosInscricaoController::class, 'store'])
         ->middleware(['aluno', 'throttle:10,1'])
         ->name('documentos-inscricao.store');
+
+    Route::get('/perfil/email', [EmailAlunoController::class, 'index'])->name('email.index');
+    Route::post('/perfil/email', [EmailAlunoController::class, 'solicitar'])->middleware('throttle:5,1')->name('email.solicitar');
+    Route::get('/perfil/email/confirmar/{token}', [EmailAlunoController::class, 'confirmar'])
+        ->middleware(['signed', 'throttle:10,1'])->where('token', '[a-f0-9]{64}')->name('email.confirmar');
 
     // Perfil
     Route::get('/perfil', [PerfilController::class, 'index'])->name('perfil');

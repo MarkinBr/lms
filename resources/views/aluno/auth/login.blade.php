@@ -81,16 +81,16 @@
                 @endif
 
                 <div class="lfield">
-                    <label for="email">E-MAIL</label>
+                    <label for="email">MATRÍCULA, CPF OU E-MAIL CONFIRMADO</label>
                     <div class="inp">
                         <input
                             id="email"
-                            type="email"
+                            type="text"
                             name="email"
                             value="{{ old('email') }}"
-                            placeholder="seuemail@exemplo.com"
-                            autocomplete="email"
-                            inputmode="email"
+                            placeholder="Sua matrícula, CPF ou e-mail confirmado"
+                            autocomplete="username"
+                            inputmode="text"
                             maxlength="255"
                             required
                             autofocus
@@ -132,7 +132,7 @@
                     <span data-submit-text>ENTRAR NO PORTAL</span>
                 </button>
 
-                <div class="divider-or">OU</div>
+                <p class="secure-box">Não possui e-mail confirmado ou precisa de ajuda no primeiro acesso? Procure a secretaria. Sua matrícula permite estudar sem e-mail.</p><div class="divider-or">OU</div>
 
                 <a href="{{ route('password.request', ['primeiro_acesso' => 1]) }}" class="btn btn-outline btn-block">
                     PRIMEIRO ACESSO
