@@ -14,84 +14,84 @@ class ConfirmacoesTelegram
             $usuario = $this->donoComVinculoBloqueado($chatId);
             $codigo = bin2hex(random_bytes(16));
             $id = DB::table('telegram_confirmacoes')->insertGetId([
-            'user_id' => $usuario->id, 'chat_id' => $chatId,
-            'codigo_hash' => hash('sha256', $codigo),
-            'acao' => 'simulacao', 'status' => 'pendente',
-            'expira_em' => now()->addMinutes(10),
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
-        DB::table('telegram_auditoria')->insert([
-            'user_id' => $usuario->id, 'confirmacao_id' => $id,
-            'update_id' => $updateId, 'acao' => 'simulacao',
-            'antes' => 'inexistente', 'depois' => 'pendente',
-            'created_at' => now(),
-        ]);
+                'user_id' => $usuario->id, 'chat_id' => $chatId,
+                'codigo_hash' => hash('sha256', $codigo),
+                'acao' => 'simulacao', 'status' => 'pendente',
+                'expira_em' => now()->addMinutes(10),
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('telegram_auditoria')->insert([
+                'user_id' => $usuario->id, 'confirmacao_id' => $id,
+                'update_id' => $updateId, 'acao' => 'simulacao',
+                'antes' => 'inexistente', 'depois' => 'pendente',
+                'created_at' => now(),
+            ]);
 
-        return [
-            'text' => 'Simulação administrativa'."\n".'Esta confirmação é apenas um teste: NÃO aprova inscrições nem altera matrículas.'."\n"
-                .'Válida por 10 minutos. Confirme ou cancele.',
-            'reply_markup' => ['inline_keyboard' => [[
-                ['text' => 'Confirmar', 'callback_data' => 'confirmar:'.$codigo],
-                ['text' => 'Cancelar', 'callback_data' => 'cancelar:'.$codigo],
-            ]]],
-        ];
+            return [
+                'text' => 'Simulação administrativa'."\n".'Esta confirmação é apenas um teste: NÃO aprova inscrições nem altera matrículas.'."\n"
+                    .'Válida por 10 minutos. Confirme ou cancele.',
+                'reply_markup' => ['inline_keyboard' => [[
+                    ['text' => 'Confirmar', 'callback_data' => 'confirmar:'.$codigo],
+                    ['text' => 'Cancelar', 'callback_data' => 'cancelar:'.$codigo],
+                ]]],
+            ];
         });
     }
 
     public function prepararRevisao(string $chatId, string $inscricaoId, int $updateId): array
     {
         return DB::transaction(function () use ($chatId, $inscricaoId, $updateId) {
-        $usuario = $this->donoComVinculoBloqueado($chatId);
-        if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/D', $inscricaoId) !== 1) {
-            return ['text' => 'Identificador de inscrição inválido.'];
-        }
+            $usuario = $this->donoComVinculoBloqueado($chatId);
+            if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/D', $inscricaoId) !== 1) {
+                return ['text' => 'Identificador de inscrição inválido.'];
+            }
 
-        $inscricao = Application::query()->with(['curso:id,titulo', 'courseModality:id,nome'])->find($inscricaoId);
-        if ($inscricao === null) {
-            return ['text' => 'Inscrição não encontrada.'];
-        }
-        if (in_array($inscricao->status, [Application::STATUS_EM_ANALISE, Application::STATUS_APROVADO], true) === false) {
-            return ['text' => 'Pré-análise não disponível para o estado atual. Consulte o painel.'];
-        }
+            $inscricao = Application::query()->with(['curso:id,titulo', 'courseModality:id,nome'])->find($inscricaoId);
+            if ($inscricao === null) {
+                return ['text' => 'Inscrição não encontrada.'];
+            }
+            if (in_array($inscricao->status, [Application::STATUS_EM_ANALISE, Application::STATUS_APROVADO], true) === false) {
+                return ['text' => 'Pré-análise não disponível para o estado atual. Consulte o painel.'];
+            }
 
-        $codigo = bin2hex(random_bytes(16));
-        $id = DB::table('telegram_confirmacoes')->insertGetId([
-            'user_id' => $usuario->id,
-            'chat_id' => $chatId,
-            'codigo_hash' => hash('sha256', $codigo),
-            'acao' => 'revisao_inscricao',
-            'application_id' => $inscricao->id,
-            'estado_hash' => $this->estadoHash($inscricao),
-            'status' => 'pendente',
-            'expira_em' => now()->addMinutes(10),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('telegram_auditoria')->insert([
-            'user_id' => $usuario->id,
-            'confirmacao_id' => $id,
-            'update_id' => $updateId,
-            'acao' => 'revisao_inscricao',
-            'antes' => 'inexistente',
-            'depois' => 'pendente',
-            'created_at' => now(),
-        ]);
+            $codigo = bin2hex(random_bytes(16));
+            $id = DB::table('telegram_confirmacoes')->insertGetId([
+                'user_id' => $usuario->id,
+                'chat_id' => $chatId,
+                'codigo_hash' => hash('sha256', $codigo),
+                'acao' => 'revisao_inscricao',
+                'application_id' => $inscricao->id,
+                'estado_hash' => $this->estadoHash($inscricao),
+                'status' => 'pendente',
+                'expira_em' => now()->addMinutes(10),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            DB::table('telegram_auditoria')->insert([
+                'user_id' => $usuario->id,
+                'confirmacao_id' => $id,
+                'update_id' => $updateId,
+                'acao' => 'revisao_inscricao',
+                'antes' => 'inexistente',
+                'depois' => 'pendente',
+                'created_at' => now(),
+            ]);
 
-        $nome = mb_strimwidth(preg_replace('/[\r\n]+/u', ' ', $inscricao->nome_completo) ?? '', 0, 38, '…');
+            $nome = mb_strimwidth(preg_replace('/[\r\n]+/u', ' ', $inscricao->nome_completo) ?? '', 0, 38, '…');
 
-        return [
-            'text' => 'Pré-análise de inscrição #'.$inscricao->id."\n"
-                .'Candidato: '.$nome."\n"
-                .'Curso: '.mb_strimwidth($inscricao->curso?->titulo ?? 'Não informado', 0, 40, '…')."\n"
-                .'Modalidade: '.mb_strimwidth($inscricao->courseModality?->nome ?? 'Não informada', 0, 25, '…')."\n"
-                .'Estado: '.$inscricao->status."\n"
-                .'Documentos cadastrados: '.$inscricao->documents()->count()."\n"
-                .'Registrar revisão NÃO aprova, rejeita ou matricula. Validade: 10 minutos.',
-            'reply_markup' => ['inline_keyboard' => [[
-                ['text' => 'Registrar revisão', 'callback_data' => 'confirmar:'.$codigo],
-                ['text' => 'Cancelar', 'callback_data' => 'cancelar:'.$codigo],
-            ]]],
-        ];
+            return [
+                'text' => 'Pré-análise de inscrição #'.$inscricao->id."\n"
+                    .'Candidato: '.$nome."\n"
+                    .'Curso: '.mb_strimwidth($inscricao->curso?->titulo ?? 'Não informado', 0, 40, '…')."\n"
+                    .'Modalidade: '.mb_strimwidth($inscricao->courseModality?->nome ?? 'Não informada', 0, 25, '…')."\n"
+                    .'Estado: '.$inscricao->status."\n"
+                    .'Documentos cadastrados: '.$inscricao->documents()->count()."\n"
+                    .'Registrar revisão NÃO aprova, rejeita ou matricula. Validade: 10 minutos.',
+                'reply_markup' => ['inline_keyboard' => [[
+                    ['text' => 'Registrar revisão', 'callback_data' => 'confirmar:'.$codigo],
+                    ['text' => 'Cancelar', 'callback_data' => 'cancelar:'.$codigo],
+                ]]],
+            ];
         });
     }
 
