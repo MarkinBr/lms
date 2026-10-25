@@ -74,9 +74,11 @@ class ConsultasAcademicasTelegram
         if ($pagina > 1) {
             $botoes[] = ['text' => '◀ Anterior', 'callback_data' => "lista:{$categoria}:".($pagina - 1)];
         }
+
         if ($temProxima && $pagina < 20) {
             $botoes[] = ['text' => 'Próxima ▶', 'callback_data' => "lista:{$categoria}:".($pagina + 1)];
         }
+
         $teclado = $botoes ? [$botoes] : [];
         $teclado[] = [['text' => 'Menu', 'callback_data' => 'menu']];
 
@@ -106,10 +108,12 @@ class ConsultasAcademicasTelegram
         if ($id < 1) {
             return ['text' => 'Identificador inválido.'];
         }
+
         $aluno = User::query()->where('nivel', 'aluno')->find($id, ['id', 'name', 'ativo']);
         if ($aluno === null) {
             return ['text' => 'Aluno não encontrado.'];
         }
+
         $matriculas = Matricula::query()->where('user_id', $id)
             ->orderByDesc('id')->limit(5)->with('curso:id,titulo')->get();
         $texto = "Ficha acadêmica resumida\n#{$aluno->id} • ".$this->curto($aluno->name)
@@ -127,6 +131,7 @@ class ConsultasAcademicasTelegram
         if (User::query()->where('nivel', 'aluno')->whereKey($id)->doesntExist()) {
             return ['text' => 'Aluno não encontrado.'];
         }
+
         $notas = Nota::query()->where('user_id', $id)->orderByDesc('id')->limit(5)->get();
         $linhas = $notas->map(fn ($n) => $this->curto($n->disciplina ?? 'Disciplina não informada')
             .' • média: '.($n->media_final ?? 'não lançada').' • '.$this->curto($n->situacao ?? 'sem situação'))->all();
@@ -141,6 +146,7 @@ class ConsultasAcademicasTelegram
         if (User::query()->where('nivel', 'aluno')->whereKey($id)->doesntExist()) {
             return ['text' => 'Aluno não encontrado.'];
         }
+
         $matriculas = Matricula::query()->where('user_id', $id)->orderByDesc('id')->limit(5)->get();
         $linhas = $matriculas->map(function ($matricula) {
             $resumo = $matricula->resumoFrequencia();
@@ -158,6 +164,7 @@ class ConsultasAcademicasTelegram
     private function curto(string $texto, int $limite = 42): string
     {
         $texto = preg_replace('/[\r\n\t]+/u', ' ', $texto) ?? '';
+
         return mb_strimwidth($texto, 0, $limite, '…');
     }
 }
