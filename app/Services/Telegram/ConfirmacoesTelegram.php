@@ -47,7 +47,7 @@ class ConfirmacoesTelegram
         if ($inscricao === null) {
             return ['text' => 'Inscrição não encontrada.'];
         }
-        if (! in_array($inscricao->status, [Application::STATUS_EM_ANALISE, Application::STATUS_APROVADO], true)) {
+        if (in_array($inscricao->status, [Application::STATUS_EM_ANALISE, Application::STATUS_APROVADO], true) === false) {
             return ['text' => 'Pré-análise não disponível para o estado atual. Consulte o painel.'];
         }
 
@@ -77,7 +77,7 @@ class ConfirmacoesTelegram
         $nome = mb_strimwidth(preg_replace('/[\\r\\n]+/u', ' ', $inscricao->nome_completo) ?? '', 0, 38, '…');
 
         return [
-            'text' => "Pré-análise de inscrição #{$inscricao->id}\\n"
+            'text' => 'Pré-análise de inscrição #'.$inscricao->id."\\n"
                 .'Candidato: '.$nome."\\n"
                 .'Curso: '.mb_strimwidth($inscricao->curso?->titulo ?? 'Não informado', 0, 40, '…')."\\n"
                 .'Modalidade: '.mb_strimwidth($inscricao->courseModality?->nome ?? 'Não informada', 0, 25, '…')."\\n"
@@ -125,7 +125,7 @@ class ConfirmacoesTelegram
             if ($status === 'confirmado' && $linha->acao === 'revisao_inscricao') {
                 $inscricao = Application::query()->whereKey($linha->application_id)->lockForUpdate()->first();
                 if ($inscricao === null || $this->estadoHash($inscricao) !== $linha->estado_hash
-                    || ! in_array($inscricao->status, [Application::STATUS_EM_ANALISE, Application::STATUS_APROVADO], true)) {
+                    || in_array($inscricao->status, [Application::STATUS_EM_ANALISE, Application::STATUS_APROVADO], true) === false) {
                     $status = 'obsoleto';
                 }
             }
