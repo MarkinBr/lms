@@ -108,14 +108,20 @@ class TelegramOutbox
                 return;
             }
             $this->finalizar($id, 'entregue');
-            if (is_string($payload['callback_id'] ?? null) && $payload['callback_id'] !== '') {
-                // Confirmação é best effort e não reativa mensagem já entregue.
+        } catch (ConnectionException) {
+            $this->reagendar($id, (int) $item->tentativas + 1);
+
+            return;
+        }
+
+        if (is_string($payload['callback_id'] ?? null) && $payload['callback_id'] !== '') {
+            try {
                 Http::timeout(3)->post('https://api.telegram.org/bot'.$token.'/answerCallbackQuery', [
                     'callback_query_id' => $payload['callback_id'],
                 ]);
+            } catch (ConnectionException) {
+                // A confirmação visual é best effort: nunca reabre a saída entregue.
             }
-        } catch (ConnectionException) {
-            $this->reagendar($id, (int) $item->tentativas + 1);
         }
     }
 
