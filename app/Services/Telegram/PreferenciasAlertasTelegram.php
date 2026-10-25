@@ -10,8 +10,8 @@ class PreferenciasAlertasTelegram
     public function consultar(string $chatId): array
     {
         $userId = $this->donoAutorizado($chatId);
-        $ativo = DB::table('telegram_alerta_preferencias')
-            ->where('user_id', $userId)->value('ativo') === 1;
+        $ativo = (bool) DB::table('telegram_alerta_preferencias')
+            ->where('user_id', $userId)->value('ativo');
 
         return ['text' => 'Alertas administrativos '.($ativo ? 'solicitados.' : 'desativados.')
             ."\nAtivação/desativação da preferência: /alertas sim ou /alertas nao."
