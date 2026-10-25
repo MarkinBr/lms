@@ -41,3 +41,13 @@ As evidências de execução ficam fora do Git. O baseline completo identifica f
 O ensaio privado não substitui a validação de operação em produção. Antes de abrir ao público: conferir conflitos, atribuições acadêmicas, envio de e-mail, arquivos e permissões; repetir backups dos dois bancos, uploads e configuração; reconciliar alterações ocorridas no legado desde o snapshot. Não restaurar backup antigo sobre um sistema que continuou recebendo dados.
 
 Se houver falha no piloto, interromper apenas seu acesso e preservar o legado e seus volumes. Não usar `docker compose down -v`, prune ou rollback de migrações como substituto do plano de retorno.
+
+## Piloto público autorizado em 25/10/2026
+
+O piloto usa `https://novo.cetsadp.com.br`, certificado próprio e o override `docker/portal-piloto.compose.yml`. O vhost em `docker/portal-piloto.nginx.conf` mantém o site e portais antigos intactos. Somente o web participa da rede interna de borda compartilhada com o Nginx; o banco continua exclusivo da rede isolada. O Nginx resolve o container pelo DNS Docker, evitando IP fixo após recriação.
+
+Web e worker usam ambiente `production`, debug desativado e cookie seguro exclusivo. O scheduler continua apenas como heartbeat isolado. O piloto conserva banco próprio: alterações nele não são sincronizadas com o legado. A conta sintética de demonstração é desativada antes da exposição. Contas, senhas e registros reais não são publicados em logs ou documentos.
+
+Sem serviço de envio validado, recuperação e confirmação de e-mail respondem com mensagem de indisponibilidade, em vez de simular entrega. Cobranças, administração, APIs e exclusão de conta não são expostas pelo vhost piloto. O financeiro continua no sistema atual. Os sete conflitos da origem permanecem preservados para conferência; o piloto não representa uma substituição definitiva.
+
+O certificado HTTP-01 usa `scripts/portal-acme-hook.py` na VPS; o deploy-hook de renovação valida e recarrega somente o Nginx. Backups de bancos, arquivos e configuração permanecem privados na VPS. O retorno consiste em retirar apenas o novo vhost e recarregar o Nginx, sem restaurar bancos nem parar o legado.

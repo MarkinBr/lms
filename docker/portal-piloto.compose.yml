@@ -1,0 +1,26 @@
+{
+  "services": {
+    "web": {
+      "environment": {
+        "APP_NAME": "CETSADP — Portal piloto",
+        "APP_ENV": "production",
+        "APP_URL": "https://novo.cetsadp.com.br",
+        "SESSION_COOKIE": "cetsadp_portal_novo",
+        "SESSION_SECURE_COOKIE": "true"
+      },
+      "networks": ["isolada", "borda"]
+    },
+    "worker": {
+      "environment": {
+        "APP_NAME": "CETSADP — Portal piloto",
+        "APP_ENV": "production",
+        "APP_URL": "https://novo.cetsadp.com.br",
+        "SESSION_COOKIE": "cetsadp_portal_novo",
+        "SESSION_SECURE_COOKIE": "true"
+      }
+    }
+  },
+  "networks": {
+    "borda": {"name": "portal84_borda", "internal": true}
+  }
+}
