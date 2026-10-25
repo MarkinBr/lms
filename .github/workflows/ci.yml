@@ -50,6 +50,8 @@ jobs:
           php-version: '8.4'
           extensions: mbstring, dom, fileinfo, pgsql, pdo_pgsql
           coverage: none
+      - name: Preparar diretórios Laravel
+        run: mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
       - name: Instalar dependências
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Preparar aplicação e migrar banco efêmero
