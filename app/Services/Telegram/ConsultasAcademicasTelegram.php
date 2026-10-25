@@ -257,7 +257,6 @@ class ConsultasAcademicasTelegram
             ."\nDocumentos e dados pessoais: apenas no painel autenticado."];
     }
 
-
     public function hoje(): array
     {
         $academico = app(PainelAcademicoQuery::class);
