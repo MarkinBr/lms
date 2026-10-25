@@ -103,6 +103,28 @@ class TelegramConfirmacoesTest extends TestCase
         $this->assertDatabaseMissing('telegram_confirmacoes', ['status' => 'pendente']);
     }
 
+    public function test_desvinculacao_impede_preparacao_e_decisao(): void
+    {
+        $admin = $this->vincular();
+        $codigo = $this->codigo();
+        app(TelegramAdministrativo::class)->revogar($admin);
+
+        $this->enviar($this->telegramCallback(3, $codigo))->assertOk();
+        $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'cancelado']);
+        $this->assertDatabaseCount('telegram_auditoria_revogacoes', 1);
+        $this->assertDatabaseCount('telegram_auditoria', 1);
+    }
+
+    public function test_conta_inativa_nao_consegue_preparar_nem_consumir_proposta(): void
+    {
+        $admin = $this->vincular();
+        $codigo = $this->codigo();
+        $admin->update(['ativo' => false]);
+        $this->enviar($this->telegramCallback(3, $codigo))->assertOk();
+        $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'pendente']);
+        $this->assertDatabaseCount('telegram_auditoria', 1);
+    }
+
     public function test_grupo_nao_cria_acao(): void
     {
         $this->vincular();
