@@ -104,6 +104,16 @@ class TelegramAdministrativo
         }
 
         $consulta = app(ConsultasAcademicasTelegram::class);
+        $preferencias = app(PreferenciasAlertasTelegram::class);
+        if ($texto === '/alertas' || $texto === '/alertas sim' || $texto === '/alertas nao') {
+            $resposta = $texto === '/alertas'
+                ? $preferencias->consultar($chatId)
+                : $preferencias->definir($chatId, $texto === '/alertas sim');
+            $this->enviar($chatId, $resposta['text']);
+
+            return;
+        }
+
         if (preg_match('/^\\/buscar\\s+(.+)$/us', $texto, $m)) {
             $resposta = $consulta->buscarAluno($m[1]);
         } elseif (preg_match('/^\\/(turma|matricula|aluno|notas|frequencia)\\s+([0-9]{1,12})$/', $texto, $m)) {
