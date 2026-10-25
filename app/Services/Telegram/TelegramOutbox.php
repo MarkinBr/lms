@@ -21,6 +21,7 @@ class TelegramOutbox
             'update_id' => $updateId,
             'chat_id' => $chatId,
             'user_id' => $usuarioId,
+            'requer_autorizacao' => $usuarioId !== null,
             'status' => 'pendente',
             'payload' => json_encode($payload, JSON_THROW_ON_ERROR),
             'expira_em' => now()->addMinutes(15),
@@ -127,9 +128,14 @@ class TelegramOutbox
 
     private function autorizado(object $item): bool
     {
-        if ($item->user_id === null) {
-            // Mensagens de pareamento ou acesso negado contêm apenas texto genérico.
+        if (! (bool) $item->requer_autorizacao) {
+            // Apenas respostas explicitamente classificadas como genéricas.
             return true;
+        }
+
+        if ($item->user_id === null) {
+            // Excluir o usuário não transforma uma resposta protegida em pública.
+            return false;
         }
         $vinculo = DB::table('telegram_vinculos')
             ->where('user_id', $item->user_id)
