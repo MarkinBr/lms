@@ -104,15 +104,32 @@ class TelegramAdministrativo
         }
 
         $consulta = app(ConsultasAcademicasTelegram::class);
+        $preferencias = app(PreferenciasAlertasTelegram::class);
+        if ($texto === '/alertas' || $texto === '/alertas sim' || $texto === '/alertas nao') {
+            $resposta = $texto === '/alertas'
+                ? $preferencias->consultar($chatId)
+                : $preferencias->definir($chatId, $texto === '/alertas sim');
+            $this->enviar($chatId, $resposta['text']);
+
+            return;
+        }
+
         if (preg_match('/^\\/buscar\\s+(.+)$/us', $texto, $m)) {
             $resposta = $consulta->buscarAluno($m[1]);
         } elseif (preg_match('/^\\/(turma|matricula|aluno|notas|frequencia)\\s+([0-9]{1,12})$/', $texto, $m)) {
             $id = (int) $m[2];
             $resposta = $consulta->{$m[1]}($id);
+        } elseif (preg_match('/^\\/filtro\\s+(curso|turma|status)\\s+([a-z0-9]{1,12})$/', $texto, $m)) {
+            $resposta = $consulta->filtrarAlunos($m[1], $m[2], 1);
         } elseif (preg_match('/^\\/inscricao\\s+([0-9a-fA-F-]{36})$/', $texto, $m)) {
             $resposta = $consulta->inscricao($m[1]);
         } else {
             $resposta = match ($texto) {
+                '/filtros' => $consulta->filtros(),
+                '/hoje' => $consulta->hoje(),
+                '/agenda7' => $consulta->agendaSemanal(),
+                '/relatorios' => $consulta->relatorios(),
+                '/aulaspendentes' => $consulta->aulasPendentes(),
                 '/pendencias' => $consulta->pendencias(),
                 '/agenda' => $consulta->agenda(),
                 '/cursos' => $consulta->cursos(),
@@ -157,6 +174,18 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if ($codigo === 'menu') {
             $resposta = $consulta->menu();
+        } elseif ($codigo === 'alertas') {
+            $resposta = app(PreferenciasAlertasTelegram::class)->consultar($chatId);
+        } elseif (in_array($codigo, ['filtros', 'hoje', 'relatorios', 'aulaspendentes'], true)) {
+            $resposta = $consulta->{$codigo}();
+        } elseif ($codigo === 'agenda7') {
+            $resposta = $consulta->agendaSemanal();
+        } elseif (preg_match('/^filtro:(curso|turma|status):([a-z0-9]{1,12}):([1-9][0-9]?)$/', $codigo, $m)) {
+            $resposta = $consulta->filtrarAlunos($m[1], $m[2], (int) $m[3]);
+        } elseif (preg_match('/^(notas|frequencia):([1-9][0-9]{0,11})$/', $codigo, $m)) {
+            $resposta = $consulta->{$m[1]}((int) $m[2]);
+        } elseif (preg_match('/^ficha:([1-9][0-9]{0,11})$/', $codigo, $m)) {
+            $resposta = $consulta->aluno((int) $m[1]);
         } elseif (in_array($codigo, ['pendencias', 'agenda', 'cursos'], true)) {
             $resposta = $consulta->{$codigo}();
         } elseif (preg_match('/^lista:(alunos|inscricoes|matriculas|turmas|aulas):([0-9]{1,2})$/', $codigo, $m)) {
@@ -165,7 +194,53 @@ class TelegramAdministrativo
             $resposta = ['text' => 'Opção inválida. Use /menu.'];
         }
 
-        $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+        $novosMenus = in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas'], true)
+            || preg_match('/^(filtro|ficha|notas|frequencia):/', $codigo) === 1;
+        if ($novosMenus) {
+            $this->atualizarCallback($chatId, $callback, $resposta);
+        } else {
+            $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+        }
+    }
+
+    private function atualizarCallback(string $chatId, array $callback, array $resposta): void
+    {
+        $token = (string) config('services.telegram.bot_token');
+        $mensagemId = $callback['message']['message_id'] ?? null;
+        $callbackId = $callback['id'] ?? null;
+        if (! is_int($mensagemId) || ! is_string($callbackId)
+            || strlen($callbackId) > 128 || $callbackId === '') {
+            return;
+        }
+
+        $payload = [
+            'chat_id' => $chatId,
+            'message_id' => $mensagemId,
+            'text' => $resposta['text'],
+            'reply_markup' => $resposta['reply_markup'] ?? ['inline_keyboard' => [[
+                ['text' => 'Menu', 'callback_data' => 'menu'],
+            ]]],
+        ];
+
+        try {
+            $edicao = Http::timeout(5)->post('https://api.telegram.org/bot'.$token.'/editMessageText', $payload);
+            if (! $edicao->successful() || $edicao->json('ok') !== true) {
+                // Mensagem antiga não editável: responder em uma nova mensagem privada.
+                $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+            }
+        } catch (ConnectionException) {
+            throw new TelegramFalhaEnvio;
+        }
+
+        // A confirmação do clique não determina o resultado da consulta.
+        // Uma falha aqui não deve gerar múltiplas mensagens em reentregas do update.
+        try {
+            Http::timeout(3)->post('https://api.telegram.org/bot'.$token.'/answerCallbackQuery', [
+                'callback_query_id' => $callbackId,
+            ]);
+        } catch (ConnectionException) {
+            // O Telegram expira o indicador de carregamento automaticamente.
+        }
     }
 
     private function vincular(string $chatId, string $codigo): bool
