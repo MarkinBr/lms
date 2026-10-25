@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\ApplicationDocumentDownloadController;
 use App\Http\Controllers\Api\V1\CourseCatalogController;
+use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -72,8 +73,7 @@ Route::prefix('v1')->group(function () {
     )->name('applications.documents.download');
 });
 
-
 // Bot Telegram administrativo (Issue #82): webhook público protegido por secret_token.
-\Illuminate\Support\Facades\Route::post('/telegram/cetsadp/webhook',
-    \App\Http\Controllers\TelegramWebhookController::class
+Route::post('/telegram/cetsadp/webhook',
+    TelegramWebhookController::class
 )->middleware('throttle:60,1')->name('telegram.admin.webhook');

@@ -5,16 +5,17 @@ namespace App\Http\Controllers;
 use App\Services\Telegram\TelegramAdministrativo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AdminTelegramController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, TelegramAdministrativo $bot): View
     {
         $usuario = $request->user();
-        abort_unless($usuario->ativo && $usuario->nivel === 'admin', 403);
+        abort_unless($bot->podeOperar($usuario), 403);
 
-        $vinculado = \Illuminate\Support\Facades\DB::table('telegram_vinculos')
+        $vinculado = DB::table('telegram_vinculos')
             ->where('user_id', $usuario->id)->whereNotNull('chat_id')->exists();
 
         return view('admin.telegram', compact('vinculado'));
@@ -29,7 +30,6 @@ class AdminTelegramController extends Controller
 
     public function revogar(Request $request, TelegramAdministrativo $bot): RedirectResponse
     {
-        abort_unless($request->user()->ativo && $request->user()->nivel === 'admin', 403);
         $bot->revogar($request->user());
 
         return redirect()->route('admin.telegram.index')->with('telegram_aviso', 'Vinculação revogada.');

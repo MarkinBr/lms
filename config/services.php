@@ -28,7 +28,7 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Mercado Pago
@@ -58,6 +58,7 @@ return [
         'sso_secret' => env('CETSADP_SSO_SECRET', ''),
     ],
     'telegram' => [
+        'admin_user_id' => env('TELEGRAM_ADMIN_USER_ID'),
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
     ],

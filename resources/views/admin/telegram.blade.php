@@ -8,7 +8,7 @@
 <body><main>
     <p>CETSADP · Administração</p>
     <h1>Vincular Telegram</h1>
-    <p>Somente administradores ativos podem usar o bot. O código vence em 10 minutos e funciona uma única vez.</p>
+    <p>Este bot é exclusivo da sua conta administrativa autorizada. O código vence em 10 minutos e funciona uma única vez.</p>
     @if($vinculado)<p><strong>Status:</strong> vinculado.</p>@else<p><strong>Status:</strong> não vinculado.</p>@endif
     @if(session('telegram_aviso'))<p role="status">{{ session('telegram_aviso') }}</p>@endif
     @if(session('telegram_codigo'))

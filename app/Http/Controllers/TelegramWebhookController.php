@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Telegram\TelegramAdministrativo;
+use App\Services\Telegram\TelegramFalhaEnvio;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,7 +25,11 @@ class TelegramWebhookController extends Controller
             'update_id' => ['required', 'integer', 'min:0'],
             'message' => ['sometimes', 'array'],
         ]);
-        $bot->receber($dados);
+        try {
+            $bot->receber($dados);
+        } catch (TelegramFalhaEnvio) {
+            return response()->json(['ok' => false], 503);
+        }
 
         return response()->json(['ok' => true]);
     }

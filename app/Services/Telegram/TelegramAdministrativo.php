@@ -5,16 +5,31 @@ namespace App\Services\Telegram;
 use App\Models\Application;
 use App\Models\Matricula;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class TelegramAdministrativo
 {
+    public function podeOperar(?User $usuario): bool
+    {
+        $configurado = config('services.telegram.admin_user_id');
+        if (! is_int($configurado) && ! is_string($configurado)) {
+            return false;
+        }
+
+        $donoId = filter_var($configurado, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+
+        return $donoId !== false && $usuario !== null
+            && (int) $usuario->id === $donoId
+            && $usuario->ativo && $usuario->nivel === 'admin';
+    }
+
     public function criarCodigo(User $usuario): string
     {
-        if (! $usuario->ativo || $usuario->nivel !== 'admin') {
-            abort(403);
-        }
+        abort_unless($this->podeOperar($usuario), 403);
 
         $codigo = bin2hex(random_bytes(16));
 
@@ -34,6 +49,7 @@ class TelegramAdministrativo
 
     public function revogar(User $usuario): void
     {
+        abort_unless($this->podeOperar($usuario), 403);
         DB::table('telegram_vinculos')->where('user_id', $usuario->id)->delete();
     }
 
@@ -44,12 +60,18 @@ class TelegramAdministrativo
             return;
         }
 
-        // Chave única impede execução duplicada em updates reenviados pelo Telegram.
-        if (! DB::table('telegram_updates')->insertOrIgnore(['update_id' => $id, 'created_at' => now()])) {
-            return;
-        }
+        DB::transaction(function () use ($update, $id) {
+            // A chave impede concorrência; falha de envio reverte também o pareamento.
+            if (! DB::table('telegram_updates')->insertOrIgnore(['update_id' => $id, 'created_at' => now()])) {
+                return;
+            }
 
-        $mensagem = $update['message'] ?? null;
+            $this->processarMensagem($update['message'] ?? null);
+        });
+    }
+
+    private function processarMensagem(mixed $mensagem): void
+    {
         if (! is_array($mensagem)) {
             return;
         }
@@ -67,13 +89,15 @@ class TelegramAdministrativo
             $this->enviar($chatId, $this->vincular($chatId, $m[1])
                 ? 'Conta administrativa vinculada. Envie /ajuda.'
                 : 'Código inválido ou expirado. Gere outro no painel administrativo.');
+
             return;
         }
 
         $vinculo = DB::table('telegram_vinculos')->where('chat_id', $chatId)->first();
         $usuario = $vinculo ? User::find($vinculo->user_id) : null;
-        if (! $usuario || ! $usuario->ativo || $usuario->nivel !== 'admin') {
-            $this->enviar($chatId, 'Acesso restrito. Vincule uma conta administrativa ativa pelo painel do CETSADP.');
+        if (! $this->podeOperar($usuario)) {
+            $this->enviar($chatId, 'Acesso restrito. Somente o administrador autorizado pode usar este bot.');
+
             return;
         }
 
@@ -97,14 +121,13 @@ class TelegramAdministrativo
                 return false;
             }
             $usuario = User::find($vinculo->user_id);
-            if (! $usuario || ! $usuario->ativo || $usuario->nivel !== 'admin') {
+            if (! $this->podeOperar($usuario)) {
                 return false;
             }
 
-            if (DB::table('telegram_vinculos')->where('chat_id', $chatId)
-                ->where('id', '!=', $vinculo->id)->exists()) {
-                return false;
-            }
+            // Um código válido do dono atual pode substituir o vínculo de um dono anterior.
+            DB::table('telegram_vinculos')->where('chat_id', $chatId)
+                ->where('user_id', '!=', $usuario->id)->delete();
             DB::table('telegram_vinculos')->where('id', $vinculo->id)->update([
                 'chat_id' => $chatId,
                 'codigo_hash' => null,
@@ -120,7 +143,7 @@ class TelegramAdministrativo
     {
         return "CETSADP • Resumo acadêmico\n"
             .'Alunos cadastrados: '.User::where('nivel', 'aluno')->count()."\n"
-            .'Matrículas ativas: '.Matricula::where('status', Matricula::STATUS_ATIVA)->count()."\n"
+            .'Matrículas ativas: '.Matricula::query()->ativas()->count()."\n"
             .'Inscrições em análise: '.Application::where('status', Application::STATUS_EM_ANALISE)->count();
     }
 
@@ -128,11 +151,21 @@ class TelegramAdministrativo
     {
         $token = (string) config('services.telegram.bot_token');
         if ($token === '') {
-            return;
+            throw new TelegramFalhaEnvio;
         }
-        Http::timeout(5)->post('https://api.telegram.org/bot'.$token.'/sendMessage', [
-            'chat_id' => $chatId,
-            'text' => $texto,
-        ])->throw();
+
+        try {
+            $resposta = Http::timeout(5)->post('https://api.telegram.org/bot'.$token.'/sendMessage', [
+                'chat_id' => $chatId,
+                'text' => $texto,
+            ]);
+        } catch (ConnectionException) {
+            // A exceção original contém a URL com token; não a propagar nem registrar.
+            throw new TelegramFalhaEnvio;
+        }
+
+        if (! $resposta->successful() || $resposta->json('ok') !== true) {
+            throw new TelegramFalhaEnvio;
+        }
     }
 }

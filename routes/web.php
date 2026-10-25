@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcompanhamentoInscricaoLinkController;
+use App\Http\Controllers\AdminTelegramController;
 use App\Http\Controllers\Aluno\AulaController;
 use App\Http\Controllers\Aluno\CalendarioController;
 use App\Http\Controllers\Aluno\CertificadosController;
@@ -13,8 +14,8 @@ use App\Http\Controllers\Aluno\FinanceiroController;
 use App\Http\Controllers\Aluno\FrequenciaController;
 use App\Http\Controllers\Aluno\NotasController;
 use App\Http\Controllers\Aluno\PerfilController;
-use App\Http\Controllers\Aluno\SecretariaController;
 // Controllers do Portal do Aluno
+use App\Http\Controllers\Aluno\SecretariaController;
 use App\Http\Controllers\Auth\AdminAccessTokenController;
 use App\Http\Controllers\Auth\AlunoLoginController;
 use App\Http\Controllers\Auth\RedefinirSenhaController;
@@ -28,8 +29,8 @@ use App\Http\Controllers\RelatorioFinanceiroController;
 use App\Http\Controllers\RelatorioFluxoCaixaController;
 use App\Http\Controllers\RelatorioInadimplenciaController;
 use App\Http\Controllers\SiteController;
-use App\Http\Controllers\SsoController;
 // Controller de Autenticação
+use App\Http\Controllers\SsoController;
 use App\Http\Controllers\ValidacaoDeclaracaoController;
 use Illuminate\Support\Facades\Route;
 
@@ -261,11 +262,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('relatorios.dre');
 });
 
-
 // Vinculação do bot administrativo Telegram — requer autenticação web e nível admin.
-\Illuminate\Support\Facades\Route::middleware(['auth', 'role:admin', 'throttle:10,1'])
+Route::middleware(['auth', 'role:admin', 'throttle:10,1'])
     ->prefix('admin/telegram')->name('admin.telegram.')->group(function () {
-        \Illuminate\Support\Facades\Route::get('/', [\App\Http\Controllers\AdminTelegramController::class, 'index'])->name('index');
-        \Illuminate\Support\Facades\Route::post('/gerar', [\App\Http\Controllers\AdminTelegramController::class, 'gerar'])->name('gerar');
-        \Illuminate\Support\Facades\Route::post('/revogar', [\App\Http\Controllers\AdminTelegramController::class, 'revogar'])->name('revogar');
+        Route::get('/', [AdminTelegramController::class, 'index'])->name('index');
+        Route::post('/gerar', [AdminTelegramController::class, 'gerar'])->name('gerar');
+        Route::post('/revogar', [AdminTelegramController::class, 'revogar'])->name('revogar');
     });
