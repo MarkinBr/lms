@@ -68,6 +68,8 @@ class TelegramOutboxTest extends TestCase
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($dono);
         $this->enviar($this->update(1, '/vincular '.$codigo))->assertOk();
 
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => false], 503)]);
         $this->enviar($this->update(2, '/resumo'))->assertOk();
         app(TelegramAdministrativo::class)->revogar($dono);
