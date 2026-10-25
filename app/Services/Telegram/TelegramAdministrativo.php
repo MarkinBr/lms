@@ -54,7 +54,14 @@ class TelegramAdministrativo
     public function revogar(User $usuario): void
     {
         abort_unless($this->podeOperar($usuario), 403);
-        DB::table('telegram_vinculos')->where('user_id', $usuario->id)->delete();
+        DB::transaction(function () use ($usuario) {
+            DB::table('telegram_vinculos')->where('user_id', $usuario->id)->delete();
+            DB::table('telegram_outbox')
+                ->where('user_id', $usuario->id)
+                ->whereIn('status', ['pendente', 'enviando'])
+                ->update(['status' => 'descartado', 'payload' => null, 'lease_ate' => null,
+                    'proxima_tentativa_em' => null, 'updated_at' => now()]);
+        });
     }
 
     public function receber(array $update): void
