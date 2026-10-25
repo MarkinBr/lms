@@ -19,6 +19,48 @@ env:
   FILESYSTEM_DISK: local
 
 jobs:
+  telegram_postgres:
+    name: Telegram concorrência PostgreSQL 16 isolado
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cetsadp_telegram_ci
+          POSTGRES_USER: telegram_ci
+          POSTGRES_PASSWORD: postgres_ci_local
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U telegram_ci -d cetsadp_telegram_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: cetsadp_telegram_ci
+      DB_USERNAME: telegram_ci
+      DB_PASSWORD: postgres_ci_local
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: PHP e extensão PostgreSQL
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, pgsql, pdo_pgsql
+          coverage: none
+      - name: Instalar dependências
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Preparar aplicação e migrar banco efêmero
+        run: |
+          cp .env.example .env
+          mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
+          php artisan key:generate --force
+          php artisan migrate --force
+      - name: Disputar confirmações e revogações em dois processos
+        run: php tests/infra/telegram_postgres_race.php
+
   quality:
     name: PHP e JavaScript
     runs-on: ubuntu-latest
