@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Legado;
 
+use App\Filament\Professor\Resources\AulaResource;
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Schema\Blueprint;
@@ -205,5 +206,18 @@ class ImportarPortalLegadoTest extends TestCase
         $aluno = User::where('matricula_login', 'cets001')->firstOrFail();
         $this->actingAs($aluno)->get(route('aluno.curso.show', DB::table('cursos')->value('id')))
             ->assertOk()->assertDontSee('https://example.test/apostila.pdf');
+    }
+
+    public function test_professor_importado_preserva_curso_e_nao_ve_curso_de_outro(): void
+    {
+        $this->fonte('professores')->insert(['id' => '5', 'nome' => 'Professor sintético', 'username' => 'prof-sintetico', 'senha_hash' => Hash::make('SenhaProfessor#2026'), 'ativo' => '1', 'curso_id' => '3']);
+        $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(0);
+        $professor = User::where('nivel', 'professor')->firstOrFail();
+        $this->assertDatabaseHas('cursos', ['instrutor_id' => $professor->id]);
+        $this->actingAs($professor);
+        $this->assertSame(1, AulaResource::getEloquentQuery()->count());
+        $outro = User::factory()->create(['nivel' => 'professor', 'ativo' => true]);
+        $this->actingAs($outro);
+        $this->assertSame(0, AulaResource::getEloquentQuery()->count());
     }
 }

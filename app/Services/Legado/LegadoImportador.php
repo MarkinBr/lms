@@ -44,10 +44,10 @@ class LegadoImportador
         $this->resultado = ['previa' => ! $aplicar, 'criados' => [], 'existentes' => [], 'conflitos' => []];
         $this->destino->beginTransaction();
         try {
-            $this->cursos($dados['cursos']);
-            $this->modulos($dados['modulos']);
             $this->pessoas('alunos', $dados['alunos'], 'aluno');
             $this->pessoas('professores', $dados['professores'], 'professor');
+            $this->cursos($dados['cursos'], $dados['professores']);
+            $this->modulos($dados['modulos']);
             $this->vinculos($dados);
             $this->aulas($dados);
             $this->materiais($dados['materiais']);
@@ -79,7 +79,7 @@ class LegadoImportador
             && (string) $a->getConfig('port') === (string) $b->getConfig('port');
     }
 
-    private function cursos(array $registros): void
+    private function cursos(array $registros, array $professores): void
     {
         foreach ($registros as $r) {
             $titulo = trim((string) ($r['nome'] ?? ''));
@@ -94,7 +94,12 @@ class LegadoImportador
 
                 continue;
             }
-            $this->gravar('cursos', $r['id'], 'cursos', ['titulo' => $titulo, 'descricao' => $r['descricao'] ?? null, 'ativo' => $this->booleano($r['ativo'] ?? true) && empty($r['deleted_at'])], $r, $existente ? (int) $existente : null);
+            $responsaveis = array_values(array_filter($professores, fn ($p) => (string) ($p['curso_id'] ?? '') === (string) $r['id']));
+            if (count($responsaveis) > 1) {
+                $this->conflito('cursos', $r['id'], 'responsavel_exige_reconciliacao');
+            }
+            $instrutor = count($responsaveis) === 1 ? $this->id('professores', $responsaveis[0]['id']) : null;
+            $this->gravar('cursos', $r['id'], 'cursos', ['titulo' => $titulo, 'descricao' => $r['descricao'] ?? null, 'instrutor_id' => $instrutor, 'ativo' => $this->booleano($r['ativo'] ?? true) && empty($r['deleted_at'])], $r, $existente ? (int) $existente : null);
         }
     }
 
