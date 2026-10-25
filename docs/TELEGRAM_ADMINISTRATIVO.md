@@ -105,3 +105,12 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - A preparação armazena `application_id` e SHA-256 do estado observado (ID, status, última atualização, curso/modalidade). Se a inscrição mudar antes de confirmar, a proposta se torna `obsoleto` e não conclui. Não é uma decisão acadêmica.
 - **Registrar revisão NÃO aprova, rejeita nem matricula**, não cria aluno, não envia e-mail e não aciona `AprovarInscricaoService`. A aprovação/rejeição real exige issue separada e homologação de efeitos externos, identidade e concorrência.
 - A migração `2026_10_25_000009_add_contexto_to_telegram_confirmacoes.php` deve ser validada no PostgreSQL isolado antes de qualquer implantação. Base dependente de PRs #95 e anteriores. Sem deploy, merge ou alterações no legado.
+
+
+## Auditoria pós-revisão independente (Issues #98–#104)
+- Correções #98: callback não reabre mensagem entregue quando falha confirmação visual; UUID estrutural 8-4-4-4-12; fixtures não assumem admin ID 1.
+- Segurança #99: `requer_autorizacao` persiste independentemente do `user_id`. Se o usuário protegido desaparecer, descartar a resposta. Registros anteriores com classificação desconhecida são tratados como protegidos.
+- Consistência #102: a proposta de pré-análise invalida-se ao mudar dados exibidos do curso/modalidade, nome do candidato ou conjunto/versionamento/validação dos documentos ativos. Só é armazenado hash, sem dados pessoais de documentos.
+- Revogação #104: cada confirmação pendente cancelada por revogação ganha registro append-only em `telegram_auditoria_revogacoes`; essa tabela não inventa `update_id` do Telegram. O histórico restringe exclusão física das entidades relacionadas.
+- Limitações: snapshots das relações não garantem atomicidade contra mutações simultâneas sem travas compartilhadas nos serviços acadêmicos; validar em PostgreSQL isolado. Mensagens já entregues não podem ser revogadas do histórico do Telegram.
+- Sem merge, sem deploy, sem mudanças de banco da VPS e sem aprovação acadêmica real.
