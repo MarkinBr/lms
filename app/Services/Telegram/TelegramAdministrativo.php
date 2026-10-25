@@ -144,7 +144,9 @@ class TelegramAdministrativo
             return;
         }
 
-        if ($texto === '/testeconfirmacao') {
+        if (preg_match('/^\\/revisarinscricao\\s+([0-9a-fA-F-]{36})$/D', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararRevisao($chatId, $m[1], $this->updateAtual);
+        } elseif ($texto === '/testeconfirmacao') {
             $resposta = app(ConfirmacoesTelegram::class)->preparar($chatId, $this->updateAtual);
         } elseif (preg_match('/^\\/buscar\\s+(.+)$/us', $texto, $m)) {
             $resposta = $consulta->buscarAluno($m[1]);
