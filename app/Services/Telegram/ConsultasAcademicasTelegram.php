@@ -166,12 +166,12 @@ class ConsultasAcademicasTelegram
             ."\nSomente chamadas concluídas. Confira detalhes no painel."];
     }
 
-
     public function pendencias(): array
     {
         $academico = app(PainelAcademicoQuery::class);
         $estruturais = $academico->pendencias();
         $linhas = ["CETSADP • Pendências", 'Inscrições em análise: '.Application::query()->emAnalise()->count()];
+
         foreach ([
             'disciplinas_sem_modulo' => 'Disciplinas sem módulo',
             'aulas_sem_disciplina' => 'Aulas sem disciplina',
@@ -239,6 +239,7 @@ class ConsultasAcademicasTelegram
         if (! preg_match('/^[0-9a-fA-F-]{36}$/D', $id)) {
             return ['text' => 'Identificador de inscrição inválido.'];
         }
+
         $inscricao = Application::query()->find($id, ['id', 'nome_completo', 'status', 'curso_id']);
         if ($inscricao === null) {
             return ['text' => 'Inscrição não encontrada.'];
