@@ -169,6 +169,8 @@ class TelegramAdministrativo
             $resposta = $consulta->agendaSemanal();
         } elseif (preg_match('/^filtro:(curso|turma|status):([a-z0-9]{1,12}):([1-9][0-9]?)$/', $codigo, $m)) {
             $resposta = $consulta->filtrarAlunos($m[1], $m[2], (int) $m[3]);
+        } elseif (preg_match('/^(notas|frequencia):([1-9][0-9]{0,11})$/', $codigo, $m)) {
+            $resposta = $consulta->{$m[1]}((int) $m[2]);
         } elseif (preg_match('/^ficha:([1-9][0-9]{0,11})$/', $codigo, $m)) {
             $resposta = $consulta->aluno((int) $m[1]);
         } elseif (in_array($codigo, ['pendencias', 'agenda', 'cursos'], true)) {
