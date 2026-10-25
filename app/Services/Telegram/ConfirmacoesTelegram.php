@@ -7,16 +7,22 @@ use Illuminate\Support\Facades\DB;
 
 class ConfirmacoesTelegram
 {
-    public function preparar(string $chatId): array
+    public function preparar(string $chatId, int $updateId): array
     {
         $usuario = $this->dono($chatId);
         $codigo = bin2hex(random_bytes(16));
-        DB::table('telegram_confirmacoes')->insert([
+        $id = DB::table('telegram_confirmacoes')->insertGetId([
             'user_id' => $usuario->id, 'chat_id' => $chatId,
             'codigo_hash' => hash('sha256', $codigo),
             'acao' => 'simulacao', 'status' => 'pendente',
             'expira_em' => now()->addMinutes(10),
             'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('telegram_auditoria')->insert([
+            'user_id' => $usuario->id, 'confirmacao_id' => $id,
+            'update_id' => $updateId, 'acao' => 'simulacao',
+            'antes' => 'inexistente', 'depois' => 'pendente',
+            'created_at' => now(),
         ]);
 
         return [
