@@ -3,13 +3,13 @@
 namespace App\Services\Telegram;
 
 use App\Models\Application;
-use App\Models\Curso;
-use App\Models\Turma;
-use App\Services\GestaoAcademica\PainelAcademicoQuery;
 use App\Models\Aula;
+use App\Models\Curso;
 use App\Models\Matricula;
 use App\Models\Nota;
+use App\Models\Turma;
 use App\Models\User;
+use App\Services\GestaoAcademica\PainelAcademicoQuery;
 
 class ConsultasAcademicasTelegram
 {
