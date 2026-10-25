@@ -478,6 +478,34 @@ function renderModules(term = "") {
 }
 renderModules();
 $("lesson-search").oninput = (e) => renderModules(e.target.value.trim());
+// Painéis independentes: o caderno começa recolhido para priorizar a aula.
+const panelPreference = storage.get("cetsadp:estudio:panels") || {};
+document.body.classList.toggle(
+	"notebook-closed",
+	panelPreference.notes !== true,
+);
+document.body.classList.toggle(
+	"course-closed",
+	panelPreference.course === false,
+);
+function syncPanelControls() {
+	const mobile = innerWidth <= 1180;
+	const focus = document.body.classList.contains("focus-mode");
+	for (const [name, id, closed] of [
+		["course", "course-toggle", "course-closed"],
+		["notes", "notebook-toggle", "notebook-closed"],
+	]) {
+		const open = mobile
+			? document.body.classList.contains("mobile-" + name)
+			: !focus && !document.body.classList.contains(closed);
+		$(id).setAttribute("aria-pressed", String(open));
+		$(id).setAttribute("aria-expanded", String(open));
+	}
+	$("focus-toggle").setAttribute("aria-pressed", String(focus));
+	$("focus-toggle").lastElementChild.textContent = focus
+		? "Sair do foco"
+		: "Modo foco";
+}
 function mobilePanel(name) {
 	document.body.classList.toggle("mobile-course", name === "course");
 	document.body.classList.toggle("mobile-notes", name === "notes");
@@ -487,48 +515,57 @@ function mobilePanel(name) {
 		if (b.hasAttribute("aria-expanded"))
 			b.setAttribute("aria-expanded", String(b.dataset.mobile === name));
 	});
+	syncPanelControls();
+}
+function togglePanel(name) {
+	if (innerWidth <= 1180) {
+		mobilePanel(
+			document.body.classList.contains("mobile-" + name) ? "lesson" : name,
+		);
+	} else {
+		const wasFocused = document.body.classList.contains("focus-mode");
+		document.body.classList.remove("focus-mode");
+		const closed = name === "notes" ? "notebook-closed" : "course-closed";
+		if (wasFocused) document.body.classList.remove(closed);
+		else document.body.classList.toggle(closed);
+		storage.set("cetsadp:estudio:panels", {
+			course: !document.body.classList.contains("course-closed"),
+			notes: !document.body.classList.contains("notebook-closed"),
+		});
+		syncPanelControls();
+		if (pdfDoc) requestPdfRender();
+	}
 }
 document.querySelectorAll("[data-mobile]").forEach((b) => {
 	b.onclick = () => {
-		mobilePanel(b.dataset.mobile);
+		const name = b.dataset.mobile;
+		mobilePanel(
+			name !== "lesson" && document.body.classList.contains("mobile-" + name)
+				? "lesson"
+				: name,
+		);
 		window.scrollTo(0, 0);
 	};
 });
-$("course-toggle").onclick = () => {
-	mobilePanel("course");
-	$("lesson-search").focus();
+$("course-toggle").onclick = () => togglePanel("course");
+$("notebook-toggle").onclick = () => togglePanel("notes");
+$("course-close").onclick = () => {
+	togglePanel("course");
+	(innerWidth <= 600
+		? document.querySelector('[data-mobile="course"]')
+		: $("course-toggle")
+	).focus();
 };
-$("notebook-toggle").onclick = () => {
-	if (innerWidth <= 1180) {
-		mobilePanel("notes");
-		$("notes-editor").focus();
-		return;
-	}
-	const wasFocused = document.body.classList.contains("focus-mode");
-	document.body.classList.remove("focus-mode");
-	$("focus-toggle").setAttribute("aria-pressed", "false");
-	$("focus-toggle").lastElementChild.textContent = "Modo foco";
-	let closed = false;
-	if (wasFocused) {
-		document.body.classList.remove("notebook-closed");
-	} else {
-		closed = document.body.classList.toggle("notebook-closed");
-	}
-	$("notebook-toggle").setAttribute("aria-pressed", String(!closed));
-	if (pdfDoc) requestPdfRender();
+$("notes-close").onclick = () => {
+	togglePanel("notes");
+	$("notebook-toggle").focus();
 };
 $("focus-toggle").onclick = () => {
-	const on = document.body.classList.toggle("focus-mode");
-	$("focus-toggle").setAttribute("aria-pressed", String(on));
-	$("notebook-toggle").setAttribute(
-		"aria-pressed",
-		String(!on && !document.body.classList.contains("notebook-closed")),
-	);
-	$("focus-toggle").lastElementChild.textContent = on
-		? "Sair do foco"
-		: "Modo foco";
+	document.body.classList.toggle("focus-mode");
+	syncPanelControls();
 	if (pdfDoc) requestPdfRender();
 };
+syncPanelControls();
 function theme(value) {
 	document.documentElement.dataset.theme = value;
 	$("theme-toggle").setAttribute("aria-pressed", String(value === "dark"));
@@ -579,8 +616,37 @@ function bindTabs(selector, attribute, callback) {
 const showDetail = bindTabs("[data-detail]", "detail");
 const showNotebook = bindTabs("[data-notebook]", "notebook");
 let activeFormat = "video";
+let studyPinned = false;
+let floatingVideo = false;
+let nativePip = false;
+let lastMaterial = "text";
+function syncStudyLayout() {
+	const simultaneous =
+		activeFormat !== "video" && (studyPinned || floatingVideo || nativePip);
+	$("panel-video").hidden = activeFormat !== "video" && !simultaneous;
+	$("panel-video").setAttribute("role", simultaneous ? "region" : "tabpanel");
+	document.body.classList.toggle(
+		"study-pinned",
+		studyPinned && activeFormat !== "video",
+	);
+	document.body.classList.toggle("floating-video", floatingVideo);
+	$("video-return").hidden = !floatingVideo;
+	$("video-unpin").hidden = !studyPinned;
+	$("video-pin").setAttribute("aria-pressed", String(studyPinned));
+	$("video-pin").textContent = studyPinned
+		? "✓ Vídeo + material"
+		: "▣ Vídeo + material";
+	$("video-pip").setAttribute(
+		"aria-pressed",
+		String(floatingVideo || nativePip),
+	);
+	$("video-pip").textContent =
+		floatingVideo || nativePip ? "Fechar flutuante" : "▧ Vídeo flutuante";
+}
 const showFormat = bindTabs("[data-tab]", "tab", (name) => {
 	activeFormat = name;
+	if (name !== "video") lastMaterial = name;
+	syncStudyLayout();
 	$("selection-tools").hidden = true;
 	if (name === "pdf") initPdf();
 });
@@ -674,6 +740,9 @@ function activateVideoFeatures() {
 	videoReady = true;
 	$("video-host").setAttribute("aria-busy", "false");
 	$("video-note").disabled = false;
+	document.querySelectorAll(".transcript-cue").forEach((b) => {
+		b.disabled = false;
+	});
 	$("video-hint").textContent =
 		"Seu ponto de parada é lembrado neste navegador.";
 }
@@ -715,7 +784,7 @@ async function setupVideo() {
 		slot.id = "estudio-youtube";
 		$("video-host").append(slot);
 		const frame = make("iframe");
-		frame.src = `https://www.youtube.com/embed/${id}?enablejsapi=1&origin=${encodeURIComponent(location.origin)}&rel=0&playsinline=1`;
+		frame.src = `https://www.youtube.com/embed/${id}?enablejsapi=1&origin=${encodeURIComponent(location.origin)}&rel=0&playsinline=1&cc_lang_pref=pt&cc_load_policy=1`;
 		frame.title = "Videoaula: " + cfg.lesson.title;
 		frame.allow =
 			"accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen";
@@ -813,18 +882,17 @@ async function setupVideo() {
 			}
 		});
 		video.addEventListener("error", () => videoFallbackNotice(url));
-		if (document.pictureInPictureEnabled) {
-			$("video-pip").hidden = false;
-			$("video-pip").onclick = async () => {
-				try {
-					if (document.pictureInPictureElement)
-						await document.exitPictureInPicture();
-					else await video.requestPictureInPicture();
-				} catch {
-					toast("Seu navegador não disponibilizou o vídeo flutuante.");
-				}
-			};
-		}
+		configureCaptions();
+		video.addEventListener("enterpictureinpicture", () => {
+			nativePip = true;
+			floatingVideo = false;
+			syncStudyLayout();
+			toast("Vídeo aberto em janela flutuante.");
+		});
+		video.addEventListener("leavepictureinpicture", () => {
+			nativePip = false;
+			syncStudyLayout();
+		});
 	}
 }
 function videoFallback(url) {
@@ -874,6 +942,154 @@ $("video-note").onclick = async () => {
 		label: "Vídeo · " + stamp(time),
 	});
 };
+// Mantém o mesmo elemento de vídeo ao alternar leitura, PDF ou janela flutuante.
+const transcript = cfg.lesson.transcript || { text: "", cues: [] };
+let captionTrack = null;
+function configureCaptions() {
+	if (!video || !transcript.cues?.length || typeof VTTCue === "undefined")
+		return;
+	captionTrack = video.addTextTrack("captions", "Português", "pt-BR");
+	for (const cue of transcript.cues)
+		captionTrack.addCue(new VTTCue(cue.start, cue.end, cue.text));
+	captionTrack.mode = "hidden";
+	$("video-captions").hidden = false;
+	$("video-captions").onclick = () => {
+		const on = captionTrack.mode !== "showing";
+		captionTrack.mode = on ? "showing" : "hidden";
+		$("video-captions").setAttribute("aria-pressed", String(on));
+	};
+	video.textTracks.addEventListener("change", () => {
+		$("video-captions").setAttribute(
+			"aria-pressed",
+			String(captionTrack.mode === "showing"),
+		);
+	});
+}
+function openMiniPlayer() {
+	studyPinned = false;
+	floatingVideo = true;
+	syncStudyLayout();
+	toast("Miniplayer ativo nesta página. Use “Voltar ao vídeo” para ampliar.");
+}
+$("video-pin").hidden = !cfg.lesson.video;
+$("video-pip").hidden = !cfg.lesson.video;
+$("video-pin").onclick = async () => {
+	if (nativePip) {
+		try {
+			await document.exitPictureInPicture();
+		} catch {}
+	}
+	floatingVideo = false;
+	studyPinned = !studyPinned;
+	if (studyPinned && activeFormat === "video") showFormat(lastMaterial);
+	syncStudyLayout();
+	if (studyPinned) $("panel-video").scrollIntoView({ block: "start" });
+};
+$("video-pip").onclick = async () => {
+	if (nativePip) {
+		try {
+			await document.exitPictureInPicture();
+		} catch {
+			toast("Feche a janela flutuante pelo controle do navegador.");
+		}
+		return;
+	}
+	if (floatingVideo) {
+		floatingVideo = false;
+		syncStudyLayout();
+		return;
+	}
+	studyPinned = false;
+	// A solicitação precisa ocorrer diretamente no clique, sem aguardar outra API.
+	if (
+		video &&
+		document.pictureInPictureEnabled &&
+		video.readyState > 0 &&
+		typeof video.requestPictureInPicture === "function"
+	) {
+		try {
+			await video.requestPictureInPicture();
+			nativePip = true;
+			syncStudyLayout();
+			return;
+		} catch {}
+	}
+	openMiniPlayer();
+};
+$("video-unpin").onclick = () => {
+	studyPinned = false;
+	syncStudyLayout();
+	$("video-pin").focus();
+};
+$("video-return").onclick = () => {
+	floatingVideo = false;
+	syncStudyLayout();
+	showFormat("video");
+	$("panel-video").scrollIntoView({ block: "start" });
+};
+// Saída acessível por teclado sem interferir no texto que o aluno está digitando.
+document.addEventListener("keydown", (e) => {
+	if (e.key === "Escape" && floatingVideo) {
+		floatingVideo = false;
+		syncStudyLayout();
+		$("video-pip").focus();
+	}
+});
+const cueButtons = [];
+if (transcript.cues?.length) {
+	$("transcript-status").textContent =
+		"Toque em um horário para ir ao trecho do vídeo. Você pode manter o vídeo acima da transcrição.";
+	$("transcript-search-label").hidden = false;
+	for (const cue of transcript.cues) {
+		const button = make("button", "transcript-cue");
+		button.type = "button";
+		button.disabled = !videoReady;
+		button.append(
+			make("span", "cue-time", stamp(cue.start)),
+			make("span", "cue-text", cue.text),
+		);
+		button.onclick = () => {
+			if (cfg.lesson.video && !floatingVideo && !nativePip) {
+				studyPinned = true;
+				syncStudyLayout();
+			}
+			seek(cue.start);
+		};
+		$("transcript-content").append(button);
+		cueButtons.push({ button, cue });
+	}
+	$("transcript-search").oninput = (e) => {
+		const query = e.target.value.toLocaleLowerCase("pt-BR");
+		let found = 0;
+		for (const { button, cue } of cueButtons) {
+			button.hidden = !cue.text.toLocaleLowerCase("pt-BR").includes(query);
+			if (!button.hidden) found++;
+		}
+		$("transcript-status").textContent = found
+			? `${found} ${found === 1 ? "trecho encontrado" : "trechos encontrados"}. Toque no horário para ir ao vídeo.`
+			: "Nenhum trecho encontrado.";
+	};
+	setInterval(async () => {
+		if (activeFormat !== "transcript" || document.hidden || !videoReady) return;
+		try {
+			const time = await videoTime();
+			for (const { button, cue } of cueButtons) {
+				if (time >= cue.start && time < cue.end)
+					button.setAttribute("aria-current", "true");
+				else button.removeAttribute("aria-current");
+			}
+		} catch {}
+	}, 500);
+} else if (transcript.text) {
+	$("transcript-status").textContent =
+		"Transcrição disponibilizada sem marcação de tempo.";
+	$("transcript-content").append(
+		make("p", "transcript-plain", transcript.text),
+	);
+} else {
+	$("transcript-status").textContent =
+		"A transcrição ainda não foi disponibilizada para esta aula. Se o vídeo tiver legendas na plataforma de origem, ative CC no player.";
+}
 setupVideo().catch((e) => console.warn("Player indisponível", e));
 
 // Biblioteca e leitor PDF carregados apenas ao abrir o material.
@@ -998,9 +1214,15 @@ async function renderPdf() {
 		const page = await doc.getPage(pageNumber);
 		if (doc !== pdfDoc) return;
 		const base = page.getViewport({ scale: 1 });
+		const stage = $("pdf-stage");
+		const stageStyle = getComputedStyle(stage);
 		const width = Math.max(
 			200,
-			$("pdf-stage").clientWidth - (innerWidth < 1181 ? 24 : 40),
+			Math.floor(
+				stage.clientWidth -
+					parseFloat(stageStyle.paddingLeft) -
+					parseFloat(stageStyle.paddingRight),
+			),
 		);
 		const scale = (width / base.width) * pdfZoom;
 		const viewport = page.getViewport({ scale });
@@ -1077,6 +1299,7 @@ let resizeTimer;
 window.addEventListener("resize", () => {
 	clearTimeout(resizeTimer);
 	resizeTimer = setTimeout(() => {
+		syncPanelControls();
 		if (pdfDoc && activeFormat === "pdf") requestPdfRender();
 	}, 250);
 });

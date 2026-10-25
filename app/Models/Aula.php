@@ -69,6 +69,7 @@ class Aula extends Model
         'conteudo_texto',
         'tipo_conteudo',
         'video_url',
+        'transcricao_video',
         'video_provider',
         'duracao',
         'materiais',

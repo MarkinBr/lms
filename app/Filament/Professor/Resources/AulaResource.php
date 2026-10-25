@@ -198,6 +198,13 @@ class AulaResource extends Resource
                                             ->visible(fn (Get $get) => $get('video_provider') !== 'upload')
                                             ->helperText('Cole a URL completa do vídeo'),
 
+                                        Forms\Components\Textarea::make('transcricao_video')
+                                            ->label('Transcrição e legendas do vídeo')
+                                            ->helperText('Cole a transcrição em texto simples ou o conteúdo de um arquivo WebVTT (.vtt). WebVTT habilita legendas e trechos clicáveis. Revise o texto antes de publicar.')
+                                            ->rows(8)
+                                            ->maxLength(100000)
+                                            ->columnSpanFull(),
+
                                         Forms\Components\FileUpload::make('video_upload')
                                             ->label('Upload do Vídeo')
                                             ->disk('public')
