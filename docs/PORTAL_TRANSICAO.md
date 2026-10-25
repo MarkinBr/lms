@@ -51,3 +51,7 @@ Web e worker usam ambiente `production`, debug desativado e cookie seguro exclus
 Sem serviço de envio validado, recuperação e confirmação de e-mail respondem com mensagem de indisponibilidade, em vez de simular entrega. Cobranças, administração, APIs e exclusão de conta não são expostas pelo vhost piloto. O financeiro continua no sistema atual. Os sete conflitos da origem permanecem preservados para conferência; o piloto não representa uma substituição definitiva.
 
 O certificado HTTP-01 usa `scripts/portal-acme-hook.py` na VPS; o deploy-hook de renovação valida e recarrega somente o Nginx. Backups de bancos, arquivos e configuração permanecem privados na VPS. O retorno consiste em retirar apenas o novo vhost e recarregar o Nginx, sem restaurar bancos nem parar o legado.
+
+A rede adicional do Nginx também foi declarada no Compose existente da VPS, preservando as demais configurações de serviços, para sobreviver à recriação do container. O piloto aceita o cabeçalho de IP real somente das redes oficiais Cloudflare em `docker/portal-cloudflare-ips.inc`; isso evita agrupar todos os alunos no limite de login do mesmo proxy. As listas têm suas fontes oficiais registradas no arquivo.
+
+Publicação verificada por HTTPS: login, dashboard, sala de aula e cookie seguro. A conta sintética de aceitação foi desativada após o teste; a credencial permaneceu exclusivamente na VPS. O timer de renovação do Certbot está habilitado. E-mail, financeiro, sincronização com o legado e os sete conflitos continuam sujeitos às limitações acima.
