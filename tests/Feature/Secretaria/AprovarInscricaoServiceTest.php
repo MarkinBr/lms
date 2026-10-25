@@ -7,15 +7,16 @@ use App\Models\CourseModality;
 use App\Models\Curso;
 use App\Models\Matricula;
 use App\Models\User;
+use App\Notifications\AtivarAcessoAluno;
 use App\Services\AprovarInscricaoException;
 use App\Services\AprovarInscricaoService;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use Tests\TestCase;
+use Tests\Feature\Auth\PortalAuthTestCase;
 
-class AprovarInscricaoServiceTest extends TestCase
+// Novos alunos recebem ativação assinada: recuperação comum exige e-mail já confirmado.
+class AprovarInscricaoServiceTest extends PortalAuthTestCase
 {
     use RefreshDatabase;
 
@@ -275,7 +276,7 @@ class AprovarInscricaoServiceTest extends TestCase
 
         $r = $this->service->executar($inscricao, $secretaria);
 
-        Notification::assertSentTo($r->user, ResetPassword::class);
+        Notification::assertSentTo($r->user, AtivarAcessoAluno::class);
 
         // O modelo tem cast 'hashed' — a senha nunca sai em texto puro,
         // e o resultado do serviço não expõe nenhuma senha.
@@ -300,10 +301,10 @@ class AprovarInscricaoServiceTest extends TestCase
         $inscricao = $this->criarInscricao($curso, $mod);
 
         $this->service->executar($inscricao, $secretaria);
-        Notification::assertSentTimes(ResetPassword::class, 1);
+        Notification::assertSentTimes(AtivarAcessoAluno::class, 1);
 
         $this->service->executar($inscricao->fresh(), $secretaria);
-        Notification::assertSentTimes(ResetPassword::class, 1);
+        Notification::assertSentTimes(AtivarAcessoAluno::class, 1);
     }
 
     /**

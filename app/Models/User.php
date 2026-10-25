@@ -94,6 +94,7 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'primeiro_acesso_pendente' => 'boolean',
         'email_confirmacao_expira_em' => 'datetime',
         'password' => 'hashed',
         'ativo' => 'boolean',

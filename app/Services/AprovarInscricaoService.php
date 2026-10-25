@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Application;
 use App\Models\Matricula;
 use App\Models\User;
+use App\Notifications\AtivarAcessoAluno;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
@@ -31,7 +32,7 @@ use Illuminate\Support\Str;
  *   6. Gerar número de matrícula único.
  *   7. Atualizar status da inscrição para "matriculado".
  *   8. Registrar auditoria (via Log estruturado).
- *   9. Disparar Password Reset APENAS para conta recém-criada,
+ *   9. Disparar ativação assinada APENAS para conta recém-criada,
  *      DEPOIS do commit. Nunca expor senha em texto puro.
  *
  * Idempotência:
@@ -125,6 +126,10 @@ class AprovarInscricaoService
                     'observacoes' => $observacoes,
                 ]);
                 $matriculaRecemCriada = true;
+            }
+
+            if ($usuarioRecemCriado) {
+                $user->forceFill(['matricula_login' => $matricula->numero_matricula])->save();
             }
 
             // 7) Atualizar inscrição → matriculado + auditoria simples.
@@ -316,6 +321,8 @@ class AprovarInscricaoService
             'password' => Str::random(48),
         ]);
 
+        $novo->forceFill(['primeiro_acesso_pendente' => true])->save();
+
         return [$novo, true];
     }
 
@@ -371,13 +378,22 @@ class AprovarInscricaoService
     }
 
     /**
-     * Dispara o link seguro de definição de senha via broker nativo do Laravel.
+     * Dispara ativação individual assinada via broker nativo; só o consumo confirma o e-mail.
      * Falha do envio não desfaz a matrícula: registra erro e sinaliza a Secretaria.
      */
     protected function dispararLinkDefinicaoSenha(User $user): void
     {
         try {
-            $status = Password::broker()->sendResetLink(['email' => $user->email]);
+            $status = Password::broker()->sendResetLink([
+                'id' => $user->id,
+                'email' => $user->email,
+                'nivel' => 'aluno',
+                'ativo' => true,
+                'primeiro_acesso_pendente' => true,
+                'email_verified_at' => null,
+            ], function (User $aluno, string $token): void {
+                $aluno->notify(new AtivarAcessoAluno($token));
+            });
 
             $this->registrarAuditoria('usuario.link_definicao_senha_enviado', [
                 'user_id' => $user->id,
@@ -385,7 +401,7 @@ class AprovarInscricaoService
             ]);
         } catch (\Throwable $e) {
             // Não relançamos: a matrícula não pode ser desfeita por falha de e-mail.
-            Log::error('Falha ao enviar link de definição de senha para novo aluno.', [
+            Log::error('Falha ao enviar link de ativação para novo aluno.', [
                 'user_id' => $user->id,
                 'exception' => $e::class,
             ]);

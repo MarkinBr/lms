@@ -20,6 +20,7 @@ use App\Http\Controllers\Aluno\PerfilController;
 use App\Http\Controllers\Aluno\SecretariaController;
 use App\Http\Controllers\Auth\AdminAccessTokenController;
 use App\Http\Controllers\Auth\AlunoLoginController;
+use App\Http\Controllers\Auth\AtivarAcessoAlunoController;
 use App\Http\Controllers\Auth\RedefinirSenhaController;
 use App\Http\Controllers\DREController;
 use App\Http\Controllers\ExtratoAlunoController;
@@ -74,6 +75,14 @@ Route::middleware('guest')->group(function () {
     Route::post('/senha/esqueci', [RedefinirSenhaController::class, 'enviarLink'])->middleware('throttle:5,1')->name('password.email');
     Route::get('/senha/redefinir/{token}', [RedefinirSenhaController::class, 'redefinir'])->name('password.reset');
     Route::post('/senha/redefinir', [RedefinirSenhaController::class, 'atualizar'])->middleware('throttle:10,1')->name('password.update');
+});
+
+// Primeiro acesso exige token individual + assinatura; sessão de terceiro é rejeitada no controller.
+Route::middleware(['signed', 'throttle:10,1'])->group(function () {
+    Route::get('/acesso/ativar/{aluno}/{token}', [AtivarAcessoAlunoController::class, 'formulario'])
+        ->whereNumber('aluno')->name('aluno.ativacao');
+    Route::post('/acesso/ativar/{aluno}/{token}', [AtivarAcessoAlunoController::class, 'ativar'])
+        ->whereNumber('aluno')->name('aluno.ativacao.store');
 });
 
 Route::post('/portal/logout', [AlunoLoginController::class, 'logout'])->middleware(['auth', 'aluno'])->name('aluno.logout');
