@@ -42,6 +42,15 @@ class TelegramCentralInteligenteTest extends TestCase
         $this->assertStringContainsString('frequencia:'.$aluno->id, $botoes);
     }
 
+    public function test_filtros_guiados_oferecem_atalhos_de_status_e_curso(): void
+    {
+        $curso = Curso::create(['titulo' => 'Curso de Liderança', 'ativo' => true]);
+        $resposta = app(ConsultasAcademicasTelegram::class)->filtros();
+        $botoes = json_encode($resposta['reply_markup']['inline_keyboard']);
+        $this->assertStringContainsString('filtro:status:ativo:1', $botoes);
+        $this->assertStringContainsString('filtro:curso:'.$curso->id.':1', $botoes);
+    }
+
     public function test_filtro_alunos_por_curso_e_status_sem_expor_contato(): void
     {
         $curso = Curso::create(['titulo' => 'Teologia', 'ativo' => true]);
