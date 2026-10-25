@@ -96,3 +96,12 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - A preparação e a primeira decisão ficam em `telegram_auditoria`, com transição de estado, ator e `update_id`. Sem token, CPF, documentos ou payload acadêmico. Auditoria não é removida na revogação.
 - A revogação cancela confirmações pendentes do usuário. Operações acadêmicas não foram conectadas a esse fluxo.
 - Requer migração `telegram_confirmacoes` e `telegram_auditoria`. **Não migrar o banco da VPS sem homologação e backup**. Também requer revisão de concorrência em PostgreSQL isolado antes de habilitar escritas reais.
+
+
+## Etapa 6 — pré-análise de inscrição (Issue #96)
+
+- `/revisarinscricao UUID` consulta a inscrição pelo ID inequívoco e prepara revisão técnica apenas se o estado for `em_analise` ou `aprovado`. O bot apresenta candidato resumido, curso, modalidade, status e **contagem** de documentos. Não exibe CPF, e-mail, telefone, documentos, links nem valores.
+- Botões **Registrar revisão** e **Cancelar** usam o controle transacional e auditoria já existentes. A decisão é de uso único e expira após dez minutos.
+- A preparação armazena `application_id` e SHA-256 do estado observado (ID, status, última atualização, curso/modalidade). Se a inscrição mudar antes de confirmar, a proposta se torna `obsoleto` e não conclui. Não é uma decisão acadêmica.
+- **Registrar revisão NÃO aprova, rejeita nem matricula**, não cria aluno, não envia e-mail e não aciona `AprovarInscricaoService`. A aprovação/rejeição real exige issue separada e homologação de efeitos externos, identidade e concorrência.
+- A migração `2026_10_25_000009_add_contexto_to_telegram_confirmacoes.php` deve ser validada no PostgreSQL isolado antes de qualquer implantação. Base dependente de PRs #95 e anteriores. Sem deploy, merge ou alterações no legado.
