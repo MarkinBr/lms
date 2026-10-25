@@ -1,97 +1,77 @@
 #!/bin/bash
-# ============================================================
-# CETSADP v9.5.0 — LMS Entrypoint Script
-# Etapa 4.3: Inicialização robusta do container LMS
-#
-# Este script substitui o CMD inline do Dockerfile.
-# Garante que migrations, cache e permissões estejam corretos
-# antes de iniciar o Apache.
-# ============================================================
-set -e
+# Migração é uma operação explícita: nunca iniciada por web, worker ou heartbeat.
+set -eu
+fail() { echo "ERRO: $*" >&2; exit 1; }
+[ -n "${APP_KEY:-}" ] || fail 'APP_KEY obrigatória.'
+[ -n "${DB_PASSWORD:-}" ] || fail 'DB_PASSWORD obrigatória.'
+mode="${1:-web}"
+case "$mode" in web|worker|migrate|scheduler|scheduler-list) ;; *) fail 'Modo inválido.' ;; esac
 
-echo ""
-echo "============================================"
-echo "  🎓 CETSADP LMS — Inicializando..."
-echo "  📦 Versão: v9.5.0"
-echo "============================================"
-echo ""
-
-# === 1. Verificar variáveis obrigatórias ===
-if [ -z "$APP_KEY" ]; then
-    echo "❌ ERRO: APP_KEY não definida. Abortando."
-    exit 1
+if [ "${APP_ENV:-}" = homologacao ]; then
+    [ "${APP_DEBUG:-}" = false ] || fail 'Debug deve estar desativado.'
+    [ "${DB_HOST:-}" = postgres ] && [ "${DB_DATABASE:-}" = portal84_lms ] || fail 'Banco isolado obrigatório.'
+    [ "${DB_USERNAME:-}" = portal84_teste ] || fail 'Usuário isolado obrigatório.'
+    [ "${LEGADO_DB_HOST:-}" = postgres ] && [ "${LEGADO_DB_DATABASE:-}" = portal84_legado ] || fail 'Origem isolada obrigatória.'
+    [ "${LEGADO_DB_USERNAME:-}" = "$DB_USERNAME" ] && [ "${LEGADO_DB_PASSWORD:-}" = "$DB_PASSWORD" ] || fail 'Credenciais da cópia inconsistentes.'
+    [ "${MAIL_MAILER:-}" = array ] && [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || fail 'Mensagens externas bloqueadas.'
+    [ "${QUEUE_CONNECTION:-}" = database ] && [ "${DB_QUEUE:-}" = portal84-homologacao ] || fail 'Fila isolada obrigatória.'
+    [ "${APP_CONFIG_CACHE:-}" = /tmp/portal84-config.php ] || fail 'Cache de configuração isolado obrigatório.'
 fi
 
-if [ -z "$DB_PASSWORD" ]; then
-    echo "❌ ERRO: DB_PASSWORD não definida. Abortando."
-    exit 1
-fi
-
-# === 2. Aguardar PostgreSQL ficar pronto ===
-echo "⏳ Aguardando PostgreSQL (${DB_HOST:-postgres}:${DB_PORT:-5432})..."
-MAX_ATTEMPTS=30
-ATTEMPT=0
-until pg_isready -h "${DB_HOST:-postgres}" -p "${DB_PORT:-5432}" -U "${DB_USERNAME:-cetsadp_user}" -q 2>/dev/null; do
-    ATTEMPT=$((ATTEMPT + 1))
-    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
-        echo "❌ PostgreSQL não ficou pronto após ${MAX_ATTEMPTS} tentativas. Abortando."
-        exit 1
+cd "${APP_ROOT:-/var/www/html}"
+marker=''
+if [ "${APP_ENV:-}" = homologacao ]; then
+    case "${PORTAL84_RELEASE:-}" in portal84-*) ;; *) fail 'Versão de release obrigatória.' ;; esac
+    case "$PORTAL84_RELEASE" in *[!a-z0-9._-]*) fail 'Versão de release inválida.' ;; esac
+    marker="$PWD/storage/app/.portal84-migrated-$PORTAL84_RELEASE"
+    if [ "$mode" = migrate ]; then
+        # Invalidar sucesso anterior ANTES de tentar conexão/migração.
+        rm -f "$marker"
+    elif [ "$mode" != scheduler-list ]; then
+        [ -f "$marker" ] && [ "$(cat "$marker")" = "$PORTAL84_RELEASE" ] || fail 'Migração desta release ainda não foi concluída com sucesso.'
     fi
-    echo "  ⏳ Tentativa ${ATTEMPT}/${MAX_ATTEMPTS}..."
+fi
+# Heartbeat propositalmente NÃO chama schedule:run/work. A agenda real inclui cobranças.
+# schedule:list somente inspeciona a agenda; nenhum comando listado será executado.
+if [ "$mode" = scheduler ]; then
+    [ "${APP_ENV:-}" = homologacao ] || fail 'Heartbeat exclusivo de homologação.'
+    trap 'exit 0' TERM INT
+    while true; do
+        date -u +%FT%TZ > /tmp/portal84-scheduler-heartbeat
+        echo 'portal84: heartbeat; tarefas reais desativadas'
+        sleep 60 &
+        wait $!
+    done
+fi
+
+attempt=0
+until pg_isready -h "${DB_HOST:-postgres}" -p "${DB_PORT:-5432}" -U "${DB_USERNAME:-}" -q; do
+    attempt=$((attempt + 1))
+    [ "$attempt" -lt 30 ] || fail 'PostgreSQL indisponível.'
     sleep 2
 done
-echo "✅ PostgreSQL está pronto."
 
-# === 3. Aguardar Redis ficar pronto ===
-echo "⏳ Aguardando Redis (${REDIS_HOST:-redis}:${REDIS_PORT:-6379})..."
-ATTEMPT=0
-until timeout 2 bash -c "</dev/tcp/${REDIS_HOST:-redis}/${REDIS_PORT:-6379}" 2>/dev/null; do
-    ATTEMPT=$((ATTEMPT + 1))
-    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
-        echo "⚠️  Redis não ficou pronto. Continuando sem cache Redis..."
-        break
+# Cada container possui framework/cache próprio; somente storage/app é compartilhado.
+mkdir -p storage/app/public storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+chown -R www-data:www-data storage/framework storage/logs bootstrap/cache
+# Apenas o web prepara permissões do volume, antes de os consumidores iniciarem.
+if [ "$mode" = web ]; then
+    chown -R www-data:www-data storage/app
+    if [ ! -L public/storage ]; then
+        [ ! -e public/storage ] || fail 'public/storage existe e não é symlink.'
+        ln -s ../storage/app/public public/storage
     fi
-    echo "  ⏳ Tentativa ${ATTEMPT}/${MAX_ATTEMPTS}..."
-    sleep 2
-done
-if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-    echo "✅ Redis está pronto."
 fi
 
-# === 4. Garantir permissões de diretórios ===
-echo "📁 Configurando permissões..."
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
-
-# === 5. Executar migrations ===
-echo "🗄️  Executando migrations..."
-php artisan migrate --force --no-interaction 2>&1 || {
-    echo "⚠️  Algumas migrations podem ter falhado. Verificando status..."
-    php artisan migrate:status 2>&1 | tail -10
-}
-
-# === 6. Criar link simbólico do storage ===
-echo "🔗 Criando link de storage..."
-php artisan storage:link 2>/dev/null || true
-
-# === 7. Otimizar para produção ===
-if [ "${APP_ENV}" = "production" ]; then
-    echo "🚀 Otimizando para produção..."
-    php artisan config:cache 2>/dev/null || true
-    php artisan route:cache 2>/dev/null || true
-    php artisan view:cache 2>/dev/null || true
-    echo "✅ Cache de configurações, rotas e views gerado."
-fi
-
-# === 8. Healthcheck endpoint (escrever arquivo para o healthcheck) ===
-echo "ok" > /tmp/lms-ready
-
-echo ""
-echo "============================================"
-echo "  ✅ CETSADP LMS v9.5.0 pronto!"
-echo "  🌐 Iniciando Apache..."
-echo "============================================"
-echo ""
-
-# === 9. Iniciar Apache em foreground ===
-exec apache2-foreground
+case "$mode" in
+    migrate)
+        php artisan migrate --force --no-interaction
+        if [ -n "$marker" ]; then
+            printf '%s\n' "$PORTAL84_RELEASE" > "$marker"
+        fi
+        exit 0
+        ;;
+    worker) exec php artisan queue:work database --queue=portal84-homologacao --sleep=3 --tries=1 --timeout=60 --memory=192 --max-time=3600 ;;
+    scheduler-list) exec php artisan schedule:list --no-interaction ;;
+    web) exec apache2-foreground ;;
+esac

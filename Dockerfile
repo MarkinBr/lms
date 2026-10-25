@@ -1,80 +1,41 @@
-# ============================================================
-# CETSADP v9.3.6 — LMS Dockerfile
-# Etapa 4.3: Entrypoint robusto + phpredis + healthcheck
-#
-# CORREÇÕES:
-#   D05 — Healthcheck adicionado
-#   I04 — Extensão phpredis instalada (necessária para QUEUE_CONNECTION=redis)
-#   N03 — entrypoint.sh substitui CMD inline
-#   N04 — pg_isready instalado para health check do PostgreSQL
-# ============================================================
-FROM php:8.4-apache
-
-# 1. Instalar bibliotecas do sistema
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    libonig-dev \
-    libxml2-dev \
-    libzip-dev \
-    libicu-dev \
-    libpq-dev \
-    zip \
-    unzip \
-    git \
-    curl \
-    gnupg \
-    postgresql-client \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# 2. Instalar extensões PHP (CORREÇÃO I04: adicionado redis)
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) \
-    gd \
-    intl \
-    zip \
-    pdo \
-    pdo_pgsql \
-    bcmath \
-    mbstring \
-    exif \
-    pcntl
-
-# v9.3.4: Instalar phpredis via PECL (necessário para queue/cache/session Redis)
-RUN pecl install redis && docker-php-ext-enable redis
-
-# 3. Configurar Apache
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
-RUN sed -ri -e 's!AllowOverride None!AllowOverride All!g' /etc/apache2/apache2.conf
-
-RUN a2enmod rewrite headers
-
-# 4. Copiar arquivos
-COPY . /var/www/html
+# syntax=docker/dockerfile:1
+FROM composer:2 AS composer
+FROM php:8.4-apache AS php-build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev libxml2-dev \
+    libzip-dev libicu-dev libpq-dev unzip curl postgresql-client \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j2 gd intl zip pdo_pgsql bcmath mbstring exif pcntl \
+    && pecl install redis && docker-php-ext-enable redis \
+    && rm -rf /var/lib/apt/lists/*
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/*.conf \
+    && printf '<Directory /var/www/html/public>\nAllowOverride All\nRequire all granted\n</Directory>\n' > /etc/apache2/conf-available/portal.conf \
+    && a2enconf portal && a2enmod rewrite headers \
+    && printf 'ServerLimit 4\nStartServers 1\nMinSpareServers 1\nMaxSpareServers 2\nMaxRequestWorkers 4\nMaxConnectionsPerChild 500\n' > /etc/apache2/mods-available/mpm_prefork.conf
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 WORKDIR /var/www/html
+COPY . .
+RUN test -s composer.lock && test -s package-lock.json \
+    && mkdir -p storage/app/public storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
-# 5. Instalar Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+FROM node:22-bookworm-slim AS assets
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY resources ./resources
+COPY public ./public
+COPY vite.config.* postcss.config.js tailwind.config.js ./
+COPY --from=php-build /var/www/html/vendor/laravel/framework/src/Illuminate/Pagination/resources/views ./vendor/laravel/framework/src/Illuminate/Pagination/resources/views
+RUN mkdir -p storage/framework/views
+RUN npm run build
 
-# 6. Rodar Instalações
-RUN composer install --no-dev --optimize-autoloader
-RUN npm install && npm run build
 
-# 7. Permissões
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# 8. Tornar entrypoint executável
-RUN chmod +x /var/www/html/entrypoint.sh
-
-# 9. Healthcheck (CORREÇÃO D05)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost/up || exit 1
-
-# 10. Inicialização via entrypoint.sh (CORREÇÃO N03)
+FROM php-build AS runtime
+COPY --from=assets /build/public/build ./public/build
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 CMD curl -fsS http://127.0.0.1/up || exit 1
 ENTRYPOINT ["/var/www/html/entrypoint.sh"]
+CMD ["web"]

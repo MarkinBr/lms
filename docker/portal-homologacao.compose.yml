@@ -1,0 +1,348 @@
+{
+  "name": "portal84",
+  "services": {
+    "web": {
+      "image": "portal84-lms:${PORTAL84_TAG:?arquivo env privado obrigatorio}",
+      "command": [
+        "web"
+      ],
+      "environment": {
+        "APP_NAME": "Portal84 Homologacao",
+        "APP_ENV": "homologacao",
+        "APP_DEBUG": "false",
+        "APP_KEY": "${APP_KEY:?arquivo env privado obrigatorio}",
+        "APP_URL": "http://127.0.0.1:8874",
+        "APP_CONFIG_CACHE": "/tmp/portal84-config.php",
+        "APP_SERVICES_CACHE": "/tmp/portal84-services.php",
+        "APP_PACKAGES_CACHE": "/tmp/portal84-packages.php",
+        "APP_ROUTES_CACHE": "/tmp/portal84-routes.php",
+        "APP_EVENTS_CACHE": "/tmp/portal84-events.php",
+        "DB_CONNECTION": "pgsql",
+        "DB_HOST": "postgres",
+        "DB_PORT": "5432",
+        "DB_DATABASE": "portal84_lms",
+        "DB_USERNAME": "portal84_teste",
+        "DB_PASSWORD": "${DB_PASSWORD:?arquivo env privado obrigatorio}",
+        "DB_URL": "",
+        "DATABASE_URL": "",
+        "LEGADO_DB_CONNECTION": "pgsql",
+        "LEGADO_DB_HOST": "postgres",
+        "LEGADO_DB_PORT": "5432",
+        "LEGADO_DB_DATABASE": "portal84_legado",
+        "LEGADO_DB_USERNAME": "portal84_teste",
+        "LEGADO_DB_PASSWORD": "${DB_PASSWORD:?arquivo env privado obrigatorio}",
+        "LEGADO_DB_URL": "",
+        "QUEUE_CONNECTION": "database",
+        "DB_QUEUE_CONNECTION": "pgsql",
+        "DB_QUEUE": "portal84-homologacao",
+        "CACHE_STORE": "file",
+        "CACHE_PREFIX": "portal84",
+        "SESSION_DRIVER": "file",
+        "SESSION_COOKIE": "portal84_session",
+        "SESSION_DOMAIN": "",
+        "SESSION_SECURE_COOKIE": "false",
+        "SESSION_SAME_SITE": "strict",
+        "FILESYSTEM_DISK": "local",
+        "APPLICATIONS_DISK": "applications",
+        "APPLICATIONS_DRIVER": "local",
+        "MAIL_MAILER": "array",
+        "TELEGRAM_ENABLED": "false",
+        "TELEGRAM_BOT_TOKEN": "",
+        "TELEGRAM_WEBHOOK_SECRET": "",
+        "TELEGRAM_ADMIN_USER_ID": "",
+        "MP_ACCESS_TOKEN": "",
+        "MP_PUBLIC_KEY": "",
+        "WHATSAPP_API_URL": "",
+        "WHATSAPP_API_TOKEN": "",
+        "WHATSAPP_INSTANCE_ID": "",
+        "CETSADP_LIVE_API_URL": "",
+        "CETSADP_SSO_SECRET": "",
+        "LOG_CHANNEL": "stderr",
+        "PORTAL84_RELEASE": "${PORTAL84_TAG:?arquivo env privado obrigatorio}"
+      },
+      "networks": [
+        "isolada"
+      ],
+      "volumes": [
+        "storage:/var/www/html/storage/app"
+      ],
+      "mem_limit": "640m",
+      "cpus": "0.75",
+      "pids_limit": 100,
+      "restart": "unless-stopped",
+      "init": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      },
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "build": {
+        "context": "..",
+        "dockerfile": "Dockerfile"
+      },
+      "ports": [
+        "127.0.0.1:8874:80"
+      ]
+    },
+    "worker": {
+      "image": "portal84-lms:${PORTAL84_TAG:?arquivo env privado obrigatorio}",
+      "command": [
+        "worker"
+      ],
+      "environment": {
+        "APP_NAME": "Portal84 Homologacao",
+        "APP_ENV": "homologacao",
+        "APP_DEBUG": "false",
+        "APP_KEY": "${APP_KEY:?arquivo env privado obrigatorio}",
+        "APP_URL": "http://127.0.0.1:8874",
+        "APP_CONFIG_CACHE": "/tmp/portal84-config.php",
+        "APP_SERVICES_CACHE": "/tmp/portal84-services.php",
+        "APP_PACKAGES_CACHE": "/tmp/portal84-packages.php",
+        "APP_ROUTES_CACHE": "/tmp/portal84-routes.php",
+        "APP_EVENTS_CACHE": "/tmp/portal84-events.php",
+        "DB_CONNECTION": "pgsql",
+        "DB_HOST": "postgres",
+        "DB_PORT": "5432",
+        "DB_DATABASE": "portal84_lms",
+        "DB_USERNAME": "portal84_teste",
+        "DB_PASSWORD": "${DB_PASSWORD:?arquivo env privado obrigatorio}",
+        "DB_URL": "",
+        "DATABASE_URL": "",
+        "LEGADO_DB_CONNECTION": "pgsql",
+        "LEGADO_DB_HOST": "postgres",
+        "LEGADO_DB_PORT": "5432",
+        "LEGADO_DB_DATABASE": "portal84_legado",
+        "LEGADO_DB_USERNAME": "portal84_teste",
+        "LEGADO_DB_PASSWORD": "${DB_PASSWORD:?arquivo env privado obrigatorio}",
+        "LEGADO_DB_URL": "",
+        "QUEUE_CONNECTION": "database",
+        "DB_QUEUE_CONNECTION": "pgsql",
+        "DB_QUEUE": "portal84-homologacao",
+        "CACHE_STORE": "file",
+        "CACHE_PREFIX": "portal84",
+        "SESSION_DRIVER": "file",
+        "SESSION_COOKIE": "portal84_session",
+        "SESSION_DOMAIN": "",
+        "SESSION_SECURE_COOKIE": "false",
+        "SESSION_SAME_SITE": "strict",
+        "FILESYSTEM_DISK": "local",
+        "APPLICATIONS_DISK": "applications",
+        "APPLICATIONS_DRIVER": "local",
+        "MAIL_MAILER": "array",
+        "TELEGRAM_ENABLED": "false",
+        "TELEGRAM_BOT_TOKEN": "",
+        "TELEGRAM_WEBHOOK_SECRET": "",
+        "TELEGRAM_ADMIN_USER_ID": "",
+        "MP_ACCESS_TOKEN": "",
+        "MP_PUBLIC_KEY": "",
+        "WHATSAPP_API_URL": "",
+        "WHATSAPP_API_TOKEN": "",
+        "WHATSAPP_INSTANCE_ID": "",
+        "CETSADP_LIVE_API_URL": "",
+        "CETSADP_SSO_SECRET": "",
+        "LOG_CHANNEL": "stderr",
+        "PORTAL84_RELEASE": "${PORTAL84_TAG:?arquivo env privado obrigatorio}"
+      },
+      "networks": [
+        "isolada"
+      ],
+      "volumes": [
+        "storage:/var/www/html/storage/app"
+      ],
+      "mem_limit": "320m",
+      "cpus": "0.35",
+      "pids_limit": 100,
+      "restart": "unless-stopped",
+      "init": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        },
+        "web": {
+          "condition": "service_healthy"
+        }
+      },
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "healthcheck": {
+        "disable": true
+      }
+    },
+    "scheduler": {
+      "image": "portal84-lms:${PORTAL84_TAG:?arquivo env privado obrigatorio}",
+      "command": [
+        "scheduler"
+      ],
+      "environment": {
+        "APP_NAME": "Portal84 Homologacao",
+        "APP_ENV": "homologacao",
+        "APP_DEBUG": "false",
+        "APP_KEY": "${APP_KEY:?arquivo env privado obrigatorio}",
+        "APP_URL": "http://127.0.0.1:8874",
+        "APP_CONFIG_CACHE": "/tmp/portal84-config.php",
+        "APP_SERVICES_CACHE": "/tmp/portal84-services.php",
+        "APP_PACKAGES_CACHE": "/tmp/portal84-packages.php",
+        "APP_ROUTES_CACHE": "/tmp/portal84-routes.php",
+        "APP_EVENTS_CACHE": "/tmp/portal84-events.php",
+        "DB_CONNECTION": "pgsql",
+        "DB_HOST": "postgres",
+        "DB_PORT": "5432",
+        "DB_DATABASE": "portal84_lms",
+        "DB_USERNAME": "portal84_teste",
+        "DB_PASSWORD": "${DB_PASSWORD:?arquivo env privado obrigatorio}",
+        "DB_URL": "",
+        "DATABASE_URL": "",
+        "LEGADO_DB_CONNECTION": "pgsql",
+        "LEGADO_DB_HOST": "postgres",
+        "LEGADO_DB_PORT": "5432",
+        "LEGADO_DB_DATABASE": "portal84_legado",
+        "LEGADO_DB_USERNAME": "portal84_teste",
+        "LEGADO_DB_PASSWORD": "${DB_PASSWORD:?arquivo env privado obrigatorio}",
+        "LEGADO_DB_URL": "",
+        "QUEUE_CONNECTION": "database",
+        "DB_QUEUE_CONNECTION": "pgsql",
+        "DB_QUEUE": "portal84-homologacao",
+        "CACHE_STORE": "file",
+        "CACHE_PREFIX": "portal84",
+        "SESSION_DRIVER": "file",
+        "SESSION_COOKIE": "portal84_session",
+        "SESSION_DOMAIN": "",
+        "SESSION_SECURE_COOKIE": "false",
+        "SESSION_SAME_SITE": "strict",
+        "FILESYSTEM_DISK": "local",
+        "APPLICATIONS_DISK": "applications",
+        "APPLICATIONS_DRIVER": "local",
+        "MAIL_MAILER": "array",
+        "TELEGRAM_ENABLED": "false",
+        "TELEGRAM_BOT_TOKEN": "",
+        "TELEGRAM_WEBHOOK_SECRET": "",
+        "TELEGRAM_ADMIN_USER_ID": "",
+        "MP_ACCESS_TOKEN": "",
+        "MP_PUBLIC_KEY": "",
+        "WHATSAPP_API_URL": "",
+        "WHATSAPP_API_TOKEN": "",
+        "WHATSAPP_INSTANCE_ID": "",
+        "CETSADP_LIVE_API_URL": "",
+        "CETSADP_SSO_SECRET": "",
+        "LOG_CHANNEL": "stderr",
+        "PORTAL84_RELEASE": "${PORTAL84_TAG:?arquivo env privado obrigatorio}"
+      },
+      "networks": [
+        "isolada"
+      ],
+      "volumes": [
+        "storage:/var/www/html/storage/app"
+      ],
+      "mem_limit": "96m",
+      "cpus": "0.10",
+      "pids_limit": 100,
+      "restart": "unless-stopped",
+      "init": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        },
+        "web": {
+          "condition": "service_healthy"
+        }
+      },
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "test -n \"$(find /tmp/portal84-scheduler-heartbeat -mmin -2 2>/dev/null)\""
+        ],
+        "interval": "60s",
+        "timeout": "5s",
+        "retries": 3
+      }
+    },
+    "postgres": {
+      "image": "postgres:16-bookworm",
+      "environment": {
+        "POSTGRES_DB": "portal84_lms",
+        "POSTGRES_USER": "portal84_teste",
+        "POSTGRES_PASSWORD": "${DB_PASSWORD:?arquivo env privado obrigatorio}"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=128MB",
+        "-c",
+        "max_connections=30",
+        "-c",
+        "work_mem=4MB"
+      ],
+      "networks": [
+        "isolada"
+      ],
+      "volumes": [
+        "postgres:/var/lib/postgresql/data"
+      ],
+      "mem_limit": "640m",
+      "cpus": "0.60",
+      "pids_limit": 100,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "pg_isready -U portal84_teste -d portal84_lms"
+        ],
+        "interval": "5s",
+        "timeout": "3s",
+        "retries": 20
+      },
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      }
+    }
+  },
+  "networks": {
+    "isolada": {
+      "name": "portal84_isolada",
+      "internal": true
+    }
+  },
+  "volumes": {
+    "postgres": {
+      "name": "portal84_postgres"
+    },
+    "storage": {
+      "name": "portal84_storage"
+    }
+  }
+}

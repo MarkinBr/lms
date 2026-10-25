@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\IdentificadorAluno;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -38,14 +39,10 @@ class RedefinirSenhaController extends Controller
         $email = mb_strtolower(trim($dados['email']));
 
         try {
-            $aluno = User::query()
-                ->whereRaw('LOWER(email) = ?', [$email])
-                ->where('nivel', 'aluno')
-                ->where('ativo', true)
-                ->first();
+            $aluno = app(IdentificadorAluno::class)->porEmailConfirmado($email);
 
             if ($aluno) {
-                Password::broker()->sendResetLink(['email' => $aluno->email]);
+                Password::broker()->sendResetLink(['email' => $aluno->email, 'id' => $aluno->id, 'nivel' => 'aluno', 'ativo' => true]);
             }
         } catch (Throwable) {
             // A resposta permanece idêntica para não revelar a existência da conta
@@ -87,11 +84,7 @@ class RedefinirSenhaController extends Controller
         ]);
 
         $email = mb_strtolower(trim($dados['email']));
-        $aluno = User::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->where('nivel', 'aluno')
-            ->where('ativo', true)
-            ->first();
+        $aluno = app(IdentificadorAluno::class)->porEmailConfirmado($email);
 
         if (! $aluno) {
             return $this->falhaRedefinicao($request);
@@ -100,6 +93,9 @@ class RedefinirSenhaController extends Controller
         $status = Password::broker()->reset(
             [
                 'email' => $aluno->email,
+                'id' => $aluno->id,
+                'nivel' => 'aluno',
+                'ativo' => true,
                 'password' => $dados['password'],
                 'password_confirmation' => $dados['password_confirmation'],
                 'token' => $dados['token'],
@@ -109,6 +105,9 @@ class RedefinirSenhaController extends Controller
                     'password' => Hash::make($password),
                     'remember_token' => Str::random(60),
                     'senha_alterada_em' => now(),
+                    'email_confirmacao_pendente' => null,
+                    'email_confirmacao_token' => null,
+                    'email_confirmacao_expira_em' => null,
                 ])->save();
 
                 event(new PasswordReset($user));

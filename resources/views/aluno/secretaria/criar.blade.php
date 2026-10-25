@@ -8,7 +8,7 @@
 <div class="max-w-3xl mx-auto space-y-6">
     
     {{-- Navegação --}}
-    <a href="{{ route('aluno.secretaria') }}" class="inline-flex items-center text-sm text-slate-500 hover:text-[#003366] font-bold transition-colors">
+    <a href="{{ route('aluno.secretaria') }}" class="inline-flex items-center text-sm text-slate-500 hover:text-[#061a30] font-bold transition-colors">
         <i class="fa-solid fa-arrow-left mr-2"></i> Voltar para a lista
     </a>
 
@@ -85,7 +85,7 @@
                     <a href="{{ route('aluno.secretaria') }}" class="px-6 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">
                         Cancelar
                     </a>
-                    <button type="submit" class="px-6 py-3 bg-[#003366] hover:bg-[#002244] text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">
+                    <button type="submit" class="px-6 py-3 bg-[#061a30] hover:bg-[#041322] text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">
                         Enviar Requerimento
                     </button>
                 </div>

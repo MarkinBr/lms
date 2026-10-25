@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Services\Auth\IdentificadorAluno;
+use App\Services\Auth\SenhaAluno;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,20 +34,20 @@ class AlunoLoginController extends Controller
         return view('aluno.auth.login');
     }
 
-    public function login(Request $request): RedirectResponse
+    public function login(Request $request, IdentificadorAluno $identificadores, SenhaAluno $senhas): RedirectResponse
     {
         $request->merge([
             'email' => mb_strtolower(trim((string) $request->input('email'))),
         ]);
 
         $dados = $request->validate([
-            'email' => ['required', 'string', 'email:filter', 'max:255'],
+            'email' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'max:1024'],
             'remember' => ['nullable', 'boolean'],
         ]);
 
         $email = mb_strtolower(trim($dados['email']));
-        $chaveLimite = $this->chaveLimite($request, $email);
+        $chaveLimite = $this->chaveLimite($request, $identificadores->chaveLimite($email));
 
         if (RateLimiter::tooManyAttempts($chaveLimite, self::MAX_TENTATIVAS)) {
             return $this->falhar(
@@ -55,14 +56,10 @@ class AlunoLoginController extends Controller
             );
         }
 
-        $aluno = User::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->where('nivel', 'aluno')
-            ->where('ativo', true)
-            ->first();
+        $aluno = $identificadores->resolver($email);
 
         $hash = $aluno?->password ?: self::HASH_SENHA_FICTICIA;
-        $senhaValida = Hash::check($dados['password'], $hash);
+        $senhaValida = $senhas->confere($dados['password'], $hash);
 
         if (! $aluno || ! $senhaValida) {
             RateLimiter::hit($chaveLimite, self::BLOQUEIO_SEGUNDOS);

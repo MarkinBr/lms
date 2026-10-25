@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DisciplinaResource\RelationManagers;
 
+use App\Support\TranscricaoVideo;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -63,6 +64,13 @@ class AulasRelationManager extends RelationManager
                             ->label('URL do vídeo')
                             ->url()
                             ->visible(fn (Forms\Get $get) => in_array($get('tipo_conteudo'), ['video', 'misto']))
+                            ->columnSpanFull(),
+
+                        Forms\Components\Textarea::make('transcricao_video')
+                            ->label('Transcrição e legendas do vídeo')
+                            ->helperText('Cole a transcrição em texto simples ou o conteúdo de um arquivo WebVTT (.vtt). WebVTT habilita legendas e trechos clicáveis. Revise o texto antes de publicar.')
+                            ->rows(8)
+                            ->maxLength(TranscricaoVideo::MAX_CARACTERES)
                             ->columnSpanFull(),
 
                         Forms\Components\RichEditor::make('conteudo_texto')

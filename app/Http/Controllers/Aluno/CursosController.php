@@ -7,6 +7,7 @@ use App\Models\AulaAoVivo;
 use App\Models\Curso;
 use App\Models\Matricula;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CursosController extends Controller
 {
@@ -16,11 +17,11 @@ class CursosController extends Controller
     public function index()
     {
         $aluno = auth()->user();
-        $statusValidos = ['ativo', 'ativa', 'concluido'];
+        $statusValidos = ['ativo', 'ativa', 'concluido', 'concluida'];
 
         $matriculas = Matricula::with([
-                'curso.modulos.aulas' => fn ($query) => $query->orderBy('ordem'),
-            ])
+            'curso.modulos.aulas' => fn ($query) => $query->orderBy('ordem'),
+        ])
             ->where('user_id', $aluno->id)
             ->whereIn(DB::raw('LOWER(status)'), $statusValidos)
             ->orderByDesc('created_at')
@@ -29,11 +30,12 @@ class CursosController extends Controller
         $matriculas->getCollection()->transform(function ($matricula) use ($aluno) {
             $curso = $matricula->curso;
 
-            if (!$curso) {
+            if (! $curso) {
                 $matricula->total_aulas = 0;
                 $matricula->aulas_concluidas = 0;
                 $matricula->progresso = 0;
                 $matricula->tempo_total_minutos = 0;
+
                 return $matricula;
             }
 
@@ -55,6 +57,7 @@ class CursosController extends Controller
 
             $tempoTotalMinutos = $aulas->sum(function ($aula) {
                 preg_match('/(\d+)/', (string) ($aula->duracao ?? ''), $matches);
+
                 return (int) ($matches[1] ?? 0);
             });
 
@@ -83,8 +86,8 @@ class CursosController extends Controller
 
         $resumo = [
             'total_cursos' => $matriculas->total(),
-            'ativos' => $matriculas->getCollection()->filter(fn ($m) => strtolower((string) $m->status) !== 'concluido')->count(),
-            'concluidos' => $matriculas->getCollection()->filter(fn ($m) => strtolower((string) $m->status) === 'concluido')->count(),
+            'ativos' => $matriculas->getCollection()->filter(fn ($m) => ! in_array(strtolower((string) $m->status), ['concluido', 'concluida'], true))->count(),
+            'concluidos' => $matriculas->getCollection()->filter(fn ($m) => in_array(strtolower((string) $m->status), ['concluido', 'concluida'], true))->count(),
             'progresso_medio' => (int) round($matriculas->getCollection()->avg('progresso') ?? 0),
         ];
 
@@ -100,7 +103,7 @@ class CursosController extends Controller
 
         $matricula = Matricula::where('user_id', $aluno->id)
             ->where('curso_id', $id)
-            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
+            ->visiveisNoPortal()
             ->firstOrFail();
 
         $curso = Curso::with([
@@ -133,6 +136,17 @@ class CursosController extends Controller
         $aulasConcluidas = $progressos->where('concluida', true)->count();
         $progresso = $totalAulas > 0 ? (int) round(($aulasConcluidas / $totalAulas) * 100) : 0;
         $modulos = $curso->modulos;
+        $materiaisLegados = Schema::hasTable('legado_materiais')
+            ? DB::table('legado_materiais')->where('curso_id', $curso->id)
+                ->where(function ($query) use ($curso): void {
+                    $query->whereNull('aula_id')->orWhereExists(function ($aulas) use ($curso): void {
+                        $aulas->selectRaw('1')->from('aulas')
+                            ->join('modulos', 'modulos.id', '=', 'aulas.modulo_id')
+                            ->whereColumn('aulas.id', 'legado_materiais.aula_id')
+                            ->where('modulos.curso_id', $curso->id)->where('aulas.liberada', true);
+                    });
+                })->orderBy('nome')->get()
+            : collect();
 
         return view('aluno.cursos.show', compact(
             'curso',
@@ -141,6 +155,7 @@ class CursosController extends Controller
             'totalModulos',
             'totalAulas',
             'aulasConcluidas',
+            'materiaisLegados',
             'progresso'
         ));
     }

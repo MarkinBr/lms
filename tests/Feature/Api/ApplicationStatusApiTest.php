@@ -8,13 +8,14 @@ use App\Models\CourseModality;
 use App\Models\Curso;
 use App\Models\Matricula;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\AtivarAcessoAluno;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use Tests\TestCase;
+use Tests\Feature\Auth\PortalAuthTestCase;
 
-class ApplicationStatusApiTest extends TestCase
+// Novos alunos recebem ativação assinada: recuperação comum exige e-mail já confirmado.
+class ApplicationStatusApiTest extends PortalAuthTestCase
 {
     use RefreshDatabase;
 
@@ -208,7 +209,7 @@ class ApplicationStatusApiTest extends TestCase
         $this->assertSame($secretario->id, (int) $inscricao->analisado_por_id);
         $this->assertSame('Documentação conferida.', $inscricao->observacoes_secretaria);
         $this->assertNotNull($inscricao->analisado_em);
-        Notification::assertSentToTimes($aluno, ResetPassword::class, 1);
+        Notification::assertSentToTimes($aluno, AtivarAcessoAluno::class, 1);
         Mail::assertSent(InscricaoDecisaoMail::class, function (InscricaoDecisaoMail $mail) use ($inscricao): bool {
             return $mail->tipo === InscricaoDecisaoMail::TIPO_MATRICULA
                 && $mail->protocolo === $inscricao->protocol
@@ -277,7 +278,7 @@ class ApplicationStatusApiTest extends TestCase
         $this->assertSame($analisadoEm, $inscricaoAtualizada->analisado_em?->toISOString());
         $this->assertSame($operadorOriginal, $inscricaoAtualizada->analisado_por_id);
         $this->assertSame($observacaoOriginal, $inscricaoAtualizada->observacoes_secretaria);
-        Notification::assertSentToTimes($aluno, ResetPassword::class, 1);
+        Notification::assertSentToTimes($aluno, AtivarAcessoAluno::class, 1);
         Mail::assertSent(InscricaoDecisaoMail::class, 1);
     }
 

@@ -2,12 +2,12 @@
      Sem formulários simulados, contagens fictícias ou ações que gravem dados. --}}
 <section class="mx-auto max-w-5xl space-y-7" aria-labelledby="recurso-titulo">
     <nav class="flex items-center gap-2 text-sm text-slate-500" aria-label="Navegação">
-        <a href="{{ route('aluno.dashboard') }}" class="font-semibold transition hover:text-[#003366] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">Portal do Aluno</a>
+        <a href="{{ route('aluno.dashboard') }}" class="font-semibold transition hover:text-[#061a30] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">Portal do Aluno</a>
         <i class="fa-solid fa-chevron-right text-[10px] text-slate-400" aria-hidden="true"></i>
-        <span class="font-semibold text-[#003366]" aria-current="page">{{ $titulo }}</span>
+        <span class="font-semibold text-[#061a30]" aria-current="page">{{ $titulo }}</span>
     </nav>
 
-    <div class="relative isolate overflow-hidden rounded-3xl bg-[#092849] p-7 text-white shadow-xl shadow-blue-950/10 sm:p-10 lg:p-12">
+    <div class="relative isolate overflow-hidden rounded-3xl bg-[#061a30] p-7 text-white shadow-xl shadow-blue-950/10 sm:p-10 lg:p-12">
         <div class="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border border-white/10 bg-white/5" aria-hidden="true"></div>
         <div class="pointer-events-none absolute -bottom-28 right-12 h-56 w-56 rounded-full bg-[#C69D54]/10 blur-2xl" aria-hidden="true"></div>
 
@@ -30,7 +30,7 @@
             <p class="mt-2 text-sm leading-6 text-slate-600">{{ $orientacao }}</p>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row md:flex-col">
-            <a href="{{ route($rotaPrincipal) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#003366] px-5 py-3 text-sm font-bold text-white shadow-md shadow-blue-950/10 transition hover:bg-[#124977] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">
+            <a href="{{ route($rotaPrincipal) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#061a30] px-5 py-3 text-sm font-bold text-white shadow-md shadow-blue-950/10 transition hover:bg-[#124977] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">
                 {{ $textoPrincipal }}
                 <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
             </a>

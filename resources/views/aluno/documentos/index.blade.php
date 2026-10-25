@@ -66,7 +66,7 @@
                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm text-slate-700" required>
                         </div>
 
-                        <button type="submit" class="w-full px-4 py-3 bg-[#003366] hover:bg-[#002244] text-white rounded-xl text-sm font-bold uppercase tracking-wide shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <button type="submit" class="w-full px-4 py-3 bg-[#061a30] hover:bg-[#041322] text-white rounded-xl text-sm font-bold uppercase tracking-wide shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
                             <i class="fa-solid fa-paper-plane"></i> Emitir Documento
                         </button>
                     </form>

@@ -9,7 +9,7 @@
 
     {{-- Header e Ação --}}
     <div class="flex justify-end">
-        <a href="{{ route('aluno.secretaria.criar') }}" class="inline-flex items-center px-6 py-3 bg-[#003366] hover:bg-[#002244] text-white rounded-xl text-sm font-bold uppercase tracking-widest shadow-lg hover:shadow-xl transition-all active:scale-95">
+        <a href="{{ route('aluno.secretaria.criar') }}" class="inline-flex items-center px-6 py-3 bg-[#061a30] hover:bg-[#041322] text-white rounded-xl text-sm font-bold uppercase tracking-widest shadow-lg hover:shadow-xl transition-all active:scale-95">
             <i class="fa-solid fa-plus mr-2"></i> Novo Requerimento
         </a>
     </div>

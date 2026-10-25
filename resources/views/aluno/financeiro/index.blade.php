@@ -8,7 +8,7 @@
 <div class="space-y-8 animate-fade-in">
     
     {{-- Resumo Financeiro (Widgets Clicáveis) --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="portal-finance-summary {{ $statusFinanceiro === 'Em dia' ? 'is-current' : 'has-overdue' }} grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {{-- Widget 1: Próximas / Abertas --}}
         <a href="{{ route('aluno.financeiro', ['filtro' => 'aberto']) }}" class="block group">
@@ -73,7 +73,7 @@
                 <div class="relative z-10">
                     <div class="flex items-center justify-between mb-4">
                         <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                            <i class="fa-solid {{ $statusFinanceiro === 'Em dia' ? 'fa-shield-check' : 'fa-triangle-exclamation' }} text-2xl"></i>
+                            <i class="fa-solid {{ $statusFinanceiro === 'Em dia' ? 'fa-shield-halved' : 'fa-triangle-exclamation' }} text-2xl"></i>
                         </div>
                         <span class="px-3 py-1 bg-white/20 text-white rounded-full text-[10px] font-black uppercase">
                             Status
@@ -93,7 +93,7 @@
                         </p>
                     </div>
                 </div>
-                <i class="fa-solid {{ $statusFinanceiro === 'Em dia' ? 'fa-shield-check' : 'fa-triangle-exclamation' }} absolute -right-6 -bottom-6 text-white/10 text-[8rem] group-hover:scale-110 transition-transform duration-500"></i>
+                <i class="fa-solid {{ $statusFinanceiro === 'Em dia' ? 'fa-shield-halved' : 'fa-triangle-exclamation' }} absolute -right-6 -bottom-6 text-white/10 text-[8rem] group-hover:scale-110 transition-transform duration-500"></i>
             </div>
         </a>
     </div>
@@ -275,7 +275,7 @@
                                     </div>
                                 @else
                                     <button onclick="abrirOpcoesPagamento({{ $mensalidade->id }})" 
-                                            class="inline-flex items-center gap-2 px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white rounded-lg text-xs font-bold uppercase shadow-sm hover:shadow-md transition-all active:scale-95">
+                                            class="inline-flex items-center gap-2 px-4 py-2 bg-[#061a30] hover:bg-[#041322] text-white rounded-lg text-xs font-bold uppercase shadow-sm hover:shadow-md transition-all active:scale-95">
                                         Pagar <i class="fa-solid fa-chevron-right text-[10px]"></i>
                                     </button>
                                 @endif

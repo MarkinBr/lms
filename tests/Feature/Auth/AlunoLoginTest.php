@@ -6,9 +6,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
-use Tests\TestCase;
 
-class AlunoLoginTest extends TestCase
+class AlunoLoginTest extends PortalAuthTestCase
 {
     use RefreshDatabase;
 
@@ -154,12 +153,15 @@ class AlunoLoginTest extends TestCase
 
     private function criarUsuario(array $atributos = []): User
     {
-        return User::query()->create(array_merge([
+        $usuario = User::query()->create(array_merge([
             'name' => 'Aluno de Teste',
             'email' => 'aluno@example.test',
             'password' => Hash::make(self::SENHA),
             'nivel' => 'aluno',
             'ativo' => true,
         ], $atributos));
+        $usuario->forceFill(['email_verified_at' => now()])->save();
+
+        return $usuario;
     }
 }
