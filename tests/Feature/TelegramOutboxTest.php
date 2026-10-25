@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\Telegram\TelegramAdministrativo;
+use App\Services\Telegram\TelegramOutbox;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -70,7 +70,7 @@ class TelegramOutboxTest extends TestCase
         $this->enviar($this->update(2, '/resumo'))->assertOk();
         app(TelegramAdministrativo::class)->revogar($dono);
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
-        app(\App\Services\Telegram\TelegramOutbox::class)->drenarPendentes();
+        app(TelegramOutbox::class)->drenarPendentes();
         $this->assertDatabaseHas('telegram_outbox', ['update_id' => 2, 'status' => 'descartado', 'payload' => null]);
     }
 }
