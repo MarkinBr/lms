@@ -269,7 +269,7 @@ class TelegramAdministrativo
     private function enviar(string $chatId, string $texto, ?array $teclado = null): void
     {
         if ($this->updateAtual === null) {
-            throw new \\LogicException('Resposta Telegram fora de update identificado.');
+            throw new \LogicException('Resposta Telegram fora de update identificado.');
         }
 
         $vinculo = DB::table('telegram_vinculos')->where('chat_id', $chatId)->first();
