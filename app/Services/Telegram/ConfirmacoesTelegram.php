@@ -74,15 +74,15 @@ class ConfirmacoesTelegram
             'created_at' => now(),
         ]);
 
-        $nome = mb_strimwidth(preg_replace('/[\\r\\n]+/u', ' ', $inscricao->nome_completo) ?? '', 0, 38, '…');
+        $nome = mb_strimwidth(preg_replace('/[\r\n]+/u', ' ', $inscricao->nome_completo) ?? '', 0, 38, '…');
 
         return [
-            'text' => 'Pré-análise de inscrição #'.$inscricao->id."\\n"
-                .'Candidato: '.$nome."\\n"
-                .'Curso: '.mb_strimwidth($inscricao->curso?->titulo ?? 'Não informado', 0, 40, '…')."\\n"
-                .'Modalidade: '.mb_strimwidth($inscricao->courseModality?->nome ?? 'Não informada', 0, 25, '…')."\\n"
-                .'Estado: '.$inscricao->status."\\n"
-                .'Documentos cadastrados: '.$inscricao->documents()->count()."\\n"
+            'text' => 'Pré-análise de inscrição #'.$inscricao->id."\n"
+                .'Candidato: '.$nome."\n"
+                .'Curso: '.mb_strimwidth($inscricao->curso?->titulo ?? 'Não informado', 0, 40, '…')."\n"
+                .'Modalidade: '.mb_strimwidth($inscricao->courseModality?->nome ?? 'Não informada', 0, 25, '…')."\n"
+                .'Estado: '.$inscricao->status."\n"
+                .'Documentos cadastrados: '.$inscricao->documents()->count()."\n"
                 .'Registrar revisão NÃO aprova, rejeita ou matricula. Validade: 10 minutos.',
             'reply_markup' => ['inline_keyboard' => [[
                 ['text' => 'Registrar revisão', 'callback_data' => 'confirmar:'.$codigo],
