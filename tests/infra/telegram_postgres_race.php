@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 // Execução exclusivamente em PostgreSQL descartável, fora do bootstrap SQLite do PHPUnit.
 use App\Models\User;
 use App\Services\Telegram\ConfirmacoesTelegram;
@@ -22,7 +20,7 @@ if (app()->environment() !== 'testing'
 
 function verify(bool $condition, string $message): void
 {
-    if (! $condition) {
+    if ($condition === false) {
         throw new RuntimeException($message);
     }
 }
@@ -31,7 +29,7 @@ if (($argv[1] ?? '') === 'worker') {
     [, , $operation, $ownerId, $chatId, $callback, $updateId, $gate] = $argv;
     config()->set('services.telegram.admin_user_id', (int) $ownerId);
     $start = microtime(true);
-    while (! file_exists($gate)) {
+    while (file_exists($gate) === false) {
         if (microtime(true) - $start > 25) {
             fwrite(STDERR, "Barreira expirada.\n");
             exit(3);
@@ -118,7 +116,7 @@ for ($round = 1; $round <= 4; $round++) {
             verify($current->status === 'confirmado' && $decisionCount === 1,
                 'Confirmação dupla não consumida exatamente uma vez');
         } else {
-            verify(! DB::table('telegram_vinculos')->where('user_id', $owner->id)->exists(),
+            verify(DB::table('telegram_vinculos')->where('user_id', $owner->id)->exists() === false,
                 'Revogação não excluiu vínculo');
             $revocations = DB::table('telegram_auditoria_revogacoes')
                 ->where('confirmacao_id', $confirmation->id)->count();
