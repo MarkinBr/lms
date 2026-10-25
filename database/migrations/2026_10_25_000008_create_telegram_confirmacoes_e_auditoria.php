@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('telegram_confirmacoes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             $table->string('chat_id');
             $table->string('codigo_hash', 64)->unique();
             $table->string('acao', 40);
@@ -23,7 +23,7 @@ return new class extends Migration
         Schema::create('telegram_auditoria', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('confirmacao_id')->constrained('telegram_confirmacoes')->cascadeOnDelete();
+            $table->foreignId('confirmacao_id')->constrained('telegram_confirmacoes')->restrictOnDelete();
             $table->unsignedBigInteger('update_id')->unique();
             $table->string('acao', 40);
             $table->string('antes', 20);
