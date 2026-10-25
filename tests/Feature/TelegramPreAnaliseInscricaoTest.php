@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Application;
+use App\Models\ApplicationDocument;
 use App\Models\CourseModality;
 use App\Models\Curso;
 use App\Models\User;
 use App\Services\Telegram\TelegramAdministrativo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -112,6 +114,61 @@ class TelegramPreAnaliseInscricaoTest extends TestCase
         $this->assertDatabaseHas('applications', [
             'id' => $inscricao->id, 'status' => Application::STATUS_CANCELADO,
         ]);
+    }
+
+    public function test_documento_adicionado_invalida_revisao(): void
+    {
+        $inscricao = $this->prepararAmbiente();
+        $botao = $this->comandoRevisao($inscricao);
+        ApplicationDocument::query()->create([
+            'application_id' => $inscricao->id,
+            'tipo' => 'outro', 'nome_original' => 'teste.pdf',
+            'nome_armazenado' => 'teste.pdf', 'mime_type' => 'application/pdf',
+            'tamanho' => 20, 'caminho_arquivo' => 'isolado/teste.pdf', 'validado' => false,
+        ]);
+        $this->clicar(3, $botao);
+        $this->assertDatabaseHas('telegram_confirmacoes', ['acao' => 'revisao_inscricao', 'status' => 'obsoleto']);
+        $this->assertDatabaseCount('matriculas', 0);
+    }
+
+    public function test_documento_removido_ou_validado_invalida_revisao(): void
+    {
+        $inscricao = $this->prepararAmbiente();
+        $documento = ApplicationDocument::query()->create([
+            'application_id' => $inscricao->id,
+            'tipo' => 'outro', 'nome_original' => 'teste.pdf',
+            'nome_armazenado' => 'teste.pdf', 'mime_type' => 'application/pdf',
+            'tamanho' => 20, 'caminho_arquivo' => 'isolado/teste.pdf', 'validado' => false,
+        ]);
+        $botao = $this->comandoRevisao($inscricao);
+        $documento->update(['validado' => true, 'validado_em' => now()]);
+        $this->clicar(3, $botao);
+        $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'obsoleto']);
+
+        $this->enviar(4, '/revisarinscricao '.$inscricao->id);
+        $botaoNovo = Http::recorded()->last()[0]['reply_markup']['inline_keyboard'][0][0]['callback_data'];
+        $documento->delete();
+        $this->clicar(5, $botaoNovo);
+        $this->assertDatabaseHas('telegram_confirmacoes', [
+            'acao' => 'revisao_inscricao', 'status' => 'obsoleto',
+        ]);
+        $this->assertDatabaseCount('matriculas', 0);
+    }
+
+    public function test_titulo_curso_e_nome_modalidade_invalidam_revisao(): void
+    {
+        $inscricao = $this->prepararAmbiente();
+        $botao = $this->comandoRevisao($inscricao);
+        $inscricao->curso->update(['titulo' => 'Novo título']);
+        $this->clicar(3, $botao);
+        $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'obsoleto']);
+
+        $this->enviar(4, '/revisarinscricao '.$inscricao->id);
+        $botaoNovo = Http::recorded()->last()[0]['reply_markup']['inline_keyboard'][0][0]['callback_data'];
+        $inscricao->courseModality->update(['nome' => 'Outra modalidade']);
+        $this->clicar(5, $botaoNovo);
+        $this->assertSame(2, DB::table('telegram_confirmacoes')
+            ->where('status', 'obsoleto')->count());
     }
 
     public function test_inscricao_ja_matriculada_nao_cria_proposta(): void
