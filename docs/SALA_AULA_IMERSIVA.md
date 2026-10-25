@@ -20,7 +20,7 @@ O botão **Vídeo + material** conserva o mesmo player e fixa o vídeo acima de 
 
 ### Cadastro da transcrição
 
-A migração aditiva `2026_10_25_000002_add_transcricao_video_to_aulas_table.php` adiciona `aulas.transcricao_video`, opcional. O campo **Transcrição e legendas do vídeo** está tanto na edição de aulas do Professor quanto nas aulas da Disciplina no administrativo. Aceita texto simples ou conteúdo de um arquivo WebVTT, até 100.000 caracteres. O parser limita a 2.000 trechos e descarta tempos inválidos e blocos NOTE/STYLE/REGION.
+A migração aditiva `2026_10_25_000002_add_transcricao_video_to_aulas_table.php` adiciona `aulas.transcricao_video`, opcional. O campo **Transcrição e legendas do vídeo** está tanto na edição de aulas do Professor quanto nas aulas da Disciplina no administrativo. Aceita texto simples ou conteúdo de um arquivo WebVTT, até 500.000 caracteres e 5.000 trechos (limites corrigidos na Issue #80). Conteúdo acima desses limites gera aviso em vez de exibir uma versão cortada. O parser descarta tempos inválidos e blocos NOTE/STYLE/REGION.
 
 Texto simples aparece sem horários. WebVTT habilita busca, salto por trecho, indicação do trecho atual e legendas CC no vídeo direto. Nos embeds, o texto cadastrado continua disponível na aba e o player de origem controla suas próprias legendas; o YouTube recebe a preferência de português e CC quando existentes. Não há extração de legendas de terceiros nem transcrição automática de áudio. Sem cadastro, a tela informa que a transcrição ainda não foi disponibilizada. A leitura da aula não é usada como se fosse transcrição.
 
@@ -33,6 +33,20 @@ Referências: [WebVTT — W3C](https://www.w3.org/TR/webvtt1/), [Picture-in-Pict
 - Navegador na porta 8776, banco e aluno sintéticos: reprodução contínua ao alternar para leitura e PDF, vídeo fixo a 64 px do topo no celular durante rolagem, fechamento manual das duas laterais, busca e salto para 10 segundos na transcrição, ativação de CC e miniplayer com retorno ao vídeo. O navegador de homologação não concedeu PiP nativo; a alternativa dentro da página foi exercitada.
 - Larguras 320, 390, 768, 1024 e 1440 px sem overflow da página. A 1440 px, com percurso aberto e caderno recolhido, o player passou de aproximadamente 805 para 1151 px. No celular a 390 px, passou de aproximadamente 345 para 375 px, descontando a barra de rolagem do navegador.
 - Migração aplicada no SQLite local após backup consistente privado; nenhuma transcrição de aula real foi preenchida. Homologação usa trechos fictícios identificados na própria interface. Não houve publicação em produção.
+
+### Transcrição do vídeo original — Issue #80
+
+A aula local 1 usa o vídeo `S7s27o1xXps` e estava sem `transcricao_video`. O player do YouTube disponibiliza CC, mas os parâmetros do iframe não importam o texto para a aba do LMS. A transcrição foi lida da interface **Mostrar transcrição** do próprio vídeo, cuja legenda é identificada como **Português (gerada automaticamente)**. Não há serviço externo de transcrição nem dependência de API interna do YouTube em produção.
+
+Foram preservados 1.219 trechos, com inícios de 0:00 até 3:16:06, e gerado WebVTT de 161.697 caracteres. Os horários têm a precisão de segundos exibida pela interface. Como a interface consultada não fornece finais de cada fala, o arquivo usa o próximo início como limite de navegação e uma janela de oito segundos no último trecho. Isso não substitui as legendas oficiais do player nem representa alinhamento fonético exato. O texto automático foi mantido sem revisão editorial.
+
+O limite antigo de 100.000 caracteres cortava essa aula. Agora o parser preserva a transcrição inteira dentro dos limites explícitos; formulários usam a mesma constante. Os horários após uma hora usam `h:mm:ss`. A indicação do trecho atual atualiza somente o botão anterior e o novo, evitando milhares de escritas no DOM a cada meio segundo.
+
+A importação local foi feita após backup SQLite consistente e somente quando o campo estava vazio e a URL do vídeo correspondia exatamente. A comparação com o backup confirmou alteração apenas em `aulas.transcricao_video`, na aula 1. Na homologação isolada, a aula 2 passou a usar o vídeo e a transcrição reais; cadernos, grifos e progresso foram preservados. Arquivos de origem e WebVTT ficam privados em `storage/app/transcricoes`, ignorados pelo Git. Eles não são publicados no PR. Demais vídeos continuam exigindo transcrição cadastrada; não foi criado um importador automático genérico.
+
+Validação: três regressões primeiro falharam (aula longa cortada; excesso de caracteres e de trechos sem aviso) e depois passaram. Os seis testes de transcrição passaram. Navegador confirmou 1.219 botões, busca no texto original, formato `3:16:06`, player YouTube e salto para o trecho em 1:03:55 com indicação subsequente do trecho atual. Pint, Biome e sintaxe JS verificados.
+
+A execução completa com SQLite em memória terminou com **385 testes aprovados e 20 falhas, 1.963 asserções**: 19 em `tests/Feature/Deploy/PatchValidationTest.php` (auditoria de patches financeiros/deploy, consultas PostgreSQL e tabelas ausentes nesse teste sem migração) e uma em `tests/Feature/ExampleTest.php` (GET `/` sem preparar `pagina_inicials`). Esses arquivos e o código financeiro não foram alterados nesta correção. A suíte completa não está verde; detalhes ficam no log privado `storage/app/sala76-qa/issue80-testes-completos.log`.
 
 ## Caderno e compatibilidade
 

@@ -7,6 +7,36 @@ use PHPUnit\Framework\TestCase;
 
 class TranscricaoVideoTest extends TestCase
 {
+    public function test_aula_longa_preserva_todos_os_trechos_ate_o_final(): void
+    {
+        $vtt = "WEBVTT\n\n";
+        for ($i = 0; $i < 1219; $i++) {
+            $inicio = gmdate('H:i:s', $i * 9).'.000';
+            $fim = gmdate('H:i:s', $i * 9 + 8).'.000';
+            $vtt .= "$inicio --> $fim\n".str_repeat('Conteúdo da aula. ', 9)."Final do trecho $i\n\n";
+        }
+        $this->assertGreaterThan(100000, mb_strlen($vtt));
+        $r = TranscricaoVideo::preparar($vtt);
+        $this->assertCount(1219, $r['cues']);
+        $this->assertStringContainsString('Final do trecho 1218', $r['text']);
+        $this->assertSame(10962.0, $r['cues'][1218]['start']);
+    }
+
+    public function test_conteudo_excessivo_avisa_em_vez_de_exibir_transcricao_cortada(): void
+    {
+        $r = TranscricaoVideo::preparar(str_repeat('á', 500001));
+        $this->assertNotEmpty($r['warning'] ?? null);
+        $this->assertSame('', $r['text']);
+        $this->assertSame([], $r['cues']);
+    }
+
+    public function test_quantidade_excessiva_de_trechos_avisa_sem_exibir_versao_parcial(): void
+    {
+        $r = TranscricaoVideo::preparar("WEBVTT\n\n".str_repeat("00:00.000 --> 00:01.000\nTrecho\n\n", 5001));
+        $this->assertNotEmpty($r['warning'] ?? null);
+        $this->assertSame([], $r['cues']);
+    }
+
     public function test_texto_sem_tempos_nao_inventa_timestamps(): void
     {
         $this->assertSame(['text' => 'Uma explicação real.', 'cues' => []], TranscricaoVideo::preparar('<b>Uma explicação real.</b>'));

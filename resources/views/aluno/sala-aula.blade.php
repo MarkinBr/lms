@@ -81,10 +81,10 @@
     <title>{{ $aula->titulo }} — Sala de Aula CETSADP</title>
     <link rel="stylesheet" href="{{ asset('vendor/portal/fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/portal/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/estudio-aula.css') }}?v=78">
+    <link rel="stylesheet" href="{{ asset('css/estudio-aula.css') }}?v=80">
     <script>window.CETSADP_STUDIO = {{ \Illuminate\Support\Js::from($dadosEstudio) }};</script>
     <script defer src="{{ asset('vendor/estudio/dompurify/purify.min.js') }}"></script>
-    <script type="module" src="{{ asset('js/estudio-aula.js') }}?v=78"></script>
+    <script type="module" src="{{ asset('js/estudio-aula.js') }}?v=80"></script>
 </head>
 <body>
     @include('aluno.partials.estudio-interface')

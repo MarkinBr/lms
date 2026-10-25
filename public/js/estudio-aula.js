@@ -700,8 +700,13 @@ let video = null,
 	pendingResume = 0,
 	hasOfferedResume = false;
 function stamp(seconds) {
-	seconds = Math.floor(Number(seconds) || 0);
-	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+	seconds = Math.max(0, Math.floor(Number(seconds) || 0));
+	const hours = Math.floor(seconds / 3600);
+	const minutes = Math.floor(seconds / 60);
+	const tail = String(seconds % 60).padStart(2, "0");
+	return hours
+		? `${hours}:${String(minutes % 60).padStart(2, "0")}:${tail}`
+		: `${minutes}:${tail}`;
 }
 function script(src) {
 	return new Promise((resolve, reject) => {
@@ -1036,7 +1041,10 @@ document.addEventListener("keydown", (e) => {
 	}
 });
 const cueButtons = [];
-if (transcript.cues?.length) {
+let currentCueButton = null;
+if (transcript.warning) {
+	$("transcript-status").textContent = transcript.warning;
+} else if (transcript.cues?.length) {
 	$("transcript-status").textContent =
 		"Toque em um horário para ir ao trecho do vídeo. Você pode manter o vídeo acima da transcrição.";
 	$("transcript-search-label").hidden = false;
@@ -1073,10 +1081,13 @@ if (transcript.cues?.length) {
 		if (activeFormat !== "transcript" || document.hidden || !videoReady) return;
 		try {
 			const time = await videoTime();
-			for (const { button, cue } of cueButtons) {
-				if (time >= cue.start && time < cue.end)
-					button.setAttribute("aria-current", "true");
-				else button.removeAttribute("aria-current");
+			const current =
+				cueButtons.find(({ cue }) => time >= cue.start && time < cue.end)
+					?.button || null;
+			if (current !== currentCueButton) {
+				currentCueButton?.removeAttribute("aria-current");
+				current?.setAttribute("aria-current", "true");
+				currentCueButton = current;
 			}
 		} catch {}
 	}, 500);
