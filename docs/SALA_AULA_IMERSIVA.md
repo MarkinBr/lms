@@ -38,7 +38,7 @@ Não há dependência de CDN para estilos, leitor PDF ou sanitização. Os SDKs 
 - Pint nos arquivos PHP alterados; Biome 2.6.3 em JS/CSS sem erros; `node --check`; `git diff --check`; `view:clear` e `view:cache`.
 - Navegador na aplicação Laravel com SQLite de homologação separado, aluno e conteúdo sintéticos: vídeo, salvamento e recuperação das notas, PDF com camada de texto, grifo amarelo, paginação, referência de página, navegação móvel, modo foco e retorno ao caderno. Exercício incorreto retornou 0% pelo servidor.
 - Sem rolagem horizontal em 320, 390, 768, 1024 e 1440 px nos estados examinados. Controles próprios visíveis com rótulos; sem erros ou avisos de console no estado auditado. Isso não equivale a certificação completa de acessibilidade ou testes em todos os dispositivos físicos.
-- A sessão existente na porta 8000 retornou 403 por perfil; a autorização foi preservada. A demonstração autenticada foi feita com aluno sintético na porta 8776, sem converter perfis ou alterar matrículas reais.
+- A demonstração autenticada usa aluno sintético, banco separado e cookie de sessão exclusivo na porta 8776. O portal local continua exigindo perfil de aluno; nenhum perfil ou matrícula real foi convertido para a revisão visual.
 
 ## Instalação e rollback
 
