@@ -35,7 +35,7 @@ class ConsultasAcademicasTelegram
 
     public function listar(string $categoria, int $pagina): array
     {
-        if (! isset(self::TITULOS[$categoria]) || $pagina < 1 || $pagina > 20) {
+        if (isset(self::TITULOS[$categoria]) === false || $pagina < 1 || $pagina > 20) {
             return ['text' => 'Opção inválida. Use /menu.'];
         }
 
@@ -108,7 +108,7 @@ class ConsultasAcademicasTelegram
             return ['text' => 'Identificador inválido.'];
         }
         $aluno = User::query()->where('nivel', 'aluno')->find($id, ['id', 'name', 'ativo']);
-        if (! $aluno) {
+        if ($aluno === null) {
             return ['text' => 'Aluno não encontrado.'];
         }
         $matriculas = Matricula::query()->where('user_id', $id)
@@ -125,7 +125,7 @@ class ConsultasAcademicasTelegram
 
     public function notas(int $id): array
     {
-        if (! User::query()->where('nivel', 'aluno')->whereKey($id)->exists()) {
+        if (User::query()->where('nivel', 'aluno')->whereKey($id)->doesntExist()) {
             return ['text' => 'Aluno não encontrado.'];
         }
         $notas = Nota::query()->where('user_id', $id)->orderByDesc('id')->limit(5)->get();
@@ -139,7 +139,7 @@ class ConsultasAcademicasTelegram
 
     public function frequencia(int $id): array
     {
-        if (! User::query()->where('nivel', 'aluno')->whereKey($id)->exists()) {
+        if (User::query()->where('nivel', 'aluno')->whereKey($id)->doesntExist()) {
             return ['text' => 'Aluno não encontrado.'];
         }
         $matriculas = Matricula::query()->where('user_id', $id)->orderByDesc('id')->limit(5)->get();
