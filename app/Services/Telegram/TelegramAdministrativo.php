@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Http;
 
 class TelegramAdministrativo
 {
+    private ?int $updateAtual = null;
+
+    private ?array $callbackAtual = null;
+
     public function podeOperar(?User $usuario): bool
     {
         $configurado = config('services.telegram.admin_user_id');
@@ -60,18 +64,35 @@ class TelegramAdministrativo
             return;
         }
 
-        DB::transaction(function () use ($update, $id) {
-            // A chave impede concorrência; falha de envio reverte também o pareamento.
-            if (! DB::table('telegram_updates')->insertOrIgnore(['update_id' => $id, 'created_at' => now()])) {
-                return;
-            }
+        $this->updateAtual = $id;
+        $this->callbackAtual = isset($update['callback_query']) && is_array($update['callback_query'])
+            ? $update['callback_query'] : null;
 
-            if (isset($update['callback_query'])) {
-                $this->processarCallback($update['callback_query']);
-            } else {
-                $this->processarMensagem($update['message'] ?? null);
-            }
-        });
+        try {
+            DB::transaction(function () use ($update, $id) {
+                if (! DB::table('telegram_updates')->insertOrIgnore([
+                    'update_id' => $id, 'created_at' => now(),
+                ])) {
+                    return;
+                }
+
+                if (isset($update['callback_query'])) {
+                    $this->processarCallback($update['callback_query']);
+                } else {
+                    $this->processarMensagem($update['message'] ?? null);
+                }
+            });
+        } finally {
+            $this->updateAtual = null;
+            $this->callbackAtual = null;
+        }
+
+        // Nenhuma chamada HTTP acontece enquanto a transação acadêmica está aberta.
+        // Só tenta o registro deste update; mensagens pendentes têm reentrega separada.
+        $saida = DB::table('telegram_outbox')->where('update_id', $id)->value('id');
+        if ($saida !== null) {
+            app(TelegramOutbox::class)->entregar((int) $saida);
+        }
     }
 
     private function processarMensagem(mixed $mensagem): void
@@ -205,42 +226,7 @@ class TelegramAdministrativo
 
     private function atualizarCallback(string $chatId, array $callback, array $resposta): void
     {
-        $token = (string) config('services.telegram.bot_token');
-        $mensagemId = $callback['message']['message_id'] ?? null;
-        $callbackId = $callback['id'] ?? null;
-        if (! is_int($mensagemId) || ! is_string($callbackId)
-            || strlen($callbackId) > 128 || $callbackId === '') {
-            return;
-        }
-
-        $payload = [
-            'chat_id' => $chatId,
-            'message_id' => $mensagemId,
-            'text' => $resposta['text'],
-            'reply_markup' => $resposta['reply_markup'] ?? ['inline_keyboard' => [[
-                ['text' => 'Menu', 'callback_data' => 'menu'],
-            ]]],
-        ];
-
-        try {
-            $edicao = Http::timeout(5)->post('https://api.telegram.org/bot'.$token.'/editMessageText', $payload);
-            if (! $edicao->successful() || $edicao->json('ok') !== true) {
-                // Mensagem antiga não editável: responder em uma nova mensagem privada.
-                $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
-            }
-        } catch (ConnectionException) {
-            throw new TelegramFalhaEnvio;
-        }
-
-        // A confirmação do clique não determina o resultado da consulta.
-        // Uma falha aqui não deve gerar múltiplas mensagens em reentregas do update.
-        try {
-            Http::timeout(3)->post('https://api.telegram.org/bot'.$token.'/answerCallbackQuery', [
-                'callback_query_id' => $callbackId,
-            ]);
-        } catch (ConnectionException) {
-            // O Telegram expira o indicador de carregamento automaticamente.
-        }
+        $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
     }
 
     private function vincular(string $chatId, string $codigo): bool
@@ -282,24 +268,22 @@ class TelegramAdministrativo
 
     private function enviar(string $chatId, string $texto, ?array $teclado = null): void
     {
-        $token = (string) config('services.telegram.bot_token');
-        if ($token === '') {
-            throw new TelegramFalhaEnvio;
+        if ($this->updateAtual === null) {
+            throw new \\LogicException('Resposta Telegram fora de update identificado.');
         }
 
-        try {
-            $dados = ['chat_id' => $chatId, 'text' => $texto];
-            if ($teclado !== null) {
-                $dados['reply_markup'] = $teclado;
-            }
-            $resposta = Http::timeout(5)->post('https://api.telegram.org/bot'.$token.'/sendMessage', $dados);
-        } catch (ConnectionException) {
-            // A exceção original contém a URL com token; não a propagar nem registrar.
-            throw new TelegramFalhaEnvio;
-        }
+        $vinculo = DB::table('telegram_vinculos')->where('chat_id', $chatId)->first();
+        $usuario = $vinculo ? User::find($vinculo->user_id) : null;
+        $userId = $this->podeOperar($usuario) ? (int) $usuario->id : null;
+        $codigo = (string) ($this->callbackAtual['data'] ?? '');
+        $editar = $this->callbackAtual !== null && (
+            in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas'], true)
+            || preg_match('/^(filtro|ficha|notas|frequencia):/', $codigo) === 1
+        );
 
-        if (! $resposta->successful() || $resposta->json('ok') !== true) {
-            throw new TelegramFalhaEnvio;
-        }
+        app(TelegramOutbox::class)->registrar(
+            $this->updateAtual, $chatId, $texto, $teclado, $userId,
+            $editar ? $this->callbackAtual : null
+        );
     }
 }
