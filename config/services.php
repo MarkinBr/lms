@@ -57,4 +57,9 @@ return [
         'live_api_url' => env('CETSADP_LIVE_API_URL', 'http://backend:3000'),
         'sso_secret' => env('CETSADP_SSO_SECRET', ''),
     ],
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+    ],
+
 ];
