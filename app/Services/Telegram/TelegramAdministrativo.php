@@ -53,11 +53,29 @@ class TelegramAdministrativo
     {
         abort_unless($this->podeOperar($usuario), 403);
         DB::transaction(function () use ($usuario) {
-            DB::table('telegram_vinculos')->where('user_id', $usuario->id)->delete();
-            DB::table('telegram_confirmacoes')->where('user_id', $usuario->id)
+            $vinculo = DB::table('telegram_vinculos')->where('user_id', $usuario->id)
+                ->lockForUpdate()->first();
+            $pendentes = DB::table('telegram_confirmacoes')
+                ->where('user_id', $usuario->id)
+                ->where('status', 'pendente')
+                ->lockForUpdate()->get(['id', 'acao']);
+            foreach ($pendentes as $confirmacao) {
+                DB::table('telegram_auditoria_revogacoes')->insert([
+                    'user_id' => $usuario->id,
+                    'confirmacao_id' => $confirmacao->id,
+                    'acao' => $confirmacao->acao,
+                    'antes' => 'pendente',
+                    'depois' => 'cancelado',
+                    'created_at' => now(),
+                ]);
+            }
+            DB::table('telegram_confirmacoes')->whereIn('id', $pendentes->pluck('id'))
                 ->where('status', 'pendente')->update([
                     'status' => 'cancelado', 'consumido_em' => now(), 'updated_at' => now(),
                 ]);
+            if ($vinculo !== null) {
+                DB::table('telegram_vinculos')->where('id', $vinculo->id)->delete();
+            }
             DB::table('telegram_outbox')
                 ->where('user_id', $usuario->id)
                 ->whereIn('status', ['pendente', 'enviando'])
