@@ -182,7 +182,53 @@ class TelegramAdministrativo
             $resposta = ['text' => 'Opção inválida. Use /menu.'];
         }
 
-        $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+        $novosMenus = in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros'], true)
+            || preg_match('/^(filtro|ficha|notas|frequencia):/', $codigo) === 1;
+        if ($novosMenus) {
+            $this->atualizarCallback($chatId, $callback, $resposta);
+        } else {
+            $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+        }
+    }
+
+    private function atualizarCallback(string $chatId, array $callback, array $resposta): void
+    {
+        $token = (string) config('services.telegram.bot_token');
+        $mensagemId = $callback['message']['message_id'] ?? null;
+        $callbackId = $callback['id'] ?? null;
+        if (! is_int($mensagemId) || ! is_string($callbackId)
+            || strlen($callbackId) > 128 || $callbackId === '') {
+            return;
+        }
+
+        $payload = [
+            'chat_id' => $chatId,
+            'message_id' => $mensagemId,
+            'text' => $resposta['text'],
+            'reply_markup' => $resposta['reply_markup'] ?? ['inline_keyboard' => [[
+                ['text' => 'Menu', 'callback_data' => 'menu'],
+            ]]],
+        ];
+
+        try {
+            $edicao = Http::timeout(5)->post('https://api.telegram.org/bot'.$token.'/editMessageText', $payload);
+            if (! $edicao->successful() || $edicao->json('ok') !== true) {
+                // Mensagem antiga não editável: responder em uma nova mensagem privada.
+                $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+            }
+        } catch (ConnectionException) {
+            throw new TelegramFalhaEnvio;
+        }
+
+        // A confirmação do clique não determina o resultado da consulta.
+        // Uma falha aqui não deve gerar múltiplas mensagens em reentregas do update.
+        try {
+            Http::timeout(3)->post('https://api.telegram.org/bot'.$token.'/answerCallbackQuery', [
+                'callback_query_id' => $callbackId,
+            ]);
+        } catch (ConnectionException) {
+            // O Telegram expira o indicador de carregamento automaticamente.
+        }
     }
 
     private function vincular(string $chatId, string $codigo): bool
