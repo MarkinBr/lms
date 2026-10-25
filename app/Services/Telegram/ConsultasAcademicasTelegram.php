@@ -31,6 +31,7 @@ class ConsultasAcademicasTelegram
             $teclado[] = [['text' => $titulo, 'callback_data' => "lista:{$chave}:1"]];
         }
 
+        $teclado[] = [['text' => 'Alertas (preferências)', 'callback_data' => 'alertas']];
         $teclado[] = [['text' => 'Filtros de alunos', 'callback_data' => 'filtros']];
         $teclado[] = [['text' => 'Painel do dia', 'callback_data' => 'hoje']];
         $teclado[] = [['text' => 'Relatórios', 'callback_data' => 'relatorios'], ['text' => 'Agenda 7 dias', 'callback_data' => 'agenda7']];
