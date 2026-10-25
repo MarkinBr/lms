@@ -4,7 +4,6 @@ namespace App\Services\Telegram;
 
 use App\Models\Application;
 use App\Models\Aula;
-use App\Models\ChamadaFrequencia;
 use App\Models\Matricula;
 use App\Models\Nota;
 use App\Models\Turma;
