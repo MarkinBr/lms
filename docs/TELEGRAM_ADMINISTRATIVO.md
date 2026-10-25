@@ -86,3 +86,13 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Operação manual futura: somente no serviço web autorizado e com credenciais, executar `php artisan telegram:outbox-drenar --limite=20`. **Não** habilitar cron, scheduler, worker ou rede de saída nova sem processo de implantação.
 - A migração `create_telegram_outbox_table` exige revisão e homologação no PostgreSQL isolado antes de aplicar em qualquer banco real.
 - Nenhuma ação acadêmica de escrita foi habilitada. Antes de permitir aprovações/matrículas é necessário ainda implementar confirmações de uso único e trilha de auditoria.
+
+
+## Etapa 5 — confirmação de teste e trilha de auditoria (Issue #94)
+
+- `/testeconfirmacao` cria uma proposta **de simulação sem efeito acadêmico**; o bot mostra o resumo e dois botões: **Confirmar** e **Cancelar**.
+- Cada proposta possui código aleatório de 128 bits, somente SHA-256 no banco, vinculado ao usuário administrativo e chat privado, expira após dez minutos.
+- A confirmação e o cancelamento usam `lockForUpdate`, status único e revalidação do dono. Um clique repetido não executa a decisão outra vez. Um código expirado não confirma.
+- A preparação e a primeira decisão ficam em `telegram_auditoria`, com transição de estado, ator e `update_id`. Sem token, CPF, documentos ou payload acadêmico. Auditoria não é removida na revogação.
+- A revogação cancela confirmações pendentes do usuário. Operações acadêmicas não foram conectadas a esse fluxo.
+- Requer migração `telegram_confirmacoes` e `telegram_auditoria`. **Não migrar o banco da VPS sem homologação e backup**. Também requer revisão de concorrência em PostgreSQL isolado antes de habilitar escritas reais.
