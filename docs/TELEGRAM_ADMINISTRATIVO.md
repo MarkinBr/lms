@@ -48,3 +48,14 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Implementação só de leitura nos models existentes. Não refaz pareamento, não altera webhook registrado nem exige migração adicional. O registro de `telegram_updates` é uma escrita técnica de idempotência, não de dados acadêmicos.
 - O envio para o Telegram continua na transação atual. Antes de **qualquer** fluxo futuro que escreva dados acadêmicos, adotar outbox/entrega separada e revalidar titular em cada confirmação.
 - Validar com `php artisan test --filter='TelegramMenuConsultaTest|TelegramAdministrativoTest'` e `vendor/bin/pint --test` nos arquivos PHP tocados em ambiente isolado. Jamais executar na base da VPS. Sem deploy automático nesta entrega.
+
+
+## Etapa 3 — consultas operacionais (Issue #88)
+
+- `/pendencias`: inscrições em análise e contagens de inconsistências estruturais já acompanhadas pelo serviço `PainelAcademicoQuery`. Não corrige ou altera registros.
+- `/agenda`: até cinco próximos encontros do serviço acadêmico existente, sem compartilhar link de transmissão.
+- `/cursos`: primeiros cinco cursos ativos por título.
+- `/turma ID`, `/matricula ID` e `/inscricao UUID`: fichas resumidas por identificador explícito e único. Matrículas podem ter vínculos adicionais em `matricula_turma` e exigem consulta no painel para detalhes.
+- Menu com botões para pendências, agenda e cursos. Sem CPF, telefone, endereço, documentos, dados bancários, valores ou credenciais.
+- Nesta etapa não há escrita acadêmica, migrações, alteração do pareamento, publicação nem deploy. A autorização exclusiva do administrador vinculado continua sendo verificada antes das consultas.
+- Homologação: `php artisan test --filter='TelegramOperacionalTest|TelegramMenuConsultaTest|TelegramAdministrativoTest'` e Pint em SQLite isolado, sem acesso ao banco real. PostgreSQL e Telegram real continuam pendentes de validação segura.
