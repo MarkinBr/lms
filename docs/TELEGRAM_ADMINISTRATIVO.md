@@ -26,3 +26,13 @@
 - PHPUnit: `php artisan test --filter=TelegramAdministrativoTest` com `APP_ENV=testing`, SQLite em memória, mail/cache/sessão em array e Telegram simulado. Nunca executar testes no banco de produção.
 - A CI inclui o teste do bot no filtro de testes direcionados, além da validação de sintaxe e Pint.
 - Não é necessário Nutgram, IA local, API paga ou outro servidor para os comandos desta etapa; o cliente HTTP do Laravel é suficiente.
+
+## Ativação no piloto publicado
+
+As credenciais ficam somente em `/srv/portal84/telegram.env`, com permissão 0600. O arquivo contém `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` e `TELEGRAM_ADMIN_USER_ID`. O token é inserido pelo titular diretamente no VS Code conectado à VPS; não transita pela conversa, Git ou argumentos de processos.
+
+Aplicar o override `docker/telegram-piloto.compose.yml` depois dos arquivos de homologação e piloto, carregando os arquivos privados com `--env-file`. Somente o web recebe as credenciais e participa da rede adicional de saída; PostgreSQL, worker e heartbeat mantêm suas redes isoladas. Nunca imprimir `docker compose config`, ambientes de containers ou exceções que contenham a URL da API; validar com `config --quiet`.
+
+O Nginx encaminha apenas POST no caminho exato `/api/telegram/cetsadp/webhook`. O Laravel exige o segredo do header antes de processar o conteúdo. Registrar o webhook por HTTPS com `secret_token` e `allowed_updates=["message"]`, preservando atualizações pendentes. Validar token/identidade com `getMe`, registro com `getWebhookInfo`, rejeição sem segredo e acesso exclusivo do administrador escolhido.
+
+Depois da ativação, gerar o código de pareamento do administrador autorizado e enviar `/vincular CODIGO` em conversa privada com o bot. O código expira em dez minutos. A confirmação da conexão técnica não significa que uma conta Telegram já esteja vinculada.

@@ -1,0 +1,15 @@
+{
+  "services": {
+    "web": {
+      "environment": {
+        "TELEGRAM_BOT_TOKEN": "${TELEGRAM_BOT_TOKEN:?token privado obrigatorio}",
+        "TELEGRAM_WEBHOOK_SECRET": "${TELEGRAM_WEBHOOK_SECRET:?segredo privado obrigatorio}",
+        "TELEGRAM_ADMIN_USER_ID": "${TELEGRAM_ADMIN_USER_ID:?administrador autorizado obrigatorio}"
+      },
+      "networks": ["isolada", "borda", "telegram_saida"]
+    }
+  },
+  "networks": {
+    "telegram_saida": {"name": "portal84_telegram_saida", "internal": false}
+  }
+}
