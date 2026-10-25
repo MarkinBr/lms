@@ -179,19 +179,20 @@ class TelegramAdministrativoTest extends TestCase
         $this->assertStringContainsString('Resumo acadêmico', Http::recorded()->last()[0]['text']);
     }
 
-    public function test_falha_ao_recuperar_telegram_preserva_vinculos_e_codigo(): void
+    public function test_falha_ao_notificar_recuperacao_preserva_novo_vinculo_e_nao_repete_acao(): void
     {
         $anterior = $this->vincularDono();
         $novo = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
         config()->set('services.telegram.admin_user_id', $novo->id);
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($novo);
         $this->simularTelegram(Http::response([], 503));
-        $this->enviar($this->updateTelegram(11, '/vincular '.$codigo))->assertStatus(503);
-        $this->assertDatabaseHas('telegram_vinculos', ['user_id' => $anterior->id, 'chat_id' => '123']);
+        $this->enviar($this->updateTelegram(11, '/vincular '.$codigo))->assertOk();
+        $this->assertDatabaseMissing('telegram_vinculos', ['user_id' => $anterior->id, 'chat_id' => '123']);
         $this->assertDatabaseHas('telegram_vinculos', [
-            'user_id' => $novo->id, 'chat_id' => null, 'codigo_hash' => hash('sha256', $codigo),
+            'user_id' => $novo->id, 'chat_id' => '123', 'codigo_hash' => null,
         ]);
-        $this->assertDatabaseMissing('telegram_updates', ['update_id' => 11]);
+        $this->assertDatabaseHas('telegram_updates', ['update_id' => 11]);
+        $this->assertDatabaseHas('telegram_outbox', ['update_id' => 11, 'status' => 'pendente']);
     }
 
     public function test_admin_inativo_ou_rebaixado_perde_acesso_imediatamente(): void
@@ -222,51 +223,54 @@ class TelegramAdministrativoTest extends TestCase
         $this->assertSame($antes, DB::table('matriculas')->orderBy('id')->get()->toJson());
     }
 
-    public function test_update_com_falha_de_envio_pode_ser_reprocessado_uma_vez(): void
+    public function test_falha_externa_nao_reexecuta_update_nem_duplica_outbox(): void
     {
         $this->vincularDono();
         $this->simularTelegram(Http::sequence()
             ->push(['ok' => false, 'error_code' => 503], 503)
             ->push(['ok' => true]));
         $update = $this->updateTelegram(11, '/resumo');
-        $this->enviar($update)->assertStatus(503);
-        $this->assertDatabaseMissing('telegram_updates', ['update_id' => 11]);
-        $this->enviar($update)->assertOk();
         $this->enviar($update)->assertOk();
         $this->assertDatabaseHas('telegram_updates', ['update_id' => 11]);
-        Http::assertSentCount(2);
+        $this->assertDatabaseHas('telegram_outbox', ['update_id' => 11, 'status' => 'pendente']);
+        $this->enviar($update)->assertOk();
+        $this->assertDatabaseCount('telegram_outbox', 2);
+        Http::assertSentCount(1);
     }
 
-    public function test_falha_na_confirmacao_de_vinculo_preserva_codigo_para_reenvio(): void
+    public function test_falha_de_envio_nao_reverte_vinculo_e_codigo_e_consumido(): void
     {
         $usuario = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($usuario);
         $this->simularTelegram(Http::sequence()->push([], 503)->push(['ok' => true]));
         $update = $this->updateTelegram(1, '/vincular '.$codigo);
-        $this->enviar($update)->assertStatus(503);
-        $this->assertDatabaseHas('telegram_vinculos', [
-            'user_id' => $usuario->id, 'chat_id' => null, 'codigo_hash' => hash('sha256', $codigo),
-        ]);
         $this->enviar($update)->assertOk();
-        $this->assertDatabaseHas('telegram_vinculos', ['user_id' => $usuario->id, 'chat_id' => '123', 'codigo_hash' => null]);
+        $this->assertDatabaseHas('telegram_vinculos', [
+            'user_id' => $usuario->id, 'chat_id' => '123', 'codigo_hash' => null,
+        ]);
+        $this->assertDatabaseHas('telegram_outbox', ['update_id' => 1, 'status' => 'pendente']);
+        $this->enviar($update)->assertOk();
+        $this->assertDatabaseCount('telegram_outbox', 1);
     }
 
-    public function test_resposta_ok_false_nao_marca_update_como_concluido(): void
+    public function test_resposta_ok_false_persiste_update_e_pende_envio(): void
     {
         $this->vincularDono();
         $this->simularTelegram(Http::response(['ok' => false, 'description' => 'Falha'], 200));
-        $this->enviar($this->updateTelegram(11, '/resumo'))->assertStatus(503);
-        $this->assertDatabaseMissing('telegram_updates', ['update_id' => 11]);
+        $this->enviar($this->updateTelegram(11, '/resumo'))->assertOk();
+        $this->assertDatabaseHas('telegram_updates', ['update_id' => 11]);
+        $this->assertDatabaseHas('telegram_outbox', ['update_id' => 11, 'status' => 'pendente']);
     }
 
-    public function test_falha_de_conexao_nao_expoe_token_e_permite_reenvio(): void
+    public function test_falha_de_conexao_nao_expoe_token_e_mantem_outbox(): void
     {
         $this->vincularDono();
         $this->simularTelegram(Http::failedConnection('https://api.telegram.org/botteste-ficticio/sendMessage'));
         $resposta = $this->enviar($this->updateTelegram(11, '/status'));
-        $resposta->assertStatus(503);
+        $resposta->assertOk();
         $this->assertStringNotContainsString('teste-ficticio', $resposta->getContent());
-        $this->assertDatabaseMissing('telegram_updates', ['update_id' => 11]);
+        $this->assertDatabaseHas('telegram_updates', ['update_id' => 11]);
+        $this->assertDatabaseHas('telegram_outbox', ['update_id' => 11, 'status' => 'pendente']);
     }
 
     public function test_update_bem_sucedido_nao_envia_duas_respostas(): void
