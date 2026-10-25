@@ -72,7 +72,7 @@ class TelegramMenuConsultaTest extends TestCase
         $this->donoVinculado();
         for ($i = 0; $i < 7; $i++) {
             User::factory()->create(['nivel' => 'aluno', 'ativo' => true,
-                'name' => 'Estudante '.$i, 'cpf' => '11111111111']);
+                'name' => 'Estudante '.$i, 'cpf' => (string) (11111111111 + $i)]);
         }
         $this->enviar($this->telegramCallback(2, 'lista:alunos:1'))->assertOk();
         $msg = Http::recorded()->last()[0]['text'];
