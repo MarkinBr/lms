@@ -109,10 +109,16 @@ class TelegramAdministrativo
         } elseif (preg_match('/^\\/(turma|matricula|aluno|notas|frequencia)\\s+([0-9]{1,12})$/', $texto, $m)) {
             $id = (int) $m[2];
             $resposta = $consulta->{$m[1]}($id);
+        } elseif (preg_match('/^\\/filtro\\s+(curso|turma|status)\\s+([a-z0-9]{1,12})$/', $texto, $m)) {
+            $resposta = $consulta->filtrarAlunos($m[1], $m[2], 1);
         } elseif (preg_match('/^\\/inscricao\\s+([0-9a-fA-F-]{36})$/', $texto, $m)) {
             $resposta = $consulta->inscricao($m[1]);
         } else {
             $resposta = match ($texto) {
+                '/hoje' => $consulta->hoje(),
+                '/agenda7' => $consulta->agendaSemanal(),
+                '/relatorios' => $consulta->relatorios(),
+                '/aulaspendentes' => $consulta->aulasPendentes(),
                 '/pendencias' => $consulta->pendencias(),
                 '/agenda' => $consulta->agenda(),
                 '/cursos' => $consulta->cursos(),
@@ -157,6 +163,14 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if ($codigo === 'menu') {
             $resposta = $consulta->menu();
+        } elseif (in_array($codigo, ['hoje', 'relatorios', 'aulaspendentes'], true)) {
+            $resposta = $consulta->{$codigo}();
+        } elseif ($codigo === 'agenda7') {
+            $resposta = $consulta->agendaSemanal();
+        } elseif (preg_match('/^filtro:(curso|turma|status):([a-z0-9]{1,12}):([1-9][0-9]?)$/', $codigo, $m)) {
+            $resposta = $consulta->filtrarAlunos($m[1], $m[2], (int) $m[3]);
+        } elseif (preg_match('/^ficha:([1-9][0-9]{0,11})$/', $codigo, $m)) {
+            $resposta = $consulta->aluno((int) $m[1]);
         } elseif (in_array($codigo, ['pendencias', 'agenda', 'cursos'], true)) {
             $resposta = $consulta->{$codigo}();
         } elseif (preg_match('/^lista:(alunos|inscricoes|matriculas|turmas|aulas):([0-9]{1,2})$/', $codigo, $m)) {
