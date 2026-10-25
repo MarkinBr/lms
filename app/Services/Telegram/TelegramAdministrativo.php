@@ -106,11 +106,16 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if (preg_match('/^\\/buscar\\s+(.+)$/us', $texto, $m)) {
             $resposta = $consulta->buscarAluno($m[1]);
-        } elseif (preg_match('/^\\/(aluno|notas|frequencia)\\s+([0-9]{1,12})$/', $texto, $m)) {
+        } elseif (preg_match('/^\\/(turma|matricula|aluno|notas|frequencia)\\s+([0-9]{1,12})$/', $texto, $m)) {
             $id = (int) $m[2];
             $resposta = $consulta->{$m[1]}($id);
+        } elseif (preg_match('/^\\/inscricao\\s+([0-9a-fA-F-]{36})$/', $texto, $m)) {
+            $resposta = $consulta->inscricao($m[1]);
         } else {
             $resposta = match ($texto) {
+                '/pendencias' => $consulta->pendencias(),
+                '/agenda' => $consulta->agenda(),
+                '/cursos' => $consulta->cursos(),
                 '/start', '/ajuda', '/menu' => $consulta->menu(),
                 '/status' => ['text' => 'Bot CETSADP disponível. Sua conta administrativa está vinculada. Use /menu.'],
                 '/resumo' => ['text' => $this->resumo()],
@@ -152,6 +157,8 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if ($codigo === 'menu') {
             $resposta = $consulta->menu();
+        } elseif (in_array($codigo, ['pendencias', 'agenda', 'cursos'], true)) {
+            $resposta = $consulta->{$codigo}();
         } elseif (preg_match('/^lista:(alunos|inscricoes|matriculas|turmas|aulas):([0-9]{1,2})$/', $codigo, $m)) {
             $resposta = $consulta->listar($m[1], (int) $m[2]);
         } else {

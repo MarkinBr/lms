@@ -4,10 +4,12 @@ namespace App\Services\Telegram;
 
 use App\Models\Application;
 use App\Models\Aula;
+use App\Models\Curso;
 use App\Models\Matricula;
 use App\Models\Nota;
 use App\Models\Turma;
 use App\Models\User;
+use App\Services\GestaoAcademica\PainelAcademicoQuery;
 
 class ConsultasAcademicasTelegram
 {
@@ -27,6 +29,9 @@ class ConsultasAcademicasTelegram
         foreach (self::TITULOS as $chave => $titulo) {
             $teclado[] = [['text' => $titulo, 'callback_data' => "lista:{$chave}:1"]];
         }
+
+        $teclado[] = [['text' => 'Pendências', 'callback_data' => 'pendencias']];
+        $teclado[] = [['text' => 'Agenda', 'callback_data' => 'agenda'], ['text' => 'Cursos', 'callback_data' => 'cursos']];
 
         return ['text' => "Menu CETSADP • Consultas\nEscolha uma área ou use /buscar NOME, /aluno ID, /notas ID e /frequencia ID.\nInformações detalhadas devem ser consultadas no painel autenticado.",
             'reply_markup' => ['inline_keyboard' => $teclado]];
@@ -159,6 +164,92 @@ class ConsultasAcademicasTelegram
         return ['text' => "Frequência do aluno #{$id}\n"
             .($linhas ? implode("\n", $linhas) : 'Nenhuma matrícula encontrada.')
             ."\nSomente chamadas concluídas. Confira detalhes no painel."];
+    }
+
+    public function pendencias(): array
+    {
+        $academico = app(PainelAcademicoQuery::class);
+        $estruturais = $academico->pendencias();
+        $linhas = ['CETSADP • Pendências', 'Inscrições em análise: '.Application::query()->emAnalise()->count()];
+
+        foreach ([
+            'disciplinas_sem_modulo' => 'Disciplinas sem módulo',
+            'aulas_sem_disciplina' => 'Aulas sem disciplina',
+            'turmas_sem_periodo' => 'Turmas sem período',
+            'turmas_sem_disciplina' => 'Turmas sem disciplina',
+        ] as $chave => $titulo) {
+            $linhas[] = $titulo.': '.($estruturais[$chave]['count'] ?? 0);
+        }
+
+        return ['text' => implode("\n", $linhas)."\nConsulte e resolva no painel autenticado."];
+    }
+
+    public function agenda(): array
+    {
+        $eventos = app(PainelAcademicoQuery::class)->proximasAulasAoVivo()->take(5);
+        $linhas = $eventos->map(fn (array $aula) => $this->curto((string) $aula['titulo'])
+            .' • '.($aula['data_hora'] ?? 'Data não informada')
+            .' • '.$this->curto((string) ($aula['curso'] ?? 'Curso não informado')))->all();
+
+        return ['text' => "Próximos encontros\n".($linhas ? implode("\n", $linhas) : 'Nenhum encontro previsto.')
+            ."\nLinks de transmissão e informações completas: painel autenticado."];
+    }
+
+    public function cursos(): array
+    {
+        $cursos = Curso::query()->where('ativo', true)->orderBy('titulo')
+            ->limit(5)->get(['id', 'titulo']);
+        $linhas = $cursos->map(fn (Curso $curso) => '#'.$curso->id.' • '.$this->curto($curso->titulo))->all();
+
+        return ['text' => "Cursos ativos\n".($linhas ? implode("\n", $linhas) : 'Nenhum curso ativo.')
+            ."\nExibindo até cinco cursos; consulte os demais no painel."];
+    }
+
+    public function turma(int $id): array
+    {
+        $turma = Turma::query()->with('curso:id,titulo')->find($id);
+        if ($id < 1 || $turma === null) {
+            return ['text' => 'Turma não encontrada.'];
+        }
+
+        return ['text' => 'Turma #'.$turma->id.' • '.$this->curto((string) $turma->nome)
+            ."\nCurso: ".$this->curto((string) ($turma->curso?->titulo ?? 'Não informado'))
+            ."\nSituação: ".($turma->status ?? 'não informada')
+            ."\nModalidade: ".($turma->modalidade ?? 'não informada')
+            ."\nConsulte os vínculos individuais no painel."];
+    }
+
+    public function matricula(int $id): array
+    {
+        $matricula = Matricula::query()->with(['aluno:id,name', 'curso:id,titulo', 'turma:id,nome'])->find($id);
+        if ($id < 1 || $matricula === null) {
+            return ['text' => 'Matrícula não encontrada.'];
+        }
+
+        return ['text' => 'Matrícula #'.$matricula->id
+            ."\nAluno #".$matricula->user_id.' • '.$this->curto((string) ($matricula->aluno?->name ?? 'Não informado'))
+            ."\nCurso: ".$this->curto((string) ($matricula->curso?->titulo ?? 'Não informado'))
+            ."\nTurma: ".$this->curto((string) ($matricula->turma?->nome ?? 'Não vinculada no campo legado'))
+            ."\nSituação: ".($matricula->status ?? 'não informada')
+            ."\nVínculos adicionais de turma: consultar no painel."];
+    }
+
+    public function inscricao(string $id): array
+    {
+        if (preg_match('/^[0-9a-fA-F-]{36}$/D', $id) !== 1) {
+            return ['text' => 'Identificador de inscrição inválido.'];
+        }
+
+        $inscricao = Application::query()->find($id, ['id', 'nome_completo', 'status', 'curso_id']);
+        if ($inscricao === null) {
+            return ['text' => 'Inscrição não encontrada.'];
+        }
+
+        return ['text' => 'Inscrição #'.$this->curto($inscricao->id, 36)
+            ."\nCandidato: ".$this->curto($inscricao->nome_completo)
+            ."\nCurso ID: ".($inscricao->curso_id ?? 'não informado')
+            ."\nSituação: ".$inscricao->status
+            ."\nDocumentos e dados pessoais: apenas no painel autenticado."];
     }
 
     private function curto(string $texto, int $limite = 42): string
