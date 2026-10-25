@@ -73,3 +73,16 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 
 - A busca guiada apresenta botões para abrir a ficha acadêmica do aluno pelo ID; a ficha pode direcionar para notas e frequência. Os novos botões usam edição da própria mensagem (`editMessageText`) quando disponível, com retorno seguro de nova mensagem em caso de rejeição da edição.
 - `/filtros`: escolhas guiadas de alunos por status, cinco cursos e cinco turmas. Consultas continuam paginadas e sem exposição de documentos.
+
+
+## Etapa 4 — outbox durável para respostas Telegram (Issue #92, em revisão)
+
+**Esta seção substitui, para a candidata da Issue #92, a semântica antiga de rollback por falha de envio descrita na Etapa 1.**
+
+- Cada update é identificado em `telegram_updates` e a resposta em `telegram_outbox`, dentro de uma transação local. O HTTP com a API do Telegram acontece **após o commit**, sem rollback de pareamento ou opt-in por falha externa.
+- O webhook confirma atualização persistida com HTTP 200 mesmo se a tentativa de envio falhar; falhas deixam outbox pendente para reentrega. Um update duplicado não gera nova mensagem na outbox.
+- Mensagens de consultas com vínculo de administrador são descartadas se a conta estiver desativada, rebaixada ou desvinculada no momento da entrega.
+- Outbox usa lease e retentativa com atraso, prazo curto de validade e limpeza do payload após entrega/descarte. **Uma mensagem pode ser entregue mais de uma vez se ocorrer timeout após aceite remoto**; isso não duplica o efeito no LMS.
+- Operação manual futura: somente no serviço web autorizado e com credenciais, executar `php artisan telegram:outbox-drenar --limite=20`. **Não** habilitar cron, scheduler, worker ou rede de saída nova sem processo de implantação.
+- A migração `create_telegram_outbox_table` exige revisão e homologação no PostgreSQL isolado antes de aplicar em qualquer banco real.
+- Nenhuma ação acadêmica de escrita foi habilitada. Antes de permitir aprovações/matrículas é necessário ainda implementar confirmações de uso único e trilha de auditoria.
