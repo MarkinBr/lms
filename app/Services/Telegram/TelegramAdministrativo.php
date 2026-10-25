@@ -174,6 +174,8 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if ($codigo === 'menu') {
             $resposta = $consulta->menu();
+        } elseif ($codigo === 'alertas') {
+            $resposta = app(PreferenciasAlertasTelegram::class)->consultar($chatId);
         } elseif (in_array($codigo, ['filtros', 'hoje', 'relatorios', 'aulaspendentes'], true)) {
             $resposta = $consulta->{$codigo}();
         } elseif ($codigo === 'agenda7') {
@@ -192,7 +194,7 @@ class TelegramAdministrativo
             $resposta = ['text' => 'Opção inválida. Use /menu.'];
         }
 
-        $novosMenus = in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros'], true)
+        $novosMenus = in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas'], true)
             || preg_match('/^(filtro|ficha|notas|frequencia):/', $codigo) === 1;
         if ($novosMenus) {
             $this->atualizarCallback($chatId, $callback, $resposta);
