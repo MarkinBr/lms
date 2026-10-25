@@ -115,6 +115,7 @@ class TelegramAdministrativo
             $resposta = $consulta->inscricao($m[1]);
         } else {
             $resposta = match ($texto) {
+                '/filtros' => $consulta->filtros(),
                 '/hoje' => $consulta->hoje(),
                 '/agenda7' => $consulta->agendaSemanal(),
                 '/relatorios' => $consulta->relatorios(),
@@ -163,7 +164,7 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if ($codigo === 'menu') {
             $resposta = $consulta->menu();
-        } elseif (in_array($codigo, ['hoje', 'relatorios', 'aulaspendentes'], true)) {
+        } elseif (in_array($codigo, ['filtros', 'hoje', 'relatorios', 'aulaspendentes'], true)) {
             $resposta = $consulta->{$codigo}();
         } elseif ($codigo === 'agenda7') {
             $resposta = $consulta->agendaSemanal();
