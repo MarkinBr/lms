@@ -7,6 +7,7 @@ use App\Models\ApplicationDocument;
 use App\Models\CourseModality;
 use App\Models\Curso;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use App\Services\Telegram\TelegramAdministrativo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
@@ -166,7 +167,7 @@ class TelegramPreAnaliseInscricaoTest extends TestCase
         $botaoNovo = Http::recorded()->last()[0]['reply_markup']['inline_keyboard'][0][0]['callback_data'];
         $inscricao->courseModality->update(['nome' => 'Outra modalidade']);
         $this->clicar(5, $botaoNovo);
-        $this->assertSame(2, \Illuminate\Support\Facades\DB::table('telegram_confirmacoes')
+        $this->assertSame(2, DB::table('telegram_confirmacoes')
             ->where('status', 'obsoleto')->count());
     }
 
