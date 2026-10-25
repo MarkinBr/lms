@@ -260,3 +260,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/relatorios/dre', [DREController::class, 'gerar'])
         ->name('relatorios.dre');
 });
+
+
+// Vinculação do bot administrativo Telegram — requer autenticação web e nível admin.
+\Illuminate\Support\Facades\Route::middleware(['auth', 'role:admin', 'throttle:10,1'])
+    ->prefix('admin/telegram')->name('admin.telegram.')->group(function () {
+        \Illuminate\Support\Facades\Route::get('/', [\App\Http\Controllers\AdminTelegramController::class, 'index'])->name('index');
+        \Illuminate\Support\Facades\Route::post('/gerar', [\App\Http\Controllers\AdminTelegramController::class, 'gerar'])->name('gerar');
+        \Illuminate\Support\Facades\Route::post('/revogar', [\App\Http\Controllers\AdminTelegramController::class, 'revogar'])->name('revogar');
+    });
