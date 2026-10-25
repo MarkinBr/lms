@@ -130,6 +130,8 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
     Route::get('/cursos', [CursosController::class, 'index'])->name('cursos');
     Route::get('/curso/{id}', [CursosController::class, 'show'])->name('curso.show');
     Route::get('/aula/{id}', [AulaController::class, 'show'])->name('aula');
+    Route::post('/aula/{id}/caderno', [\App\Http\Controllers\Aluno\CadernoAulaController::class, 'salvar'])
+        ->middleware('throttle:90,1')->name('aula.caderno');
 
     // Issue #49: interações de aula exigem perfil de aluno ativo.
     // As três rotas legadas abaixo saíram do grupo aberto 'auth' e passaram

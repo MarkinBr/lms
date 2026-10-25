@@ -10,6 +10,7 @@ use App\Models\Matricula;
 use App\Models\Progresso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AulaController extends Controller
 {
@@ -139,7 +140,12 @@ class AulaController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        $caderno = Schema::hasTable('cadernos_aula')
+            ? DB::table('cadernos_aula')->where('aluno_id', $aluno->id)->where('aula_id', $aula->id)->first()
+            : null;
+
         return view('aluno.sala-aula', compact(
+            'caderno',
             'aula',
             'curso',
             'modulo',
@@ -255,7 +261,7 @@ class AulaController extends Controller
     public function salvarQuiz(Request $request, $id)
     {
         $request->validate([
-            'score' => 'required|integer|min:0|max:100',
+            'score' => 'nullable|integer|min:0|max:100',
             'answers' => 'required|array',
             'attempts' => 'nullable|array',
         ]);
@@ -271,19 +277,30 @@ class AulaController extends Controller
             ['progresso_porcentagem' => 0, 'concluida' => false]
         );
 
+        $respostas = $request->input('answers');
+        if ($aula->temQuestoes()) {
+            $nota = $aula->calcularNotaQuiz($respostas);
+        } else {
+            $questoes = is_string($aula->quiz) ? json_decode($aula->quiz, true) : $aula->quiz;
+            abort_unless(is_array($questoes) && count($questoes), 422, 'Esta aula não possui exercícios cadastrados.');
+            $acertos = collect($questoes)->filter(fn ($q, $i) => array_key_exists($i, $respostas)
+                && isset($q['resposta_correta']) && (string) $respostas[$i] === (string) $q['resposta_correta'])->count();
+            $nota = (int) round($acertos / count($questoes) * 100);
+        }
+
         $progresso->update([
-            'quiz_score' => $request->input('score'),
+            'quiz_score' => $nota,
             'quiz_respostas' => $request->input('answers'),
             'quiz_tentativas' => $request->input('attempts', []),
             'quiz_concluido_em' => now(),
         ]);
 
         $notaMinima = $aula->nota_minima_aprovacao ?: 60;
-        if ((int) $request->input('score') >= $notaMinima) {
+        if ($nota >= $notaMinima) {
             $this->concluir($request, $id);
         }
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'score' => $nota, 'passed' => $nota >= $notaMinima]);
     }
 
     /**
@@ -324,6 +341,11 @@ class AulaController extends Controller
 
         // Issue #49: só permite comentar em aula do próprio vínculo.
         $this->autorizarVinculo((int) $aluno->id, $aula);
+
+        abort_unless($aula->permite_comentarios, 403, 'Os comentários estão desativados para esta aula.');
+        if ($request->filled('parent_id')) {
+            abort_unless(ComentarioAula::whereKey($request->input('parent_id'))->where('aula_id', $aula->id)->where('aprovado', true)->exists(), 422);
+        }
 
         $comentario = ComentarioAula::create([
             'aula_id' => $aula->id,
