@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Services\Telegram\TelegramAdministrativo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
