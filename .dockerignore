@@ -27,6 +27,11 @@
 !resources/**
 !routes/
 !routes/**
+# Exceção somente para assets públicos; vendor aninhado continua bloqueado.
+**/vendor
+!public/vendor/
+!public/vendor/**
+public/vendor/**/vendor
 # Defesa adicional mesmo para dados acidentalmente versionados.
 **/.env
 **/.env.*
@@ -51,7 +56,6 @@
 **/backups
 **/backup
 **/node_modules
-**/vendor
 **/storage/app
 bootstrap/cache
 public/storage

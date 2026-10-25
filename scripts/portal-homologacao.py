@@ -87,7 +87,11 @@ def allowed_release_file(name):
         return False
     parts = tuple(part.lower() for part in path.parts)
     if not parts or any(p.startswith('.env') or p in {
-            'storage', 'backups', 'backup', 'vendor', 'node_modules', '.git', '.aws', '.codex', '.agents'} for p in parts):
+            'storage', 'backups', 'backup', 'node_modules', '.git', '.aws', '.codex', '.agents'} for p in parts):
+        return False
+    # Somente o vendor público versionado; dependências PHP/aninhadas continuam bloqueadas.
+    if any(part == 'vendor' and not (index == 1 and path.parts[:2] == ('public', 'vendor'))
+           for index, part in enumerate(parts)):
         return False
     lower = name.lower()
     if lower.startswith(('bootstrap/cache/', 'public/build/', 'public/storage/')) or lower == 'public/hot':

@@ -1,6 +1,7 @@
 """RegressÃµes executÃ¡veis da infra isolada; somente fixtures sintÃ©ticas."""
 import base64
 import copy
+import fnmatch
 import importlib.util
 import io
 import json
@@ -133,6 +134,76 @@ class EntrypointTest(unittest.TestCase):
 
 
 class ReleaseTest(unittest.TestCase):
+    def test_package_preserves_public_vendor_assets_and_blocks_nested_dependencies(self):
+        module = infra()
+        assets = {
+            'public/vendor/fontawesome/webfonts/fa-solid-900.woff2': b'wOF2\x00\xff\r\n\x80\x00',
+            'public/vendor/alpine/alpine.js': b'window.Alpine = {};\r\n',
+        }
+        blocked = [
+            'vendor/autoload.php', 'app/vendor/autoload.php',
+            'public/other/vendor/autoload.php', 'public/vendor/pdfjs/vendor/autoload.php',
+            'public/vendor/node_modules/dependency/index.js', 'public/vendor/.env.local',
+            'public/vendor/database.sql.gz', 'public/vendor/private.key',
+            'public/vendor/storage/private.pdf', 'public/vendor/backups/data.tar',
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'source.tar'
+            output = Path(directory) / 'portal84-assets.tar.gz'
+            with tarfile.open(source, 'w') as tar:
+                for name, content in {**assets, **dict.fromkeys(blocked, b'DO_NOT_COPY')}.items():
+                    member = tarfile.TarInfo(name)
+                    member.size = len(content)
+                    tar.addfile(member, io.BytesIO(content))
+            result = module.package_archive(source, output, '0123456789abcdef')
+            with tarfile.open(output, 'r:gz') as tar:
+                self.assertEqual(set(tar.getnames()), {*assets, '.portal84-release.json'})
+                for name, content in assets.items():
+                    self.assertEqual(tar.extractfile(name).read(), content)
+                self.assertEqual(json.load(tar.extractfile('.portal84-release.json'))['files'], len(assets))
+            self.assertEqual(result['files'], len(assets))
+            extracted = Path(directory) / 'extracted'
+            self.assertEqual(module.extract_release(source, extracted), len(assets))
+            for name, content in assets.items():
+                self.assertEqual((extracted / name).read_bytes(), content)
+            for name in blocked:
+                self.assertFalse((extracted / name).exists(), name)
+
+    def test_docker_context_keeps_public_vendor_without_php_vendor_or_sensitive_data(self):
+        # Avalia as regras em ordem, incluindo diretórios pais e glob **.
+        def matches(pattern, parts):
+            if not pattern:
+                return not parts
+            if pattern[0] == '**':
+                return matches(pattern[1:], parts) or bool(parts) and matches(pattern, parts[1:])
+            return bool(parts) and fnmatch.fnmatchcase(parts[0], pattern[0]) and matches(pattern[1:], parts[1:])
+
+        rules = [line.strip() for line in (ROOT / '.dockerignore').read_text(encoding='utf-8').splitlines()
+                 if line.strip() and not line.lstrip().startswith('#')]
+
+        def included(name):
+            parts = name.split('/')
+            keep = True
+            for rule in rules:
+                allow = rule.startswith('!')
+                pattern = rule.lstrip('!').strip('/').split('/')
+                if any(matches(pattern, parts[:length]) for length in range(1, len(parts) + 1)):
+                    keep = allow
+            return keep
+
+        for name in ['public/vendor/fontawesome/webfonts/fa-solid-900.woff2',
+                     'public/vendor/alpine/alpine.js', 'public/vendor/pdfjs/pdf.js']:
+            with self.subTest(asset=name):
+                self.assertTrue(included(name), name)
+        for name in ['vendor/autoload.php', 'app/vendor/autoload.php',
+                     'public/other/vendor/autoload.php', 'public/vendor/pdfjs/vendor/autoload.php',
+                     'public/vendor/node_modules/dependency/index.js', 'public/vendor/.env.local',
+                     'public/vendor/database.sql.gz', 'public/vendor/private.key',
+                     'public/vendor/storage/app/private.pdf', 'public/vendor/backups/data.tar',
+                     'node_modules/dependency/index.js', 'public/storage/private.pdf']:
+            with self.subTest(blocked=name):
+                self.assertFalse(included(name), name)
+
     def test_package_preserves_git_case_and_excludes_data_without_filesystem_roundtrip(self):
         module = infra()
         with tempfile.TemporaryDirectory() as directory:

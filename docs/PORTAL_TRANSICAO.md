@@ -48,7 +48,7 @@ O piloto usa `https://novo.cetsadp.com.br`, certificado próprio e o override `d
 
 Web e worker usam ambiente `production`, debug desativado e cookie seguro exclusivo. O scheduler continua apenas como heartbeat isolado. O piloto conserva banco próprio: alterações nele não são sincronizadas com o legado. A conta sintética de demonstração é desativada antes da exposição. Contas, senhas e registros reais não são publicados em logs ou documentos.
 
-Sem serviço de envio validado, recuperação e confirmação de e-mail respondem com mensagem de indisponibilidade, em vez de simular entrega. Cobranças, administração, APIs e exclusão de conta não são expostas pelo vhost piloto. O financeiro continua no sistema atual. Os sete conflitos da origem permanecem preservados para conferência; o piloto não representa uma substituição definitiva.
+Sem serviço de envio validado, recuperação e confirmação de e-mail respondem com mensagem de indisponibilidade, em vez de simular entrega. Emissão de pagamentos e webhooks externos continuam indisponíveis até configurar as integrações. Os sete conflitos da origem permanecem preservados para conferência; o piloto não representa uma substituição definitiva.
 
 O certificado HTTP-01 usa `scripts/portal-acme-hook.py` na VPS; o deploy-hook de renovação valida e recarrega somente o Nginx. Backups de bancos, arquivos e configuração permanecem privados na VPS. O retorno consiste em retirar apenas o novo vhost e recarregar o Nginx, sem restaurar bancos nem parar o legado.
 
@@ -57,3 +57,9 @@ A rede adicional do Nginx também foi declarada no Compose existente da VPS, pre
 Publicação verificada por HTTPS: login, dashboard, sala de aula e cookie seguro. A conta sintética de aceitação foi desativada após o teste; a credencial permaneceu exclusivamente na VPS. O timer de renovação do Certbot está habilitado. E-mail, financeiro, sincronização com o legado e os sete conflitos continuam sujeitos às limitações acima.
 
 A raiz `https://novo.cetsadp.com.br/` abre o site institucional Blade do repositório LMS, com suas páginas, imagens, estilos e scripts. Não redireciona para o login. O Portal do Aluno continua em `/portal/login`. O vhost também encaminha catálogo, inscrições, acompanhamento, newsletter e validação pública ao Laravel, respeitando a autenticação e os limites definidos nas rotas. O formulário de contato retorna indisponibilidade explícita até validar SMTP, para não simular envio de e-mail.
+
+## Integridade do sistema publicado
+
+O pacote e o contexto Docker incluem `public/vendor` (Font Awesome, fontes, Alpine, calendário, PDF.js e sanitização), preservando os arquivos binários. A pasta `vendor` PHP da máquina de desenvolvimento, dependências aninhadas e arquivos sensíveis continuam excluídos. A imagem instala suas próprias dependências pelo lockfile.
+
+O Nginx encaminha o LMS completo ao Laravel, incluindo `/admin`, `/secretaria`, `/professor`, Livewire, relatórios e a consulta financeira do aluno. Autenticação, CSRF, limites de acesso e permissões de cada perfil continuam na aplicação. Liberar os caminhos dos painéis não altera o perfil das contas existentes. Somente ações que exigem integrações ainda não configuradas retornam indisponibilidade explícita.
