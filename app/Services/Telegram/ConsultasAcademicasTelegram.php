@@ -170,7 +170,7 @@ class ConsultasAcademicasTelegram
     {
         $academico = app(PainelAcademicoQuery::class);
         $estruturais = $academico->pendencias();
-        $linhas = ["CETSADP • Pendências", 'Inscrições em análise: '.Application::query()->emAnalise()->count()];
+        $linhas = ['CETSADP • Pendências', 'Inscrições em análise: '.Application::query()->emAnalise()->count()];
 
         foreach ([
             'disciplinas_sem_modulo' => 'Disciplinas sem módulo',
@@ -236,7 +236,7 @@ class ConsultasAcademicasTelegram
 
     public function inscricao(string $id): array
     {
-        if (! preg_match('/^[0-9a-fA-F-]{36}$/D', $id)) {
+        if (preg_match('/^[0-9a-fA-F-]{36}$/D', $id) !== 1) {
             return ['text' => 'Identificador de inscrição inválido.'];
         }
 
