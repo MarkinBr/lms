@@ -6,6 +6,7 @@ use App\Filament\Professor\Resources\AulaResource\Pages;
 use App\Models\Aula;
 use App\Models\Curso;
 use App\Models\Disciplina;
+use App\Support\TranscricaoVideo;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs;
@@ -202,7 +203,7 @@ class AulaResource extends Resource
                                             ->label('Transcrição e legendas do vídeo')
                                             ->helperText('Cole a transcrição em texto simples ou o conteúdo de um arquivo WebVTT (.vtt). WebVTT habilita legendas e trechos clicáveis. Revise o texto antes de publicar.')
                                             ->rows(8)
-                                            ->maxLength(100000)
+                                            ->maxLength(TranscricaoVideo::MAX_CARACTERES)
                                             ->columnSpanFull(),
 
                                         Forms\Components\FileUpload::make('video_upload')

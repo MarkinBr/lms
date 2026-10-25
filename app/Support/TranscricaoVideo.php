@@ -4,10 +4,17 @@ namespace App\Support;
 
 class TranscricaoVideo
 {
+    public const MAX_CARACTERES = 500000;
+
+    public const MAX_TRECHOS = 5000;
+
     /** Transcrição editorial em texto simples ou WebVTT, sem buscar fontes externas. */
     public static function preparar(?string $conteudo): array
     {
-        $conteudo = trim(mb_substr($conteudo ?? '', 0, 100000));
+        if (mb_strlen($conteudo ?? '') > self::MAX_CARACTERES) {
+            return ['text' => '', 'cues' => [], 'warning' => 'A transcrição ultrapassa o limite de 500.000 caracteres. A instituição precisa dividir o conteúdo; nenhum trecho parcial será exibido.'];
+        }
+        $conteudo = trim($conteudo ?? '');
         if (! preg_match('/^\x{FEFF}?WEBVTT(?:\s|$)/u', $conteudo)) {
             return ['text' => self::texto($conteudo), 'cues' => []];
         }
@@ -31,8 +38,8 @@ class TranscricaoVideo
             if ($inicio !== null && $fim !== null && $fim > $inicio && $texto !== '') {
                 $trechos[] = ['start' => $inicio, 'end' => $fim, 'text' => $texto];
             }
-            if (count($trechos) >= 2000) {
-                break;
+            if (count($trechos) > self::MAX_TRECHOS) {
+                return ['text' => '', 'cues' => [], 'warning' => 'A transcrição ultrapassa o limite de 5.000 trechos. A instituição precisa dividir o conteúdo; nenhum trecho parcial será exibido.'];
             }
         }
         usort($trechos, fn ($a, $b) => $a['start'] <=> $b['start']);
