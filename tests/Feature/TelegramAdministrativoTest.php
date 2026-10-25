@@ -70,6 +70,7 @@ class TelegramAdministrativoTest extends TestCase
     public function test_pareamento_admin_consulta_e_revogacao(): void
     {
         $usuario = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
+        config()->set('services.telegram.admin_user_id', $usuario->id);
         $this->actingAs($usuario)->post('/admin/telegram/gerar')->assertRedirect();
         $hash = DB::table('telegram_vinculos')->first()->codigo_hash;
         $this->assertSame(64, strlen($hash));
@@ -88,6 +89,7 @@ class TelegramAdministrativoTest extends TestCase
     public function test_codigo_expirado_ou_usuario_inativo_nao_vincula(): void
     {
         $usuario = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
+        config()->set('services.telegram.admin_user_id', $usuario->id);
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($usuario);
         DB::table('telegram_vinculos')->where('user_id', $usuario->id)
             ->update(['codigo_expira_em' => now()->subMinute()]);
@@ -160,6 +162,7 @@ class TelegramAdministrativoTest extends TestCase
     public function test_codigo_de_admin_anterior_nao_pode_ser_consumido(): void
     {
         $usuario = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
+        config()->set('services.telegram.admin_user_id', $usuario->id);
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($usuario);
         config()->set('services.telegram.admin_user_id', 999);
         $this->enviar($this->updateTelegram(1, '/vincular '.$codigo))->assertOk();
@@ -241,6 +244,7 @@ class TelegramAdministrativoTest extends TestCase
     public function test_falha_de_envio_nao_reverte_vinculo_e_codigo_e_consumido(): void
     {
         $usuario = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
+        config()->set('services.telegram.admin_user_id', $usuario->id);
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($usuario);
         $this->simularTelegram(Http::sequence()->push([], 503)->push(['ok' => true]));
         $update = $this->updateTelegram(1, '/vincular '.$codigo);
@@ -285,6 +289,7 @@ class TelegramAdministrativoTest extends TestCase
     public function test_codigo_usado_nao_vincula_outro_chat(): void
     {
         $usuario = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
+        config()->set('services.telegram.admin_user_id', $usuario->id);
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($usuario);
         $this->enviar($this->updateTelegram(1, '/vincular '.$codigo))->assertOk();
         $this->enviar($this->updateTelegram(2, '/vincular '.$codigo, 456))->assertOk();
