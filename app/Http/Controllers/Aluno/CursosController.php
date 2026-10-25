@@ -17,7 +17,7 @@ class CursosController extends Controller
     public function index()
     {
         $aluno = auth()->user();
-        $statusValidos = ['ativo', 'ativa', 'concluido'];
+        $statusValidos = ['ativo', 'ativa', 'concluido', 'concluida'];
 
         $matriculas = Matricula::with([
             'curso.modulos.aulas' => fn ($query) => $query->orderBy('ordem'),
@@ -86,8 +86,8 @@ class CursosController extends Controller
 
         $resumo = [
             'total_cursos' => $matriculas->total(),
-            'ativos' => $matriculas->getCollection()->filter(fn ($m) => strtolower((string) $m->status) !== 'concluido')->count(),
-            'concluidos' => $matriculas->getCollection()->filter(fn ($m) => strtolower((string) $m->status) === 'concluido')->count(),
+            'ativos' => $matriculas->getCollection()->filter(fn ($m) => ! in_array(strtolower((string) $m->status), ['concluido', 'concluida'], true))->count(),
+            'concluidos' => $matriculas->getCollection()->filter(fn ($m) => in_array(strtolower((string) $m->status), ['concluido', 'concluida'], true))->count(),
             'progresso_medio' => (int) round($matriculas->getCollection()->avg('progresso') ?? 0),
         ];
 
@@ -103,7 +103,7 @@ class CursosController extends Controller
 
         $matricula = Matricula::where('user_id', $aluno->id)
             ->where('curso_id', $id)
-            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
+            ->visiveisNoPortal()
             ->firstOrFail();
 
         $curso = Curso::with([

@@ -27,7 +27,7 @@ class AulaController extends Controller
 
         $matriculado = Matricula::where('user_id', $alunoId)
             ->where('curso_id', $curso->id)
-            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
+            ->visiveisNoPortal()
             ->exists();
 
         // 403 genérico: não confirma existência da aula/curso a quem não tem vínculo.
@@ -54,7 +54,7 @@ class AulaController extends Controller
 
         $matriculado = Matricula::where('user_id', $aluno->id)
             ->where('curso_id', $curso->id)
-            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
+            ->visiveisNoPortal()
             ->exists();
 
         if (! $matriculado) {

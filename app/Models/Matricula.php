@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 class Matricula extends Model
 {
@@ -24,6 +25,12 @@ class Matricula extends Model
     public const STATUS_CONCLUIDA = 'concluida';
 
     public const STATUS_CANCELADA = 'cancelada';
+
+    /** Matrículas que preservam consulta ao conteúdo, inclusive os status legados. */
+    public function scopeVisiveisNoPortal($query)
+    {
+        return $query->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido', 'concluida']);
+    }
 
     protected $fillable = [
         'user_id',

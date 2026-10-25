@@ -19,7 +19,7 @@ class CadernoAulaController extends Controller
         abort_unless($aula->modulo, 404);
         abort_unless(Matricula::where('user_id', $request->user()->id)
             ->where('curso_id', $aula->modulo->curso_id)
-            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])->exists(), 403);
+            ->visiveisNoPortal()->exists(), 403);
         abort_unless($aula->liberada, 403, 'Esta aula ainda não foi liberada.');
         abort_unless(Schema::hasTable('cadernos_aula'), 503, 'O caderno está em atualização. Exporte seu rascunho antes de sair.');
 

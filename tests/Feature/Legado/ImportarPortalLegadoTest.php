@@ -150,4 +150,20 @@ class ImportarPortalLegadoTest extends TestCase
         $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(1);
         $this->assertDatabaseCount('users', 0);
     }
+
+    public function test_matricula_concluida_importada_permite_consulta_da_aula_e_caderno(): void
+    {
+        $this->fonte('aluno_cursos')->delete();
+        $this->fonte('matriculas')->update(['status' => 'Concluída']);
+        $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(0);
+        $aluno = User::where('matricula_login', 'cets001')->firstOrFail();
+        $aulaId = DB::table('aulas')->value('id');
+        $cursoId = DB::table('cursos')->value('id');
+        $this->actingAs($aluno)->get(route('aluno.curso.show', $cursoId))->assertOk();
+        $this->get(route('aluno.aula', $aulaId))->assertOk();
+        $this->postJson(route('aluno.aula.caderno', $aulaId), [
+            'revision' => 0, 'baseNotes' => '',
+            'notebook' => ['version' => 1, 'text' => 'Minha anotação', 'highlights' => [], 'anchors' => []],
+        ])->assertOk()->assertJsonPath('success', true);
+    }
 }
