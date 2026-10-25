@@ -4,7 +4,9 @@ namespace App\Services\Telegram;
 
 use App\Models\Application;
 use App\Models\Aula;
+use App\Models\AulaAoVivo;
 use App\Models\Curso;
+use App\Models\Disciplina;
 use App\Models\Matricula;
 use App\Models\Nota;
 use App\Models\Turma;
@@ -30,6 +32,9 @@ class ConsultasAcademicasTelegram
             $teclado[] = [['text' => $titulo, 'callback_data' => "lista:{$chave}:1"]];
         }
 
+        $teclado[] = [['text' => 'Painel do dia', 'callback_data' => 'hoje']];
+        $teclado[] = [['text' => 'Relatórios', 'callback_data' => 'relatorios'], ['text' => 'Agenda 7 dias', 'callback_data' => 'agenda7']];
+        $teclado[] = [['text' => 'Aulas não liberadas', 'callback_data' => 'aulaspendentes']];
         $teclado[] = [['text' => 'Pendências', 'callback_data' => 'pendencias']];
         $teclado[] = [['text' => 'Agenda', 'callback_data' => 'agenda'], ['text' => 'Cursos', 'callback_data' => 'cursos']];
 
@@ -250,6 +255,105 @@ class ConsultasAcademicasTelegram
             ."\nCurso ID: ".($inscricao->curso_id ?? 'não informado')
             ."\nSituação: ".$inscricao->status
             ."\nDocumentos e dados pessoais: apenas no painel autenticado."];
+    }
+
+
+    public function hoje(): array
+    {
+        $academico = app(PainelAcademicoQuery::class);
+        $resumo = $academico->resumo();
+        $pendencias = $academico->pendencias();
+        $inscricoes = Application::query()->emAnalise()->count();
+
+        return ['text' => "CETSADP • Painel do dia\n"
+            .'Alunos ativos: '.$resumo['alunos']."\n"
+            .'Matrículas ativas: '.$resumo['matriculas_ativas']."\n"
+            .'Inscrições em análise: '.$inscricoes."\n"
+            .'Aulas sem disciplina: '.$pendencias['aulas_sem_disciplina']['count']."\n"
+            .'Encontros próximos: '.$academico->proximasAulasAoVivo()->count()
+            ."\nIndicadores do banco conectado; consulte os detalhes no painel."];
+    }
+
+    public function agendaSemanal(): array
+    {
+        $inicio = now()->startOfDay();
+        $fim = now()->addDays(7)->startOfDay();
+        $eventos = AulaAoVivo::query()->proximas()
+            ->where('data_hora', '<', $fim)
+            ->with('curso:id,titulo')->limit(5)->get();
+        $linhas = $eventos->map(fn (AulaAoVivo $aula) => $this->curto((string) $aula->titulo)
+            .' • '.$aula->data_hora?->format('d/m H:i')
+            .' • '.$this->curto((string) ($aula->curso?->titulo ?? 'Curso não informado')))->all();
+
+        return ['text' => "Agenda de sete dias\n"
+            .($linhas ? implode("\n", $linhas) : 'Nenhum encontro previsto.')
+            ."\nNo máximo cinco encontros. Horários do LMS, sem links privados."];
+    }
+
+    public function aulasPendentes(): array
+    {
+        $q = Aula::query()->where('liberada', false);
+        $total = (clone $q)->count();
+        $linhas = $q->orderBy('id')->limit(5)->get(['id', 'titulo'])
+            ->map(fn (Aula $a) => '#'.$a->id.' • '.$this->curto($a->titulo))->all();
+
+        return ['text' => "Aulas não liberadas: {$total}\n"
+            .($linhas ? implode("\n", $linhas) : 'Nenhuma aula nessa situação.')
+            ."\nAté cinco exemplos. Não publica ou altera aulas."];
+    }
+
+    public function relatorios(): array
+    {
+        $cursos = Curso::query()->where('ativo', true)->orderBy('titulo')->limit(5)
+            ->withCount(['matriculas as matriculas_ativas_count' => fn ($q) => $q->ativas()])
+            ->get(['id', 'titulo']);
+        $linhas = $cursos->map(fn (Curso $curso) => '#'.$curso->id.' • '.$this->curto($curso->titulo)
+            .' • matrículas ativas: '.$curso->matriculas_ativas_count)->all();
+
+        return ['text' => "Relatório por curso\n"
+            .($linhas ? implode("\n", $linhas) : 'Nenhum curso ativo.')
+            ."\nAté cinco cursos; escopo das matrículas considera status legados."];
+    }
+
+    public function filtrarAlunos(string $tipo, string $valor, int $pagina): array
+    {
+        if ($pagina < 1 || $pagina > 20
+            || ! in_array($tipo, ['curso', 'turma', 'status'], true)
+            || ! preg_match('/^(ativo|inativo|[1-9][0-9]{0,8})$/D', $valor)) {
+            return ['text' => 'Opção inválida. Use /menu.'];
+        }
+
+        $query = User::query()->where('nivel', 'aluno');
+        if ($tipo === 'status') {
+            if (! in_array($valor, ['ativo', 'inativo'], true)) {
+                return ['text' => 'Opção inválida. Use /menu.'];
+            }
+            $query->where('ativo', $valor === 'ativo');
+        } elseif ($tipo === 'curso') {
+            $query->whereHas('matriculas', fn ($q) => $q->where('curso_id', (int) $valor));
+        } else {
+            $query->whereHas('matriculas', function ($q) use ($valor) {
+                $q->where('turma_id', (int) $valor)
+                    ->orWhereHas('turmasHistorico', fn ($t) => $t->where('turmas.id', (int) $valor)
+                        ->where('matricula_turma.status', 'ativo'));
+            });
+        }
+
+        $registros = $query->orderBy('id')->skip(($pagina - 1) * 5)->limit(6)->get(['id', 'name', 'ativo']);
+        $linhas = $registros->take(5)->map(fn (User $a) => '#'.$a->id.' • '.$this->curto($a->name)
+            .' — '.($a->ativo ? 'ativo' : 'inativo'))->all();
+        $teclado = [];
+        if ($pagina > 1) {
+            $teclado[] = ['text' => '◀', 'callback_data' => "filtro:{$tipo}:{$valor}:".($pagina - 1)];
+        }
+        if ($registros->count() > 5 && $pagina < 20) {
+            $teclado[] = ['text' => '▶', 'callback_data' => "filtro:{$tipo}:{$valor}:".($pagina + 1)];
+        }
+
+        return ['text' => "Alunos por {$tipo}: {$valor} • página {$pagina}\n"
+            .($linhas ? implode("\n", $linhas) : 'Nenhum aluno encontrado.'),
+            'reply_markup' => ['inline_keyboard' => array_merge($teclado ? [$teclado] : [],
+                [[['text' => 'Menu', 'callback_data' => 'menu']]])]];
     }
 
     private function curto(string $texto, int $limite = 42): string
