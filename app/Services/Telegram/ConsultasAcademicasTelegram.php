@@ -31,6 +31,7 @@ class ConsultasAcademicasTelegram
             $teclado[] = [['text' => $titulo, 'callback_data' => "lista:{$chave}:1"]];
         }
 
+        $teclado[] = [['text' => 'Filtros de alunos', 'callback_data' => 'filtros']];
         $teclado[] = [['text' => 'Painel do dia', 'callback_data' => 'hoje']];
         $teclado[] = [['text' => 'Relatórios', 'callback_data' => 'relatorios'], ['text' => 'Agenda 7 dias', 'callback_data' => 'agenda7']];
         $teclado[] = [['text' => 'Aulas não liberadas', 'callback_data' => 'aulaspendentes']];
@@ -323,6 +324,30 @@ class ConsultasAcademicasTelegram
         return ['text' => "Relatório por curso\n"
             .($linhas ? implode("\n", $linhas) : 'Nenhum curso ativo.')
             ."\nAté cinco cursos; escopo das matrículas considera status legados."];
+    }
+
+    public function filtros(): array
+    {
+        $teclado = [
+            [['text' => 'Alunos ativos', 'callback_data' => 'filtro:status:ativo:1'],
+                ['text' => 'Alunos inativos', 'callback_data' => 'filtro:status:inativo:1']],
+        ];
+
+        foreach (Curso::query()->where('ativo', true)->orderBy('titulo')->limit(5)->get(['id', 'titulo']) as $curso) {
+            $teclado[] = [['text' => 'Curso • '.$this->curto($curso->titulo, 29),
+                'callback_data' => 'filtro:curso:'.$curso->id.':1']];
+        }
+
+        foreach (Turma::query()->where('ativa', true)->orderBy('id', 'desc')->limit(5)->get(['id', 'nome']) as $turma) {
+            $teclado[] = [['text' => 'Turma • '.$this->curto($turma->nome, 29),
+                'callback_data' => 'filtro:turma:'.$turma->id.':1']];
+        }
+
+        $teclado[] = [['text' => 'Menu', 'callback_data' => 'menu']];
+
+        return ['text' => "Filtrar alunos\nEscolha status, curso ou turma. "
+            .'Para outros identificadores, use /filtro curso ID ou /filtro turma ID.',
+            'reply_markup' => ['inline_keyboard' => $teclado]];
     }
 
     public function filtrarAlunos(string $tipo, string $valor, int $pagina): array
