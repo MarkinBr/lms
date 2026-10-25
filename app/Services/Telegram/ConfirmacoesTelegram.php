@@ -26,7 +26,7 @@ class ConfirmacoesTelegram
         ]);
 
         return [
-            'text' => "Simulação administrativa\nEsta confirmação é apenas um teste: NÃO aprova inscrições nem altera matrículas.\n"
+            'text' => 'Simulação administrativa'."\n".'Esta confirmação é apenas um teste: NÃO aprova inscrições nem altera matrículas.'."\n"
                 ."Válida por 10 minutos. Confirme ou cancele.",
             'reply_markup' => ['inline_keyboard' => [[
                 ['text' => 'Confirmar', 'callback_data' => 'confirmar:'.$codigo],
@@ -46,7 +46,7 @@ class ConfirmacoesTelegram
             $linha = DB::table('telegram_confirmacoes')
                 ->where('codigo_hash', hash('sha256', $codigo))
                 ->lockForUpdate()->first();
-            if (! $linha || $linha->user_id !== $usuario->id || $linha->chat_id !== $chatId) {
+            if ($linha === null || (int) $linha->user_id !== (int) $usuario->id || $linha->chat_id !== $chatId) {
                 return 'invalido';
             }
             if ($linha->status !== 'pendente') {
