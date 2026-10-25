@@ -27,7 +27,7 @@ class ConfirmacoesTelegram
 
         return [
             'text' => 'Simulação administrativa'."\n".'Esta confirmação é apenas um teste: NÃO aprova inscrições nem altera matrículas.'."\n"
-                ."Válida por 10 minutos. Confirme ou cancele.",
+                .'Válida por 10 minutos. Confirme ou cancele.',
             'reply_markup' => ['inline_keyboard' => [[
                 ['text' => 'Confirmar', 'callback_data' => 'confirmar:'.$codigo],
                 ['text' => 'Cancelar', 'callback_data' => 'cancelar:'.$codigo],
@@ -38,7 +38,7 @@ class ConfirmacoesTelegram
     public function decidir(string $chatId, string $acao, string $codigo, int $updateId): array
     {
         $usuario = $this->dono($chatId);
-        if (! in_array($acao, ['confirmar', 'cancelar'], true) || preg_match('/^[0-9a-f]{32}$/D', $codigo) !== 1) {
+        if (in_array($acao, ['confirmar', 'cancelar'], true) === false || preg_match('/^[0-9a-f]{32}$/D', $codigo) !== 1) {
             return ['text' => 'Confirmação inválida.'];
         }
 
