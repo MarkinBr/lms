@@ -30,6 +30,18 @@ class TelegramCentralInteligenteTest extends TestCase
         $this->assertStringNotContainsString('JoãoOutro', $consulta->buscarAluno('joão%')['text']);
     }
 
+    public function test_busca_guiada_oferece_ficha_por_id_e_rotas_de_consulta(): void
+    {
+        $aluno = User::factory()->create(['nivel' => 'aluno', 'name' => 'Pesquisa Guiada']);
+        $consulta = app(ConsultasAcademicasTelegram::class);
+        $busca = $consulta->buscarAluno('Pesquisa');
+        $this->assertSame('ficha:'.$aluno->id, $busca['reply_markup']['inline_keyboard'][0][0]['callback_data']);
+        $ficha = $consulta->aluno($aluno->id);
+        $botoes = json_encode($ficha['reply_markup']['inline_keyboard']);
+        $this->assertStringContainsString('notas:'.$aluno->id, $botoes);
+        $this->assertStringContainsString('frequencia:'.$aluno->id, $botoes);
+    }
+
     public function test_filtro_alunos_por_curso_e_status_sem_expor_contato(): void
     {
         $curso = Curso::create(['titulo' => 'Teologia', 'ativo' => true]);
