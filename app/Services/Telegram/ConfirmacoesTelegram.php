@@ -39,7 +39,7 @@ class ConfirmacoesTelegram
     public function prepararRevisao(string $chatId, string $inscricaoId, int $updateId): array
     {
         $usuario = $this->dono($chatId);
-        if (preg_match('/^[0-9a-fA-F-]{36}$/D', $inscricaoId) !== 1) {
+        if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/D', $inscricaoId) !== 1) {
             return ['text' => 'Identificador de inscrição inválido.'];
         }
 
