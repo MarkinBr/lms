@@ -27,6 +27,7 @@
             'description' => $aula->descricao, 'html' => $aula->conteudo_texto,
             'duration' => $aula->duracao_minutos ?? $aula->duracao,
             'objectives' => $toArray($aula->objetivos), 'video' => $aula->video_url,
+            'transcript' => \App\Support\TranscricaoVideo::preparar($aula->transcricao_video),
             'pdf' => $aula->pdf_url, 'pdfTitle' => $aula->pdf_titulo ?? 'Material da aula',
             'audio' => $aula->audio_url, 'audioTitle' => $aula->audio_titulo ?? 'Áudio da aula',
             'blocks' => $aula->getBlocosOrdenados(), 'materials' => $materiaisEstudio,
@@ -80,10 +81,10 @@
     <title>{{ $aula->titulo }} — Sala de Aula CETSADP</title>
     <link rel="stylesheet" href="{{ asset('vendor/portal/fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/portal/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/estudio-aula.css') }}?v=76">
+    <link rel="stylesheet" href="{{ asset('css/estudio-aula.css') }}?v=78">
     <script>window.CETSADP_STUDIO = {{ \Illuminate\Support\Js::from($dadosEstudio) }};</script>
     <script defer src="{{ asset('vendor/estudio/dompurify/purify.min.js') }}"></script>
-    <script type="module" src="{{ asset('js/estudio-aula.js') }}?v=76"></script>
+    <script type="module" src="{{ asset('js/estudio-aula.js') }}?v=78"></script>
 </head>
 <body>
     @include('aluno.partials.estudio-interface')

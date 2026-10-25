@@ -4,11 +4,35 @@ A rota real `/portal/aula/{id}` agora abre uma sala dedicada ao estudo, sem carr
 
 ## Experiência
 
-- Computador: percurso do curso à esquerda, vídeo/PDF/leitura no centro e caderno pessoal à direita. O caderno pode ser recolhido; modo foco amplia o conteúdo e oculta as duas colunas.
+- Computador: percurso do curso à esquerda e vídeo/PDF/leitura no centro. O caderno começa recolhido para ampliar a aula. Aulas e Caderno abrem e fecham separadamente pelos botões do cabeçalho ou de cada painel; a escolha fica lembrada neste navegador. Modo foco continua disponível.
 - Até 1180 px: Aulas / Estudar / Caderno alternam áreas completas. Não há três colunas comprimidas. Controles por toque, foco visível, abas com setas/Home/End e movimento reduzido.
 - Vídeo direto com controles nativos, YouTube/Vimeo com os controles oficiais. Retomada neste navegador, referências de tempo e picture-in-picture quando suportado. Sem reprodução automática.
 - PDF.js carregado sob demanda: ajuste à largura, zoom, paginação, camada de texto selecionável e grifos. PDFs externos precisam permitir CORS; existe abertura do original. PDFs escaneados sem texto permitem referência de página, mas não seleção/OCR.
 - Leitura com fonte ajustável, conteúdo sanitizado e grifos. Materiais, áudio, blocos, exercícios e comentários usam os dados existentes.
+
+## Correções de vídeo e estudo simultâneo — Issue #78
+
+O vídeo ocupa a largura útil da sala e, no celular, chega às bordas da área de estudo. O título e os espaços no celular foram compactados. O contêiner intermediário do YouTube também ocupa a área inteira, sem limitar o iframe à altura de uma linha.
+
+O botão **Vídeo + material** conserva o mesmo player e fixa o vídeo acima de Leitura, PDF ou Transcrição. Não recria o elemento, não reinicia a reprodução e não exige modo foco. **Desafixar vídeo** fica sobre o player para encerrar esse modo durante a rolagem. O leitor PDF calcula a largura descontando o padding real e reserva espaço para a barra de rolagem, evitando deslocamento horizontal no ajuste inicial.
+
+**Vídeo flutuante** tenta Picture-in-Picture nativo no clique para vídeos diretos, quando o navegador permite. Se indisponível ou recusado, ou para embeds YouTube/Vimeo, abre um miniplayer dentro da própria página. O estado ativo, a mensagem e os controles Fechar flutuante / Voltar ao vídeo são explícitos; Escape também fecha o miniplayer. A alternativa dentro da página não acompanha a troca para outro aplicativo. A janela nativa depende do navegador e do provedor.
+
+### Cadastro da transcrição
+
+A migração aditiva `2026_10_25_000002_add_transcricao_video_to_aulas_table.php` adiciona `aulas.transcricao_video`, opcional. O campo **Transcrição e legendas do vídeo** está tanto na edição de aulas do Professor quanto nas aulas da Disciplina no administrativo. Aceita texto simples ou conteúdo de um arquivo WebVTT, até 100.000 caracteres. O parser limita a 2.000 trechos e descarta tempos inválidos e blocos NOTE/STYLE/REGION.
+
+Texto simples aparece sem horários. WebVTT habilita busca, salto por trecho, indicação do trecho atual e legendas CC no vídeo direto. Nos embeds, o texto cadastrado continua disponível na aba e o player de origem controla suas próprias legendas; o YouTube recebe a preferência de português e CC quando existentes. Não há extração de legendas de terceiros nem transcrição automática de áudio. Sem cadastro, a tela informa que a transcrição ainda não foi disponibilizada. A leitura da aula não é usada como se fosse transcrição.
+
+Referências: [WebVTT — W3C](https://www.w3.org/TR/webvtt1/), [Picture-in-Picture — MDN](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestPictureInPicture), [parâmetros oficiais do YouTube](https://developers.google.com/youtube/player_parameters).
+
+### Validação da Issue #78
+
+- 123 testes aprovados, 595 asserções: Aluno, Auth, Autorizacao, cadastro/migração de AulaDisciplina e Unit, com SQLite em memória, mail/cache/sessão array e fila síncrona. Inclui transcrição persistida, parsing de WebVTT, tempos inválidos e ausência de transcrição.
+- Pint nos sete arquivos PHP alterados/novos; Biome em JS/CSS sem erros; sintaxe JS; compilação Blade; diff sem erros.
+- Navegador na porta 8776, banco e aluno sintéticos: reprodução contínua ao alternar para leitura e PDF, vídeo fixo a 64 px do topo no celular durante rolagem, fechamento manual das duas laterais, busca e salto para 10 segundos na transcrição, ativação de CC e miniplayer com retorno ao vídeo. O navegador de homologação não concedeu PiP nativo; a alternativa dentro da página foi exercitada.
+- Larguras 320, 390, 768, 1024 e 1440 px sem overflow da página. A 1440 px, com percurso aberto e caderno recolhido, o player passou de aproximadamente 805 para 1151 px. No celular a 390 px, passou de aproximadamente 345 para 375 px, descontando a barra de rolagem do navegador.
+- Migração aplicada no SQLite local após backup consistente privado; nenhuma transcrição de aula real foi preenchida. Homologação usa trechos fictícios identificados na própria interface. Não houve publicação em produção.
 
 ## Caderno e compatibilidade
 

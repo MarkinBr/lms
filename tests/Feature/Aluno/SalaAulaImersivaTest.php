@@ -28,6 +28,17 @@ class SalaAulaImersivaTest extends TestCase
             ->assertDontSee('premium-classroom.js')->assertDontSee('cdn.tailwindcss.com')->assertDontSee('CETSADP_ESTUDIO_V1');
     }
 
+    public function test_transcricao_cadastrada_chega_a_sala_com_tempos_sem_confundir_com_leitura(): void
+    {
+        $f = SalaAulaFixture::criar();
+        $f['aula']->update(['transcricao_video' => "WEBVTT\n\n00:01.000 --> 00:04.000\nUma fala do professor."]);
+        $this->actingAs($f['aluno'])->get(route('aluno.aula', $f['aula']->id))
+            ->assertOk()->assertSee('Uma fala do professor.')->assertSee('video-pin')->assertSee('panel-transcript');
+        $this->assertSame("WEBVTT\n\n00:01.000 --> 00:04.000\nUma fala do professor.", $f['aula']->fresh()->transcricao_video);
+        $f['aula']->update(['transcricao_video' => null]);
+        $this->get(route('aluno.aula', $f['aula']->id))->assertOk()->assertDontSee('Uma fala do professor.');
+    }
+
     public function test_caderno_persiste_grifos_e_notas_simples_sem_concluir_aula(): void
     {
         $f = SalaAulaFixture::criar();
