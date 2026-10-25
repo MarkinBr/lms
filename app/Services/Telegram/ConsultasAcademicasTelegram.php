@@ -108,9 +108,16 @@ class ConsultasAcademicasTelegram
         $lista = $alunos->map(fn ($a) => '#'.$a->id.' • '.$this->curto($a->name)
             .' — '.($a->ativo ? 'ativo' : 'inativo'))->all();
 
+        $botoes = $alunos->map(fn (User $a) => [[
+            'text' => 'Ficha #'.$a->id.' • '.$this->curto($a->name, 22),
+            'callback_data' => 'ficha:'.$a->id,
+        ]])->all();
+        $botoes[] = [['text' => 'Menu', 'callback_data' => 'menu']];
+
         return ['text' => "Busca de alunos\n"
             .($lista ? implode("\n", $lista) : 'Nenhum aluno encontrado.')
-            ."\nExibindo no máximo cinco. Consulte o painel para a lista completa."];
+            ."\nExibindo no máximo cinco. Consulte o painel para a lista completa.",
+            'reply_markup' => ['inline_keyboard' => $botoes]];
     }
 
     public function aluno(int $id): array
@@ -133,7 +140,12 @@ class ConsultasAcademicasTelegram
                 ." ({$matricula->status})";
         }
 
-        return ['text' => $texto."\nSem documentos ou dados pessoais. Consulte detalhes no painel autenticado."];
+        return ['text' => $texto."\nSem documentos ou dados pessoais. Consulte detalhes no painel autenticado.",
+            'reply_markup' => ['inline_keyboard' => [
+                [['text' => 'Notas', 'callback_data' => 'notas:'.$id],
+                    ['text' => 'Frequência', 'callback_data' => 'frequencia:'.$id]],
+                [['text' => 'Menu', 'callback_data' => 'menu']],
+            ]]];
     }
 
     public function notas(int $id): array
