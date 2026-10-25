@@ -50,7 +50,7 @@ class TelegramMenuConsultaTest extends TestCase
         ]];
     }
 
-    private function callback(int $id, string $data, string $type = 'private', int $sender = 321): array
+    private function telegramCallback(int $id, string $data, string $type = 'private', int $sender = 321): array
     {
         return ['update_id' => $id, 'callback_query' => [
             'id' => 'cb-'.$id, 'from' => ['id' => $sender],
@@ -74,12 +74,12 @@ class TelegramMenuConsultaTest extends TestCase
             User::factory()->create(['nivel' => 'aluno', 'ativo' => true,
                 'name' => 'Estudante '.$i, 'cpf' => '11111111111']);
         }
-        $this->enviar($this->callback(2, 'lista:alunos:1'))->assertOk();
+        $this->enviar($this->telegramCallback(2, 'lista:alunos:1'))->assertOk();
         $msg = Http::recorded()->last()[0]['text'];
         $this->assertStringContainsString('Estudante 0', $msg);
         $this->assertStringNotContainsString('Estudante 6', $msg);
         $this->assertStringNotContainsString('11111111111', $msg);
-        $this->enviar($this->callback(3, 'lista:alunos:2'))->assertOk();
+        $this->enviar($this->telegramCallback(3, 'lista:alunos:2'))->assertOk();
         $this->assertStringContainsString('Estudante 6', Http::recorded()->last()[0]['text']);
     }
 
@@ -87,10 +87,10 @@ class TelegramMenuConsultaTest extends TestCase
     {
         $dono = $this->donoVinculado();
         $anterior = Http::recorded()->count();
-        $this->enviar($this->callback(2, 'lista:alunos:1', 'group'))->assertOk();
+        $this->enviar($this->telegramCallback(2, 'lista:alunos:1', 'group'))->assertOk();
         $this->assertCount($anterior, Http::recorded());
         app(TelegramAdministrativo::class)->revogar($dono);
-        $this->enviar($this->callback(3, 'lista:alunos:1'))->assertOk();
+        $this->enviar($this->telegramCallback(3, 'lista:alunos:1'))->assertOk();
         $this->assertStringContainsString('Acesso restrito', Http::recorded()->last()[0]['text']);
     }
 
@@ -99,14 +99,14 @@ class TelegramMenuConsultaTest extends TestCase
         $this->donoVinculado();
         $this->enviar($this->mensagem(2, '/buscar '.str_repeat('x', 100)))->assertOk();
         $this->assertStringContainsString('até 60', Http::recorded()->last()[0]['text']);
-        $this->enviar($this->callback(3, 'lista:users:1'))->assertOk();
+        $this->enviar($this->telegramCallback(3, 'lista:users:1'))->assertOk();
         $this->assertStringContainsString('Opção inválida', Http::recorded()->last()[0]['text']);
     }
 
     public function test_repeticao_nao_reprocessa_callback(): void
     {
         $this->donoVinculado();
-        $payload = $this->callback(2, 'lista:alunos:1');
+        $payload = $this->telegramCallback(2, 'lista:alunos:1');
         $this->enviar($payload)->assertOk();
         $n = Http::recorded()->count();
         $this->enviar($payload)->assertOk();
