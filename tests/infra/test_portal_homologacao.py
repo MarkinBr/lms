@@ -133,6 +133,31 @@ class EntrypointTest(unittest.TestCase):
 
 
 class ReleaseTest(unittest.TestCase):
+    def test_package_preserves_git_case_and_excludes_data_without_filesystem_roundtrip(self):
+        module = infra()
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'source.tar'
+            output = Path(directory) / 'portal84-code.tar.gz'
+            entries = {
+                'app/Http/Controllers/API/ApplicationController.php': b'legacy API',
+                'app/Http/Controllers/Api/V1/ApplicationDocumentDownloadController.php': b'private download',
+                '.env': b'DO_NOT_COPY',
+                'database/user.sqlite': b'DO_NOT_COPY',
+            }
+            with tarfile.open(source, 'w') as tar:
+                for name, content in entries.items():
+                    info = tarfile.TarInfo(name)
+                    info.size = len(content)
+                    tar.addfile(info, io.BytesIO(content))
+            module.package_archive(source, output, '0123456789abcdef')
+            with tarfile.open(output, 'r:gz') as tar:
+                self.assertIn('app/Http/Controllers/API/ApplicationController.php', tar.getnames())
+                correct = 'app/Http/Controllers/Api/V1/ApplicationDocumentDownloadController.php'
+                self.assertIn(correct, tar.getnames())
+                self.assertEqual(tar.extractfile(correct).read(), b'private download')
+                self.assertNotIn('.env', tar.getnames())
+                self.assertNotIn('database/user.sqlite', tar.getnames())
+
     def test_path_guard_rejects_production_existing_overlap_and_traversal(self):
         module = infra()
         with tempfile.TemporaryDirectory() as directory:

@@ -49,10 +49,33 @@ class FonteLegado
                     continue;
                 }
                 $campos = array_values(array_filter($schema->getColumnListing($tabela), fn ($c) => ! preg_match('/senha|password|token|secret|ip_address/i', $c)));
-                $dados['historicos'][$tabela] = $conexao->table($tabela)->select($campos)->get()->map(fn ($r) => (array) $r)->all();
+                $dados['historicos'][$tabela] = $conexao->table($tabela)->select($campos)->get()->map(fn ($r) => $this->sanitizar((array) $r))->all();
             }
 
             return $dados;
         });
+    }
+
+    private function sanitizar(mixed $valor): mixed
+    {
+        if (is_array($valor)) {
+            $limpo = [];
+            foreach ($valor as $chave => $item) {
+                if (is_string($chave) && preg_match('/senha|password|token|secret|authorization|api.?key|ip_address/i', $chave)) {
+                    continue;
+                }
+                $limpo[$chave] = $this->sanitizar($item);
+            }
+
+            return $limpo;
+        }
+        if (is_string($valor)) {
+            $json = json_decode($valor, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
+                return json_encode($this->sanitizar($json), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            }
+        }
+
+        return $valor;
     }
 }

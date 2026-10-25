@@ -39,6 +39,7 @@ import argparse
 import base64
 import binascii
 import json
+import io
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -140,6 +141,42 @@ def prepare_release(repo, root, destination):
     (destination / '.portal84-release.json').write_text(
         json.dumps({'revision': revision, 'files': count}) + '\n', encoding='utf-8')
     return {'revision': revision, 'files': count}
+
+
+def package_archive(archive, output, revision):
+    """Preserva nomes do Git, inclusive API/Api, sem passar pelo NTFS."""
+    output = Path(output)
+    with tarfile.open(archive, 'r:') as source:
+        members = source.getmembers()
+        for member in members:
+            path = PurePosixPath(member.name)
+            if path.is_absolute() or '..' in path.parts or '\\' in member.name or ':' in member.name:
+                raise ValueError('Travessia no archive recusada.')
+            if not (member.isfile() or member.isdir()):
+                raise ValueError('Links e arquivos especiais no archive recusados.')
+        selected = [m for m in members if m.isfile() and allowed_release_file(m.name)]
+        with output.open('xb') as raw, tarfile.open(fileobj=raw, mode='w:gz') as target:
+            for member in selected:
+                target.addfile(member, source.extractfile(member))
+            marker = json.dumps({'revision': revision, 'files': len(selected)}).encode() + b'\n'
+            info = tarfile.TarInfo('.portal84-release.json')
+            info.size = len(marker)
+            target.addfile(info, io.BytesIO(marker))
+    return {'revision': revision, 'files': len(selected)}
+
+
+def package_release(repo, output):
+    repo, output = map(checked_path, (repo, output))
+    if not output.parent.is_dir() or not output.name.startswith('portal84-') or not output.name.endswith('.tar.gz'):
+        raise ValueError('Pacote deve ser portal84-<versão>.tar.gz em diretório existente.')
+    revision = subprocess.run(['git', '-C', str(repo), 'rev-parse', '--verify', 'HEAD'], capture_output=True, check=True).stdout.decode().strip()
+    with tempfile.TemporaryDirectory(prefix='portal84-package-') as directory:
+        archive = Path(directory) / 'head.tar'
+        with archive.open('wb') as stream:
+            result = subprocess.run(['git', '-C', str(repo), 'archive', '--format=tar', revision], stdout=stream, stderr=subprocess.PIPE)
+        if result.returncode:
+            raise ValueError('Git archive falhou; pacote não criado.')
+        return package_archive(archive, output, revision)
 
 
 def validate_secrets(values):
@@ -302,11 +339,17 @@ def main():
     validate = commands.add_parser('validate')
     validate.add_argument('--release', required=True, type=Path)
     validate.add_argument('--env-file', required=True, type=Path)
+    package = commands.add_parser('package')
+    package.add_argument('--repo', required=True, type=Path)
+    package.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     try:
         if args.command == 'prepare':
             result = prepare_release(args.repo, args.root, args.dest)
             print(f"portal84: release limpa criada; HEAD={result['revision']}; arquivos={result['files']}")
+        elif args.command == 'package':
+            result = package_release(args.repo, args.output)
+            print(f"portal84: pacote limpo criado; HEAD={result['revision']}; arquivos={result['files']}")
         else:
             validate_release(args.release, args.env_file)
     except (ValueError, OSError, tarfile.TarError) as error:

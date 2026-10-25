@@ -166,4 +166,44 @@ class ImportarPortalLegadoTest extends TestCase
             'notebook' => ['version' => 1, 'text' => 'Minha anotação', 'highlights' => [], 'anchors' => []],
         ])->assertOk()->assertJsonPath('success', true);
     }
+
+    public function test_reimportacao_nao_recria_vinculo_cancelado_quando_nova_origem_aparece(): void
+    {
+        $this->fonte('matriculas')->delete();
+        $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(0);
+        DB::table('matriculas')->update(['status' => 'cancelada']);
+        $this->fonte('matriculas')->insert(['id' => '20', 'user_id' => 'uuid-aluno-1', 'curso_id' => '3', 'numero_matricula' => 'CETS001', 'status' => 'Ativa', 'data_matricula' => '2026-01-10']);
+        $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(2);
+        $this->assertDatabaseCount('matriculas', 1);
+        $this->assertDatabaseHas('matriculas', ['status' => 'cancelada']);
+        $this->assertDatabaseMissing('matriculas', ['status' => 'ativa']);
+    }
+
+    public function test_cpf_com_mascara_no_destino_impede_duplicar_identidade(): void
+    {
+        User::factory()->create(['cpf' => '123.456.789-01']);
+        $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(2);
+        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('matriculas', 0);
+    }
+
+    public function test_historico_remove_credenciais_em_json_aninhado_preservando_conteudo(): void
+    {
+        Schema::connection('legado')->table('presence_log', fn (Blueprint $t) => $t->text('data')->nullable());
+        $this->fonte('presence_log')->update(['data' => json_encode(['mensagem' => 'Conteúdo preservado', 'itens' => [['token' => 'SEGREDO_ANINHADO', 'senha_atual' => 'SEGREDO_ANINHADO', 'minutos' => 12]]])]);
+        $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(0);
+        $conteudo = DB::table('legado_registros')->value('conteudo');
+        $this->assertStringNotContainsString('SEGREDO_ANINHADO', $conteudo);
+        $this->assertStringContainsString('Conteúdo preservado', $conteudo);
+        $this->assertStringContainsString('minutos', $conteudo);
+    }
+
+    public function test_material_de_aula_bloqueada_nao_aparece_no_curso(): void
+    {
+        $this->fonte('aula_programacao')->update(['status' => 'programada']);
+        $this->artisan('portal:importar-legado', ['--executar' => true])->assertExitCode(0);
+        $aluno = User::where('matricula_login', 'cets001')->firstOrFail();
+        $this->actingAs($aluno)->get(route('aluno.curso.show', DB::table('cursos')->value('id')))
+            ->assertOk()->assertDontSee('https://example.test/apostila.pdf');
+    }
 }

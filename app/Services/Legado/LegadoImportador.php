@@ -134,7 +134,7 @@ class LegadoImportador
                         $q->orWhereRaw('LOWER(email) = ?', [$email]);
                     }
                     if ($cpf) {
-                        $q->orWhere('cpf', $cpf);
+                        $q->orWhereRaw("REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '') = ?", [$cpf]);
                     }
                 })->exists();
                 if ($colisao) {
@@ -193,6 +193,10 @@ class LegadoImportador
                     'numero_matricula' => $r['numero_matricula'] ?? $r['matricula'] ?? null,
                     'data_matricula' => substr((string) ($r['data_matricula'] ?? $r['matriculado_em'] ?? now()->toDateString()), 0, 10),
                 ], $v, $idExistente ? (int) $idExistente : null);
+                // Uma falha nunca pode transformar atualização em criação no próximo vínculo.
+                if ($idExistente === null) {
+                    break;
+                }
             }
         }
     }

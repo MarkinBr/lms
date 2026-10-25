@@ -137,7 +137,15 @@ class CursosController extends Controller
         $progresso = $totalAulas > 0 ? (int) round(($aulasConcluidas / $totalAulas) * 100) : 0;
         $modulos = $curso->modulos;
         $materiaisLegados = Schema::hasTable('legado_materiais')
-            ? DB::table('legado_materiais')->where('curso_id', $curso->id)->orderBy('nome')->get()
+            ? DB::table('legado_materiais')->where('curso_id', $curso->id)
+                ->where(function ($query) use ($curso): void {
+                    $query->whereNull('aula_id')->orWhereExists(function ($aulas) use ($curso): void {
+                        $aulas->selectRaw('1')->from('aulas')
+                            ->join('modulos', 'modulos.id', '=', 'aulas.modulo_id')
+                            ->whereColumn('aulas.id', 'legado_materiais.aula_id')
+                            ->where('modulos.curso_id', $curso->id)->where('aulas.liberada', true);
+                    });
+                })->orderBy('nome')->get()
             : collect();
 
         return view('aluno.cursos.show', compact(
