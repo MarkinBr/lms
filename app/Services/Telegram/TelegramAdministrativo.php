@@ -5,9 +5,7 @@ namespace App\Services\Telegram;
 use App\Models\Application;
 use App\Models\Matricula;
 use App\Models\User;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 
 class TelegramAdministrativo
 {
@@ -77,9 +75,9 @@ class TelegramAdministrativo
 
         try {
             DB::transaction(function () use ($update, $id) {
-                if (! DB::table('telegram_updates')->insertOrIgnore([
+                if (DB::table('telegram_updates')->insertOrIgnore([
                     'update_id' => $id, 'created_at' => now(),
-                ])) {
+                ]) === 0) {
                     return;
                 }
 
