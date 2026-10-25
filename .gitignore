@@ -48,3 +48,7 @@ Thumbs.db
 # Pacotes de revisão e arquivos compactados gerados localmente
 *.zip
 *.tar.gz
+
+# Cache local dos testes Python de infraestrutura
+__pycache__/
+*.py[cod]

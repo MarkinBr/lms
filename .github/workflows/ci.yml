@@ -75,7 +75,10 @@ jobs:
           if [ "${#files[@]}" -gt 0 ]; then vendor/bin/pint --test "${files[@]}"; fi
 
       - name: Testes Laravel direcionados
-        run: php artisan test --filter='Application|Contato|Newsletter|Acompanhamento|Inscricao|Auth|PortalAlunoPublico|SsoController|PortalRoutesPlaceholderTest|TelegramAdministrativo'
+        run: php artisan test --filter='Application|Contato|Newsletter|Acompanhamento|Inscricao|Auth|PortalAlunoPublico|SsoController|PortalRoutesPlaceholderTest|TelegramAdministrativo|Legado'
+
+      - name: Testes da infraestrutura isolada
+        run: python3 -m unittest discover -s tests/infra -p 'test_*.py'
 
       - name: Instalar dependências JavaScript
         run: npm ci
