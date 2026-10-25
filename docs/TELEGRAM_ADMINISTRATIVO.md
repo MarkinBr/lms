@@ -36,3 +36,15 @@ Aplicar o override `docker/telegram-piloto.compose.yml` depois dos arquivos de h
 O Nginx encaminha apenas POST no caminho exato `/api/telegram/cetsadp/webhook`. O Laravel exige o segredo do header antes de processar o conteúdo. Registrar o webhook por HTTPS com `secret_token` e `allowed_updates=["message"]`, preservando atualizações pendentes. Validar token/identidade com `getMe`, registro com `getWebhookInfo`, rejeição sem segredo e acesso exclusivo do administrador escolhido.
 
 Depois da ativação, gerar o código de pareamento do administrador autorizado e enviar `/vincular CODIGO` em conversa privada com o bot. O código expira em dez minutos. A confirmação da conexão técnica não significa que uma conta Telegram já esteja vinculada.
+
+
+## Etapa 2 — menu e consultas (Issue #86; candidata em PR separado)
+
+- `/menu` ou `/ajuda`: botões de alunos, inscrições, matrículas, turmas e aulas, com até 5 registros por página e no máximo 20 páginas. `/status` e `/resumo` continuam disponíveis.
+- `/buscar NOME`: busca limitada a 2–60 caracteres e cinco correspondências de nome. `/aluno ID`: ficha acadêmica compacta com situação cadastral e até cinco matrículas.
+- `/notas ID`: até cinco registros de notas **legadas**, vinculados a `user_id` (não há vínculo acadêmico inequívoco com uma disciplina por ID). `/frequencia ID`: resumo exclusivamente de chamadas concluídas por matrícula (até cinco matrículas).
+- Botões são `callback_query` e só funcionam em chat privado do administrador previamente vinculado e ativo. A autorização é refeita antes de cada resposta; revogar/desativar bloqueia consultas posteriores.
+- Não são mostrados CPF, telefone, endereço, documentos, pagamentos, senhas nem planilhas completas. Consultas aprofundadas permanecem no painel autenticado. A busca ainda não oferece pesquisa por CPF, para reduzir exposição.
+- Implementação só de leitura nos models existentes. Não refaz pareamento, não altera webhook registrado nem exige migração adicional. O registro de `telegram_updates` é uma escrita técnica de idempotência, não de dados acadêmicos.
+- O envio para o Telegram continua na transação atual. Antes de **qualquer** fluxo futuro que escreva dados acadêmicos, adotar outbox/entrega separada e revalidar titular em cada confirmação.
+- Validar com `php artisan test --filter='TelegramMenuConsultaTest|TelegramAdministrativoTest'` e `vendor/bin/pint --test` nos arquivos PHP tocados em ambiente isolado. Jamais executar na base da VPS. Sem deploy automático nesta entrega.

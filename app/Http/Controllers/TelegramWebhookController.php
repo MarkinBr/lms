@@ -24,6 +24,7 @@ class TelegramWebhookController extends Controller
         $dados = $request->validate([
             'update_id' => ['required', 'integer', 'min:0'],
             'message' => ['sometimes', 'array'],
+            'callback_query' => ['sometimes', 'array'],
         ]);
         try {
             $bot->receber($dados);
