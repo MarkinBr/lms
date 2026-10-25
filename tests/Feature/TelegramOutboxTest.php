@@ -43,6 +43,8 @@ class TelegramOutboxTest extends TestCase
         $dono = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
         config()->set('services.telegram.admin_user_id', $dono->id);
         $codigo = app(TelegramAdministrativo::class)->criarCodigo($dono);
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => false], 503)]);
         $update = $this->update(1, '/vincular '.$codigo);
         $this->enviar($update)->assertOk();
@@ -69,6 +71,8 @@ class TelegramOutboxTest extends TestCase
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => false], 503)]);
         $this->enviar($this->update(2, '/resumo'))->assertOk();
         app(TelegramAdministrativo::class)->revogar($dono);
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
         app(TelegramOutbox::class)->drenarPendentes();
         $this->assertDatabaseHas('telegram_outbox', ['update_id' => 2, 'status' => 'descartado', 'payload' => null]);
