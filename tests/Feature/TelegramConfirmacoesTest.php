@@ -38,7 +38,7 @@ class TelegramConfirmacoesTest extends TestCase
         ]];
     }
 
-    private function callback(int $updateId, string $dado, string $tipo = 'private'): array
+    private function telegramCallback(int $updateId, string $dado, string $tipo = 'private'): array
     {
         return ['update_id' => $updateId, 'callback_query' => [
             'id' => 'callback-'.$updateId, 'from' => ['id' => 707],
@@ -72,8 +72,8 @@ class TelegramConfirmacoesTest extends TestCase
         $this->vincular();
         $codigo = $this->codigo();
         $this->assertDatabaseCount('telegram_confirmacoes', 1);
-        $this->enviar($this->callback(3, $codigo))->assertOk();
-        $this->enviar($this->callback(4, $codigo))->assertOk();
+        $this->enviar($this->telegramCallback(3, $codigo))->assertOk();
+        $this->enviar($this->telegramCallback(4, $codigo))->assertOk();
         $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'confirmado']);
         $this->assertDatabaseCount('telegram_auditoria', 2);
         $this->assertDatabaseCount('matriculas', 0);
@@ -84,8 +84,8 @@ class TelegramConfirmacoesTest extends TestCase
         $this->vincular();
         $confirmar = $this->codigo();
         $cancelar = str_replace('confirmar:', 'cancelar:', $confirmar);
-        $this->enviar($this->callback(3, $cancelar))->assertOk();
-        $this->enviar($this->callback(4, $confirmar))->assertOk();
+        $this->enviar($this->telegramCallback(3, $cancelar))->assertOk();
+        $this->enviar($this->telegramCallback(4, $confirmar))->assertOk();
         $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'cancelado']);
         $this->assertDatabaseCount('telegram_auditoria', 2);
     }
@@ -95,7 +95,7 @@ class TelegramConfirmacoesTest extends TestCase
         $admin = $this->vincular();
         $codigo = $this->codigo();
         DB::table('telegram_confirmacoes')->update(['expira_em' => now()->subMinute()]);
-        $this->enviar($this->callback(3, $codigo))->assertOk();
+        $this->enviar($this->telegramCallback(3, $codigo))->assertOk();
         $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'expirado']);
 
         $this->enviar($this->mensagem(4, '/testeconfirmacao'))->assertOk();
