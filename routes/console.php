@@ -68,3 +68,14 @@ Schedule::command('lembretes:disparar-vencimento --dias=3')
 Schedule::command('cobrancas:disparar-atrasadas')
     ->dailyAt('10:00')->withoutOverlapping()->runInBackground()
     ->appendOutputTo(storage_path('logs/cobrancas.log'));
+
+
+// Telegram CETSADP: por padrão estes agendamentos não existem. Habilitar apenas
+// no processo autorizado que possua credenciais e scheduler em execução.
+if ((bool) config('services.telegram.avisos_automaticos', false)) {
+    Schedule::command('telegram:avisos-automaticos --tipo=diario')
+        ->dailyAt('08:00')->timezone('America/Sao_Paulo')->withoutOverlapping();
+
+    Schedule::command('telegram:avisos-automaticos --tipo=semanal')
+        ->weeklyOn(1, '08:05')->timezone('America/Sao_Paulo')->withoutOverlapping();
+}
