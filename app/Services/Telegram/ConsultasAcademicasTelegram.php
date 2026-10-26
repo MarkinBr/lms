@@ -27,6 +27,7 @@ class ConsultasAcademicasTelegram
     public function menu(): array
     {
         $teclado = [];
+        $teclado[] = [['text' => 'Administrar', 'callback_data' => 'administrar']];
         foreach (self::TITULOS as $chave => $titulo) {
             $teclado[] = [['text' => $titulo, 'callback_data' => "lista:{$chave}:1"]];
         }

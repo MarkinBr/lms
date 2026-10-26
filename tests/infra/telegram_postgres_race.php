@@ -1,6 +1,7 @@
 <?php
 
 // Execução exclusivamente em PostgreSQL descartável, fora do bootstrap SQLite do PHPUnit.
+use App\Models\Aviso;
 use App\Models\User;
 use App\Services\Telegram\ConfirmacoesTelegram;
 use App\Services\Telegram\TelegramAdministrativo;
@@ -55,7 +56,7 @@ if (($argv[1] ?? '') === 'worker') {
 
 $runner = realpath(__FILE__);
 verify($runner !== false, 'Runner indisponível');
-$scenarios = ['confirmar-confirmar', 'confirmar-revogar'];
+$scenarios = ['confirmar-confirmar', 'confirmar-revogar', 'aviso-confirmar-confirmar', 'aviso-confirmar-revogar'];
 for ($round = 1; $round <= 4; $round++) {
     foreach ($scenarios as $scenario) {
         $owner = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
@@ -65,14 +66,19 @@ for ($round = 1; $round <= 4; $round++) {
             'user_id' => $owner->id, 'chat_id' => $chat,
             'created_at' => now(), 'updated_at' => now(),
         ]);
-        $prepared = app(ConfirmacoesTelegram::class)->preparar($chat, $owner->id * 1000 + 1);
+        $avisoReal = str_starts_with($scenario, 'aviso-');
+        $revogar = str_ends_with($scenario, '-revogar');
+        $titulo = 'Concorrência descartável '.$owner->id;
+        $prepared = $avisoReal
+            ? app(ConfirmacoesTelegram::class)->prepararAviso($chat, $titulo.' | Material sintético do CI.', $owner->id * 1000 + 1)
+            : app(ConfirmacoesTelegram::class)->preparar($chat, $owner->id * 1000 + 1);
         $callback = substr($prepared['reply_markup']['inline_keyboard'][0][0]['callback_data'], strlen('confirmar:'));
         $confirmation = DB::table('telegram_confirmacoes')->where('user_id', $owner->id)->first();
         verify($confirmation !== null, 'Proposta não criada');
         $gate = sys_get_temp_dir().'/telegram-race-'.bin2hex(random_bytes(12));
         $commands = [
             ['confirmar', $owner->id * 1000 + 2],
-            [$scenario === 'confirmar-revogar' ? 'revogar' : 'confirmar', $owner->id * 1000 + 3],
+            [$revogar ? 'revogar' : 'confirmar', $owner->id * 1000 + 3],
         ];
         $workers = [];
         try {
@@ -113,7 +119,7 @@ for ($round = 1; $round <= 4; $round++) {
         $decisionCount = DB::table('telegram_auditoria')->where('confirmacao_id', $confirmation->id)
             ->where('antes', 'pendente')->count();
         verify($decisionCount <= 1, 'Duas decisões na auditoria');
-        if ($scenario === 'confirmar-confirmar') {
+        if (! $revogar) {
             verify($current->status === 'confirmado' && $decisionCount === 1,
                 'Confirmação dupla não consumida exatamente uma vez');
         } else {
@@ -123,6 +129,12 @@ for ($round = 1; $round <= 4; $round++) {
                 ->where('confirmacao_id', $confirmation->id)->count();
             verify($decisionCount + $revocations === 1,
                 'Confirmação/revogação sem transição única auditada');
+        }
+        if ($avisoReal) {
+            verify(Aviso::where('titulo', $titulo)->count() === ($current->status === 'confirmado' ? 1 : 0),
+                'Publicação precisa acompanhar a decisão exatamente uma vez');
+            verify(! DB::table('telegram_publicacoes')->where('confirmacao_id', $confirmation->id)->exists(),
+                'Texto criptografado remanescente após confirmação ou revogação');
         }
         echo "OK {$scenario} rodada {$round}\n";
     }

@@ -4,6 +4,37 @@ namespace App\Services\Telegram;
 
 class CatalogoComandosTelegram
 {
+    private const OPERACOES = [
+        'novoaviso' => ['Novo aviso', '/novoaviso TÍTULO | MENSAGEM'],
+        'novoevento' => ['Novo evento', '/novoevento TÍTULO | AAAA-MM-DD HH:MM | DESCRIÇÃO'],
+        'novaaula' => ['Nova aula', '/novaaula DISCIPLINA_ID | TÍTULO | URL_VIDEO | URL_PDF. Use - para material ausente; links devem usar HTTPS'],
+        'liberaraula' => ['Liberar aula', '/liberaraula AULA_ID. Consulte /aulaspendentes para encontrar o ID'],
+        'novachamada' => ['Nova chamada', '/novachamada TURMA_ID DISCIPLINA_ID AAAA-MM-DD'],
+        'registrarpresenca' => ['Registrar frequência', '/registrarpresenca CHAMADA_ID MATRICULA_ID presente|falta|falta_justificada'],
+        'concluirchamada' => ['Concluir chamada', '/concluirchamada CHAMADA_ID. Registre antes todos os alunos ativos'],
+    ];
+
+    public static function orientar(string $comando): ?array
+    {
+        if (! isset(self::OPERACOES[$comando])) {
+            return null;
+        }
+
+        return ['text' => 'Uso: '.self::OPERACOES[$comando][1]."\nVocê receberá uma prévia para confirmar ou cancelar em até 10 minutos."];
+    }
+
+    public static function menuAdministrativo(): array
+    {
+        $botoes = [];
+        foreach (self::OPERACOES as $comando => [$titulo]) {
+            $botoes[] = [['text' => $titulo, 'callback_data' => 'operacao:'.$comando]];
+        }
+        $botoes[] = [['text' => 'Voltar às consultas', 'callback_data' => 'menu']];
+
+        return ['text' => "CETSADP • Administrar\nEscolha uma operação para ver como preencher. Toda alteração exige prévia e confirmação.",
+            'reply_markup' => ['inline_keyboard' => $botoes]];
+    }
+
     /**
      * Apenas comandos já tratados no TelegramAdministrativo.
      * Comandos com argumentos exibem instruções de uso quando enviados sem parâmetros.
@@ -12,6 +43,7 @@ class CatalogoComandosTelegram
     {
         return [
             ['command' => 'menu', 'description' => 'Abrir menu administrativo'],
+            ['command' => 'administrar', 'description' => 'Operações com prévia e confirmação'],
             ['command' => 'hoje', 'description' => 'Visão acadêmica de hoje'],
             ['command' => 'resumo', 'description' => 'Resumo acadêmico'],
             ['command' => 'pendencias', 'description' => 'Consultar pendências'],
@@ -30,6 +62,13 @@ class CatalogoComandosTelegram
             ['command' => 'inscricao', 'description' => 'Consultar inscrição: requer UUID'],
             ['command' => 'filtro', 'description' => 'Filtrar alunos: requer critérios'],
             ['command' => 'revisarinscricao', 'description' => 'Pré-analisar inscrição: requer UUID'],
+            ['command' => 'novoaviso', 'description' => 'Publicar aviso após confirmação'],
+            ['command' => 'novaaula', 'description' => 'Cadastrar aula de vídeo ou PDF em rascunho'],
+            ['command' => 'liberaraula', 'description' => 'Liberar aula após confirmação'],
+            ['command' => 'concluirchamada', 'description' => 'Concluir chamada com frequência completa'],
+            ['command' => 'novoevento', 'description' => 'Publicar evento após confirmação'],
+            ['command' => 'novachamada', 'description' => 'Criar chamada após confirmação'],
+            ['command' => 'registrarpresenca', 'description' => 'Registrar frequência após confirmação'],
             ['command' => 'alertas', 'description' => 'Consultar ou alterar preferência de alertas'],
             ['command' => 'testeconfirmacao', 'description' => 'Simular uma confirmação sem alterar dados'],
             ['command' => 'status', 'description' => 'Verificar o vínculo administrativo'],
