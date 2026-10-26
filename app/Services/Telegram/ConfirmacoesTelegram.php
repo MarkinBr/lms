@@ -19,6 +19,18 @@ use Illuminate\Support\Facades\DB;
 
 class ConfirmacoesTelegram
 {
+    private const SERVICOS_ADMINISTRATIVOS = [
+        'aprovar_inscricao' => InscricoesAdministrativasTelegram::class,
+        'rejeitar_inscricao' => InscricoesAdministrativasTelegram::class,
+        'criar_aluno' => AlunosAdministrativosTelegram::class,
+        'editar_aluno' => AlunosAdministrativosTelegram::class,
+        'recuperar_acesso' => AlunosAdministrativosTelegram::class,
+        'ativar_acesso' => AlunosAdministrativosTelegram::class,
+        'lancar_nota' => NotasAdministrativasTelegram::class,
+        'corrigir_nota' => NotasAdministrativasTelegram::class,
+        'publicar_noticia' => NoticiasAdministrativasTelegram::class,
+    ];
+
     public function prepararAula(string $chatId, string $conteudo, int $updateId): array
     {
         $partes = array_map('trim', explode('|', $conteudo));
@@ -185,7 +197,7 @@ class ConfirmacoesTelegram
             })->exists();
     }
 
-    private function prepararOperacao(string $chatId, int $updateId, string $acao, array $dados, string $previa, string $botao): array
+    public function prepararOperacao(string $chatId, int $updateId, string $acao, array $dados, string $previa, string $botao): array
     {
         return DB::transaction(function () use ($chatId, $updateId, $acao, $dados, $previa, $botao) {
             $usuario = $this->donoComVinculoBloqueado($chatId);
@@ -402,7 +414,8 @@ class ConfirmacoesTelegram
                     $status = 'obsoleto';
                 }
             }
-            if (in_array($linha->acao, ['publicar_aviso', 'criar_evento', 'criar_chamada', 'registrar_presenca', 'criar_aula', 'liberar_aula', 'concluir_chamada'], true)) {
+            if (isset(self::SERVICOS_ADMINISTRATIVOS[$linha->acao])
+                || in_array($linha->acao, ['publicar_aviso', 'criar_evento', 'criar_chamada', 'registrar_presenca', 'criar_aula', 'liberar_aula', 'concluir_chamada'], true)) {
                 if ($status === 'confirmado') {
                     $publicacao = DB::table('telegram_publicacoes')
                         ->where('confirmacao_id', $linha->id)->lockForUpdate()->first();
@@ -436,7 +449,7 @@ class ConfirmacoesTelegram
             return $status === 'confirmado' ? 'confirmado:'.$linha->acao : $status;
         });
 
-        return ['text' => match ($resultado) {
+        $texto = match ($resultado) {
             'confirmado:publicar_aviso' => 'Aviso publicado com sucesso.',
             'confirmado:criar_evento' => 'Evento publicado no calendário.',
             'confirmado:criar_chamada' => 'Chamada criada em rascunho. Registre a frequência dos alunos.',
@@ -444,16 +457,38 @@ class ConfirmacoesTelegram
             'confirmado:criar_aula' => 'Aula cadastrada em rascunho. Use /aulaspendentes para consultar e /liberaraula ID para publicar.',
             'confirmado:liberar_aula' => 'Aula liberada para os alunos.',
             'confirmado:concluir_chamada' => 'Chamada concluída com a frequência consolidada.',
+            'confirmado:aprovar_inscricao' => 'Inscrição aprovada e matrícula criada. Comunicação individual registrada na fila.',
+            'confirmado:rejeitar_inscricao' => 'Inscrição rejeitada. Comunicação individual registrada na fila.',
+            'confirmado:criar_aluno' => 'Aluno cadastrado. Consulte /buscar NOME para localizar a ficha.',
+            'confirmado:editar_aluno' => 'Cadastro do aluno atualizado.',
+            'confirmado:recuperar_acesso' => 'Recuperação solicitada para o e-mail verificado do aluno. O envio será processado em fila.',
+            'confirmado:ativar_acesso' => 'Ativação individual registrada na fila. A entrega depende do serviço de e-mail.',
+            'confirmado:lancar_nota' => 'Notas lançadas com sucesso.',
+            'confirmado:corrigir_nota' => 'Notas corrigidas com sucesso.',
+            'confirmado:publicar_noticia' => 'Notícia publicada no site institucional.',
             'confirmado:revisao_inscricao', 'confirmado:simulacao' => 'Revisão ou simulação confirmada, sem alterar os dados acadêmicos.',
             'cancelado' => 'Operação cancelada. Nenhuma alteração foi realizada.',
             'expirado' => 'Confirmação expirada. Prepare uma nova revisão.',
             'obsoleto' => 'Os dados mudaram ou a operação já foi realizada. Consulte o painel e prepare uma nova confirmação.',
             default => 'Confirmação inválida ou sem autorização.',
-        }];
+        };
+        if ($resultado === 'confirmado:criar_aluno') {
+            $recursoId = DB::table('telegram_confirmacoes')->where('codigo_hash', hash('sha256', $codigo))
+                ->where('chat_id', $chatId)->where('status', 'confirmado')->value('recurso_id');
+            $aluno = $recursoId ? User::find($recursoId) : null;
+            if ($aluno && $aluno->nivel === 'aluno') {
+                $texto .= "\nAluno #{$aluno->id} • matrícula de acesso: {$aluno->matricula_login}";
+            }
+        }
+
+        return ['text' => $texto];
     }
 
     private function executarOperacao(string $acao, array $dados, User $usuario): ?Model
     {
+        if (isset(self::SERVICOS_ADMINISTRATIVOS[$acao])) {
+            return app(self::SERVICOS_ADMINISTRATIVOS[$acao])->executar($acao, $dados, $usuario);
+        }
         if ($acao === 'criar_aula') {
             $disciplina = Disciplina::with('modulo')->whereKey($dados['disciplina_id'])->lockForUpdate()->first();
             if (! $disciplina || ! $disciplina->modulo

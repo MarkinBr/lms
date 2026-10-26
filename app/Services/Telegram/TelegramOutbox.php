@@ -128,6 +128,12 @@ class TelegramOutbox
 
     private function autorizado(object $item): bool
     {
+        if ($item->evento_chave !== null && str_starts_with($item->evento_chave, 'resumo_diario:')) {
+            if ($item->user_id === null || ! DB::table('telegram_alerta_preferencias')
+                ->where('user_id', $item->user_id)->where('ativo', true)->exists()) {
+                return false;
+            }
+        }
         if (! (bool) $item->requer_autorizacao) {
             // Apenas respostas explicitamente classificadas como genéricas.
             return true;

@@ -54,6 +54,7 @@ class AprovarInscricaoService
         Application $application,
         User $operador,
         ?string $observacoes = null,
+        bool $notificar = true,
     ): AprovarInscricaoResult {
         $decisaoEfetivada = false;
 
@@ -166,11 +167,11 @@ class AprovarInscricaoService
 
         // 9) FORA da transação (após commit): disparar link seguro
         // de definição de senha SOMENTE para conta recém-criada.
-        if ($resultado->usuarioRecemCriado) {
+        if ($notificar && $resultado->usuarioRecemCriado) {
             $this->dispararLinkDefinicaoSenha($resultado->user);
         }
 
-        if ($decisaoEfetivada) {
+        if ($notificar && $decisaoEfetivada) {
             $this->notificarDecisao->notificarMatricula(
                 $resultado->application,
                 $resultado->matricula->numero_matricula,
@@ -189,6 +190,7 @@ class AprovarInscricaoService
         Application $application,
         User $operador,
         string $motivo,
+        bool $notificar = true,
     ): Application {
         $motivo = trim($motivo);
         if ($motivo === '') {
@@ -236,13 +238,13 @@ class AprovarInscricaoService
             $this->registrarAuditoria('inscricao.rejeitada', [
                 'application_id' => $inscricao->id,
                 'operador_id' => $operador->id,
-                'motivo' => $motivo,
+                'motivo_registrado' => true,
             ]);
 
             return $inscricao->refresh();
         });
 
-        if ($decisaoEfetivada) {
+        if ($notificar && $decisaoEfetivada) {
             $this->notificarDecisao->notificarRejeicao($resultado, $motivo);
         }
 

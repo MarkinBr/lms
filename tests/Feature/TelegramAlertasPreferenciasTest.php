@@ -48,7 +48,7 @@ class TelegramAlertasPreferenciasTest extends TestCase
 
         $this->enviar(4, '/alertas sim')->assertOk();
         $this->assertDatabaseHas('telegram_alerta_preferencias', ['user_id' => $usuario->id, 'ativo' => true]);
-        $this->assertStringContainsString('envio automático ainda não está habilitado', mb_strtolower(Http::recorded()->last()[0]['text']));
+        $this->assertStringContainsString('08:00', Http::recorded()->last()[0]['text']);
 
         $this->enviar(5, '/alertas nao')->assertOk();
         $this->assertDatabaseHas('telegram_alerta_preferencias', ['user_id' => $usuario->id, 'ativo' => false]);

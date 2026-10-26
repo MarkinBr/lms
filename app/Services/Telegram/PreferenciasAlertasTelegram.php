@@ -15,7 +15,7 @@ class PreferenciasAlertasTelegram
 
         return ['text' => 'Alertas administrativos '.($ativo ? 'solicitados.' : 'desativados.')
             ."\nAtivação/desativação da preferência: /alertas sim ou /alertas nao."
-            ."\nO envio automático ainda não está habilitado no piloto; falta homologar outbox, horário e infraestrutura."];
+            ."\nResumo diário às 08:00 (horário de Brasília), sujeito à execução do agendador."];
     }
 
     public function definir(string $chatId, bool $ativo): array
@@ -25,6 +25,13 @@ class PreferenciasAlertasTelegram
             ['user_id' => $userId],
             ['ativo' => $ativo, 'created_at' => now(), 'updated_at' => now()]
         );
+        if (! $ativo) {
+            DB::table('telegram_outbox')->where('user_id', $userId)
+                ->where('evento_chave', 'like', 'resumo_diario:%')
+                ->whereIn('status', ['pendente', 'enviando'])
+                ->update(['status' => 'descartado', 'payload' => null,
+                    'lease_ate' => null, 'proxima_tentativa_em' => null, 'updated_at' => now()]);
+        }
 
         return $this->consultar($chatId);
     }

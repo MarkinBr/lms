@@ -27,11 +27,27 @@ Use IDs do banco conectado: IDs locais e da VPS podem diferir. `/buscar`, `/alun
 - Mensagens são entregues pela outbox após a transação; a confirmação não depende de uma chamada HTTP enquanto os dados acadêmicos estão bloqueados.
 - Avisos/eventos são gerais: revise a prévia antes de confirmar. Não existe disparo de comunicação em massa neste incremento.
 
-## Etapas ainda abertas da Issue #120
+## Operações complementares da Issue #120
 
-Cadastro/edição de alunos, recuperação de acesso pelo bot, decisão efetiva de inscrições, lançamento/correção de notas, notícias institucionais, consultas financeiras e alertas automáticos ainda não são operações de escrita deste incremento. `/revisarinscricao` continua sendo pré-análise; `/notas` apenas consulta notas legadas.
+| Comando | Efeito |
+|---|---|
+| `/novoaluno NOME \| EMAIL ou - \| CPF ou -` | Cria aluno ativo com matrícula de acesso aleatória e senha desconhecida. Não cria matrícula em curso nem fornece senha pelo chat. |
+| `/editaraluno ID \| NOME \| TELEFONE ou -` | Altera somente nome/telefone. Não muda perfil, CPF, e-mail ou senha. |
+| `/recuperaracesso ALUNO_ID` | Enfileira recuperação pelo broker existente apenas para e-mail já verificado, exclusivo e de aluno ativo. Sem transporte real, explica a indisponibilidade. |
+| `/ativaracesso ALUNO_ID` | Reenvia ativação individual de aluno pendente para o e-mail cadastrado, após prévia e confirmação. Cadastro com e-mail já registra uma ativação na fila. |
+| `/aprovarinscricao UUID` | Executa `AprovarInscricaoService`, cria/reutiliza aluno elegível e matrícula, registra notificação individual na fila database na mesma transação. |
+| `/rejeitarinscricao UUID \| MOTIVO` | Rejeita inscrição elegível com justificativa e notificação individual em fila. |
+| `/lancarnota ALUNO_ID \| DISCIPLINA_ID \| PERIODO \| AV1 \| AV2 \| AV3 \| FALTAS` | Notas 0–10 e faltas inteiras, com matrícula ativa no curso. Recusa duplicatas. |
+| `/corrigirnota NOTA_ID \| AV1 \| AV2 \| AV3 \| FALTAS` | Corrige valores após apresentar os anteriores. Recusa dados alterados após a prévia e disciplinas legadas ambíguas. `/notas ALUNO_ID` mostra os IDs. |
+| `/novanoticia TÍTULO \| RESUMO \| TEXTO` | Publica texto no site institucional, com leitura completa e escape de HTML. |
+| `/financeiro` | Somente totais de mensalidades, sem dados individuais ou códigos de pagamento. |
+| `/alertas sim` e `/alertas nao` | Opt-in para um resumo diário a partir das 08:00 de Brasília. Desativar descarta saídas agendadas ainda pendentes. |
 
-Para implementar as próximas etapas, reutilizar `AprovarInscricaoService` e os fluxos existentes de senha, sem copiar a rotina de cadastro rápido com senha padrão. Antes de permitir notas, resolver o contrato entre notas legadas e avaliações: o modelo atual calcula situação `Recuperação`, que precisa ser compatível com a tabela de produção. Não criar lançamentos financeiros ou alterar pagamentos apenas para completar o menu.
+As escritas complementares usam a mesma confirmação, expiração, auditoria e proteção contra repetição. Os snapshots incluem os registros relevantes, não apenas a data de alteração. `/revisarinscricao` permanece uma pré-análise sem decisão efetiva. A normalização de notas preserva registros e permite a situação `Recuperação` no SQLite/PostgreSQL.
+
+E-mails são processados depois do commit, em fila database no mesmo banco da decisão; erros de entrega não desfazem a matrícula. Ativação e comunicação de decisão são jobs separados: repetir a decisão não cria outro token de ativação. Confirmar a decisão não significa entrega do e-mail. Retentativas podem reenviar comunicação se houver falha após o aceite pelo transporte. O piloto originalmente usa `MAIL_MAILER=array`: é necessária configuração de e-mail real para recuperação e ativação entregarem mensagens. Array/log são bloqueados também quando aninhados em failover/roundrobin. Não expor links/tokens de acesso no Telegram. Cadastro sem e-mail permanece pendente de acesso até a instituição completar o contato seguro.
+
+No piloto isolado, executar **somente** `php artisan telegram:rotinas` em um serviço dedicado com token e rede de saída, mantendo o heartbeat existente e a agenda geral desativados. `--uma-vez` executa um ciclo para verificação. Não ativar `schedule:work` para habilitar apenas Telegram: a agenda geral também inclui cobranças. O resumo é deduplicado por usuário/data; a outbox revalida vínculo, administrador e preferência antes de entregar.
 
 ## Verificação e implantação
 
@@ -39,7 +55,7 @@ Para implementar as próximas etapas, reutilizar `AprovarInscricaoService` e os 
 2. Aguardar os jobs do PR: operações administrativas, regressões existentes, concorrência PostgreSQL 16 efêmero, infraestrutura Linux e Playwright. A estação Windows não substitui esse teste PostgreSQL.
 3. Integrar pela cadeia de PRs do Telegram. Esta branch parte de `feat/114-telegram-menu-comandos` (PR #115); não substituir arquivos diretamente a partir de `main`, que ainda não contém essa cadeia.
 4. Antes de implantar no piloto, identificar a imagem atual, fazer backup verificável do banco/arquivos, testar migrações em banco PostgreSQL descartável e manter imagem/configuração anteriores para rollback. Não copiar banco local nem alterar o portal legado.
-5. Aplicar a migração aditiva `2026_10_26_000001_create_telegram_publicacoes_table.php` antes de iniciar este código, pois revogação também usa a nova tabela. Preservar `APP_KEY` para descriptografar propostas e outbox.
+5. Aplicar as migrações de `telegram_publicacoes`, `evento_chave` da outbox, normalização de notas, notícias e referência de auditoria compatível com UUID antes de iniciar este código. Preservar `APP_KEY` para descriptografar propostas e assinaturas da fila. A normalização de notas e a ampliação da chave auditada não têm rollback destrutivo; rollback de código conserva dados/colunas.
 6. Conferir webhook aceitando `message` e `callback_query`, executar `telegram:comandos-publicar --simular` e publicar o catálogo privado a partir do processo web autorizado. Não expor token, `.env` ou saída completa de configuração Docker.
 7. Homologar pelo chat privado com registros sintéticos: menu, cancelamento, confirmação expirada, revogação e dupla confirmação. Nenhum desses testes deve publicar conteúdo real para alunos.
 
