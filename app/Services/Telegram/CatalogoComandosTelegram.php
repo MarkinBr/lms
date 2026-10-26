@@ -23,6 +23,82 @@ class CatalogoComandosTelegram
         'concluirchamada' => ['Concluir chamada', '/concluirchamada CHAMADA_ID. Registre antes todos os alunos ativos'],
     ];
 
+    public static function menuPrincipal(): array
+    {
+        return [
+            'text' => "CETSADP • Painel administrativo\nEscolha uma área para continuar. Você pode voltar ao menu a qualquer momento.",
+            'reply_markup' => ['inline_keyboard' => [
+                [['text' => '👨‍🎓 Alunos', 'callback_data' => 'area:alunos'], ['text' => '📚 Cursos e aulas', 'callback_data' => 'area:cursos']],
+                [['text' => '📝 Notas e presença', 'callback_data' => 'area:avaliacoes'], ['text' => '📢 Notícias e eventos', 'callback_data' => 'area:comunicacao']],
+                [['text' => '📊 Relatórios', 'callback_data' => 'area:relatorios'], ['text' => '⚙️ Administração', 'callback_data' => 'area:admin']],
+            ]],
+        ];
+    }
+
+    public static function menuArea(string $area): array
+    {
+        $menus = [
+            'alunos' => ['Gestão de alunos', [
+                ['Cadastrar aluno', 'fluxo:novoaluno'],
+                ['Listar alunos', 'lista:alunos:1'],
+                ['Buscar aluno', 'orientar:buscar'],
+                ['Editar cadastro', 'operacao:editaraluno'],
+                ['Recuperar acesso', 'operacao:recuperaracesso'],
+                ['Ativar acesso', 'operacao:ativaracesso'],
+            ]],
+            'cursos' => ['Cursos e aulas', [
+                ['Consultar cursos', 'cursos'],
+                ['Listar turmas', 'lista:turmas:1'],
+                ['Listar aulas', 'lista:aulas:1'],
+                ['Cadastrar aula', 'operacao:novaaula'],
+                ['Liberar aula', 'operacao:liberaraula'],
+            ]],
+            'avaliacoes' => ['Notas e presença', [
+                ['Lançar nota', 'operacao:lancarnota'],
+                ['Corrigir nota', 'operacao:corrigirnota'],
+                ['Nova chamada', 'operacao:novachamada'],
+                ['Registrar presença', 'operacao:registrarpresenca'],
+                ['Concluir chamada', 'operacao:concluirchamada'],
+            ]],
+            'comunicacao' => ['Notícias e eventos', [
+                ['Publicar notícia', 'operacao:novanoticia'],
+                ['Publicar aviso', 'operacao:novoaviso'],
+                ['Novo evento', 'operacao:novoevento'],
+            ]],
+            'relatorios' => ['Relatórios e indicadores', [
+                ['Painel do dia', 'hoje'],
+                ['Relatórios', 'relatorios'],
+                ['Agenda da semana', 'agenda7'],
+                ['Resumo financeiro', 'financeiro'],
+            ]],
+            'admin' => ['Administração', [
+                ['Pendências', 'pendencias'],
+                ['Alertas', 'alertas'],
+                ['Consultas avançadas', 'menuconsultas'],
+                ['Todas as operações', 'administrar'],
+            ]],
+        ];
+
+        if (! isset($menus[$area])) {
+            return self::menuPrincipal();
+        }
+
+        [$titulo, $opcoes] = $menus[$area];
+        $teclado = [];
+        foreach (array_chunk($opcoes, 2) as $linha) {
+            $teclado[] = array_map(
+                fn (array $opcao): array => ['text' => $opcao[0], 'callback_data' => $opcao[1]],
+                $linha
+            );
+        }
+        $teclado[] = [['text' => 'Voltar ao menu principal', 'callback_data' => 'menu']];
+
+        return [
+            'text' => "CETSADP • {$titulo}\nSelecione o que deseja fazer:",
+            'reply_markup' => ['inline_keyboard' => $teclado],
+        ];
+    }
+
     public static function orientar(string $comando): ?array
     {
         if (! isset(self::OPERACOES[$comando])) {
