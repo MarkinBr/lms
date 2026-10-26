@@ -122,3 +122,12 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Regressão determinística injeta `revogar()` durante a geração de `/aluno` e verifica que **nenhuma requisição HTTP Telegram** foi feita com o conteúdo.
 - Ainda não resolvidos por este PR: D2 (revogação na inativação), D3 (purga sem rede), D4 (UUID de /inscricao), D5 (fencing da Outbox), D6 (editMessageText), G1 (lacuna do CI), efeitos externos do serviço acadêmico.
 - Não houve implantação e não foram habilitadas operações de escrita acadêmica.
+
+## Auditoria independente — D2: inativação e rebaixamento do administrador (Issue #112)
+
+- Ao atualizar **por Eloquent** `User::update(['ativo' => false])` ou `User::update(['nivel' => ...])` para um perfil que não é administrador, `TelegramUsuarioObserver` revoga o vínculo, anula códigos de pareamento em aberto ao excluir a linha de `telegram_vinculos`, cancela propostas pendentes com registro em `telegram_auditoria_revogacoes` e descarta respostas protegidas ainda pendentes. Nenhuma mensagem é enviada pela revogação.
+- Ao reativar a mesma conta ou promover novamente para administrador, **não é permitido reutilizar o chat anterior**: deve ser emitido um novo código e o administrador precisa executar `/vincular`.
+- O método manual `revogar(User $usuario)` continua restrito ao proprietário ativo; a operação interna `revogarVinculo(int $usuarioId)` não depende de a conta continuar elegível e só deve ser chamada por código servidor confiável.
+- A exclusão via `$usuario->delete()` também aciona a limpeza; vínculos de auditoria com `restrictOnDelete` podem impedir a exclusão física de usuários que possuam propostas — comportamento de retenção já existente e que requer política específica.
+- **Limitação importante:** eventos Eloquent **não** são emitidos por atualização massiva `User::query()->where(...)->update(...)`, `DB::table('users')->update(...)` ou SQL direto. Esses fluxos precisam ser inventariados e migrados para serviços que revogam explicitamente o Telegram; a correção atual não garante revogação nesses caminhos.
+- Não alterar produção, Docker, scheduler ou banco real sem homologação das migrações anteriores e dos controles de auditoria.
