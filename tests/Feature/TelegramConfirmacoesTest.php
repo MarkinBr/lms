@@ -121,7 +121,8 @@ class TelegramConfirmacoesTest extends TestCase
         $codigo = $this->codigo();
         $admin->update(['ativo' => false]);
         $this->enviar($this->telegramCallback(3, $codigo))->assertOk();
-        $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'pendente']);
+        $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'cancelado']);
+        $this->assertDatabaseCount('telegram_auditoria_revogacoes', 1);
         $this->assertDatabaseCount('telegram_auditoria', 1);
     }
 
