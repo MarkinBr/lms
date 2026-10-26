@@ -6,7 +6,9 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 // Importar os Models e Observers
 use App\Models\Mensalidade;
+use App\Models\User;
 use App\Observers\MensalidadeObserver;
+use App\Observers\TelegramUsuarioObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,5 +33,6 @@ class AppServiceProvider extends ServiceProvider
         // === REGISTRO DO OBSERVER FINANCEIRO ===
         // Isso garante que toda vez que uma mensalidade mudar, o observer é acionado
         Mensalidade::observe(MensalidadeObserver::class);
+        User::observe(TelegramUsuarioObserver::class);
     }
 }
