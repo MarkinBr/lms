@@ -52,16 +52,26 @@ class TelegramAdministrativo
     public function revogar(User $usuario): void
     {
         abort_unless($this->podeOperar($usuario), 403);
-        DB::transaction(function () use ($usuario) {
-            $vinculo = DB::table('telegram_vinculos')->where('user_id', $usuario->id)
+
+        $this->revogarVinculo((int) $usuario->id);
+    }
+
+    /**
+     * Revoga o vínculo mesmo quando o usuário acabou de perder o nível/admin ativo.
+     * Chamado internamente pelo observer User, nunca exposto como endpoint público.
+     */
+    public function revogarVinculo(int $usuarioId): void
+    {
+        DB::transaction(function () use ($usuarioId) {
+            $vinculo = DB::table('telegram_vinculos')->where('user_id', $usuarioId)
                 ->lockForUpdate()->first();
             $pendentes = DB::table('telegram_confirmacoes')
-                ->where('user_id', $usuario->id)
+                ->where('user_id', $usuarioId)
                 ->where('status', 'pendente')
                 ->lockForUpdate()->get(['id', 'acao']);
             foreach ($pendentes as $confirmacao) {
                 DB::table('telegram_auditoria_revogacoes')->insert([
-                    'user_id' => $usuario->id,
+                    'user_id' => $usuarioId,
                     'confirmacao_id' => $confirmacao->id,
                     'acao' => $confirmacao->acao,
                     'antes' => 'pendente',
@@ -77,7 +87,7 @@ class TelegramAdministrativo
                 DB::table('telegram_vinculos')->where('id', $vinculo->id)->delete();
             }
             DB::table('telegram_outbox')
-                ->where('user_id', $usuario->id)
+                ->where('user_id', $usuarioId)
                 ->whereIn('status', ['pendente', 'enviando'])
                 ->update(['status' => 'descartado', 'payload' => null, 'lease_ate' => null,
                     'proxima_tentativa_em' => null, 'updated_at' => now()]);
