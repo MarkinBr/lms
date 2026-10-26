@@ -13,9 +13,13 @@ class PreferenciasAlertasTelegram
         $ativo = (bool) DB::table('telegram_alerta_preferencias')
             ->where('user_id', $userId)->value('ativo');
 
+        $agendamento = (bool) config('services.telegram.avisos_automaticos', false)
+            ? 'Envio automático configurado neste ambiente. A entrega depende do scheduler autorizado.'
+            : 'O envio automático ainda não está habilitado neste ambiente, por segurança.';
+
         return ['text' => 'Alertas administrativos '.($ativo ? 'solicitados.' : 'desativados.')
             ."\nAtivação/desativação da preferência: /alertas sim ou /alertas nao."
-            ."\nO envio automático ainda não está habilitado no piloto; falta homologar outbox, horário e infraestrutura."];
+            ."\n".$agendamento];
     }
 
     public function definir(string $chatId, bool $ativo): array
