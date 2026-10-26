@@ -79,8 +79,20 @@ class TelegramOperacionalTest extends TestCase
         $this->enviar(2, '/menu')->assertOk();
         $request = Http::recorded()->last()[0];
         $teclado = json_encode($request['reply_markup']['inline_keyboard']);
-        $this->assertStringContainsString('pendencias', $teclado);
-        $this->assertStringContainsString('agenda', $teclado);
-        $this->assertStringContainsString('cursos', $teclado);
+        $this->assertStringContainsString('area:admin', $teclado);
+        $this->assertStringContainsString('area:relatorios', $teclado);
+        $this->assertStringContainsString('area:cursos', $teclado);
+
+        $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'segredo-falso')
+            ->postJson('/api/telegram/cetsadp/webhook', [
+                'update_id' => 3,
+                'callback_query' => [
+                    'id' => 'cb-3', 'from' => ['id' => 733],
+                    'message' => ['message_id' => 10, 'chat' => ['id' => 733, 'type' => 'private']],
+                    'data' => 'area:admin',
+                ],
+            ])->assertOk();
+        $submenu = json_encode(Http::recorded()->last()[0]['reply_markup']['inline_keyboard']);
+        $this->assertStringContainsString('pendencias', $submenu);
     }
 }
