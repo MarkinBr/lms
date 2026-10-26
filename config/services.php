@@ -61,6 +61,7 @@ return [
         'admin_user_id' => env('TELEGRAM_ADMIN_USER_ID'),
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        'avisos_automaticos' => filter_var(env('TELEGRAM_AVISOS_AUTOMATICOS', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
 ];
