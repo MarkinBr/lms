@@ -205,7 +205,7 @@ class FluxoCadastroAlunoTelegram
 
         try {
             $estado = json_decode(Crypt::decryptString($texto), true, 512, JSON_THROW_ON_ERROR);
-        } catch (DecryptException | JsonException) {
+        } catch (DecryptException|JsonException) {
             $this->limpar($chatId);
 
             return null;
