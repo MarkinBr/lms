@@ -15,7 +15,7 @@ class PreferenciasAlertasTelegram
 
         $agendamento = (bool) config('services.telegram.avisos_automaticos', false)
             ? 'Envio automático configurado neste ambiente. A entrega depende do scheduler autorizado.'
-            : 'O envio automático continua desativado neste ambiente, por segurança.';
+            : 'O envio automático ainda não está habilitado neste ambiente, por segurança.';
 
         return ['text' => 'Alertas administrativos '.($ativo ? 'solicitados.' : 'desativados.')
             ."\nAtivação/desativação da preferência: /alertas sim ou /alertas nao."
