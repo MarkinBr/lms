@@ -82,6 +82,8 @@ class TelegramPublicacoesTest extends TestCase
         ]);
         $this->assertNotNull(Aviso::first()->data_publicacao);
         $this->assertDatabaseHas('telegram_confirmacoes', ['acao' => 'publicar_aviso', 'status' => 'confirmado']);
+        $this->assertDatabaseHas('telegram_confirmacoes', ['acao' => 'publicar_aviso',
+            'recurso_tipo' => 'avisos', 'recurso_id' => Aviso::firstOrFail()->id]);
         $this->assertDatabaseCount('telegram_auditoria', 2);
         $this->assertDatabaseCount('telegram_publicacoes', 0);
     }
@@ -100,6 +102,24 @@ class TelegramPublicacoesTest extends TestCase
         $this->enviar($this->telegramCallback(6, $novoCodigo));
         $this->assertDatabaseCount('avisos', 0);
         $this->assertDatabaseCount('telegram_publicacoes', 0);
+    }
+
+    public function test_aviso_confirmado_exibe_mensagem_no_mural_e_detalhe_sem_executar_html(): void
+    {
+        $this->vincular();
+        $codigo = $this->preparar();
+        $this->enviar($this->telegramCallback(3, $codigo));
+        $aviso = Aviso::firstOrFail();
+        $aluno = User::factory()->create(['nivel' => 'aluno', 'ativo' => true]);
+
+        $this->actingAs($aluno)->get(route('aluno.comunicacao'))
+            ->assertOk()->assertSee('Inscrições até sexta-feira.');
+        $this->actingAs($aluno)->get(route('aluno.comunicacao.show', $aviso->id))
+            ->assertOk()->assertSee('Inscrições até sexta-feira.');
+
+        $aviso->update(['mensagem' => '<script>alert("teste")</script> Conteúdo em texto']);
+        $this->get(route('aluno.comunicacao.show', $aviso->id))
+            ->assertOk()->assertSee('Conteúdo em texto')->assertDontSee('<script>alert("teste")</script>', false);
     }
 
     public function test_revogacao_ou_perda_de_permissao_bloqueia_publicacao(): void

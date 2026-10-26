@@ -35,7 +35,7 @@
         {{-- Corpo do Conteúdo --}}
         <div class="p-8">
             <div class="prose prose-slate max-w-none text-slate-600 leading-relaxed">
-                {!! nl2br(e($aviso->conteudo)) !!}
+                {!! nl2br(e($aviso->mensagem)) !!}
             </div>
 
             {{-- Área de Anexo --}}

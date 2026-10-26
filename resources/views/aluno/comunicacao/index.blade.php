@@ -73,7 +73,7 @@
                             </div>
                             
                             <p class="text-sm text-slate-500 leading-relaxed mb-2 line-clamp-2">
-                                {{ \Str::limit(strip_tags($aviso->conteudo), 150) }}
+                                {{ \Str::limit(strip_tags($aviso->mensagem), 150) }}
                             </p>
 
                             <div class="flex items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-wide">

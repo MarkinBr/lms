@@ -13,6 +13,7 @@ use App\Models\Matricula;
 use App\Models\MatriculaTurma;
 use App\Models\Turma;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
@@ -52,16 +53,26 @@ class ConfirmacoesTelegram
         }
 
         return $this->prepararOperacao($chatId, $updateId, 'liberar_aula', [
-            'aula_id' => $aula->id, 'estado_hash' => $this->estadoAulaHash($aula),
+            'aula_id' => $aula->id, 'estado_hash' => $this->estadoRegistroHash($aula),
         ], "Liberar a aula #{$aula->id} — {$aula->titulo} para os alunos?", 'Liberar aula');
     }
 
-    private function estadoAulaHash(Aula $aula): string
+    private function estadoRegistroHash(Model $registro): string
     {
-        $atributos = $aula->getAttributes();
+        $atributos = $registro->getAttributes();
         ksort($atributos);
 
         return hash('sha256', json_encode($atributos, JSON_THROW_ON_ERROR));
+    }
+
+    private function estadoChamadaHash(ChamadaFrequencia $chamada): string
+    {
+        return hash('sha256', json_encode([
+            'chamada' => $this->estadoRegistroHash($chamada),
+            'ativos' => $chamada->alunosAtivos()->pluck('id')->sort()->values()->all(),
+            'frequencias' => $chamada->frequencias()->orderBy('id')
+                ->get(['id', 'matricula_id', 'situacao', 'observacao', 'registrado_por'])->toArray(),
+        ], JSON_THROW_ON_ERROR));
     }
 
     public function prepararConclusaoChamada(string $chatId, string $conteudo, int $updateId): array
@@ -76,7 +87,7 @@ class ConfirmacoesTelegram
         }
 
         return $this->prepararOperacao($chatId, $updateId, 'concluir_chamada', [
-            'chamada_id' => $chamada->id,
+            'chamada_id' => $chamada->id, 'estado_hash' => $this->estadoChamadaHash($chamada),
         ], "Concluir chamada #{$chamada->id} de {$chamada->data_aula->format('d/m/Y')}? A frequência será consolidada.", 'Concluir chamada');
     }
 
@@ -399,7 +410,13 @@ class ConfirmacoesTelegram
                         $status = 'obsoleto';
                     } else {
                         $dados = json_decode(Crypt::decryptString($publicacao->dados_criptografados), true, 512, JSON_THROW_ON_ERROR);
-                        $status = $this->executarOperacao($linha->acao, $dados, $usuario) ? 'confirmado' : 'obsoleto';
+                        $recurso = $this->executarOperacao($linha->acao, $dados, $usuario);
+                        $status = $recurso !== null ? 'confirmado' : 'obsoleto';
+                        if ($recurso !== null) {
+                            DB::table('telegram_confirmacoes')->where('id', $linha->id)->update([
+                                'recurso_tipo' => $recurso->getTable(), 'recurso_id' => $recurso->getKey(),
+                            ]);
+                        }
                     }
                 }
 
@@ -435,54 +452,64 @@ class ConfirmacoesTelegram
         }];
     }
 
-    private function executarOperacao(string $acao, array $dados, User $usuario): bool
+    private function executarOperacao(string $acao, array $dados, User $usuario): ?Model
     {
         if ($acao === 'criar_aula') {
             $disciplina = Disciplina::with('modulo')->whereKey($dados['disciplina_id'])->lockForUpdate()->first();
             if (! $disciplina || ! $disciplina->modulo
                 || (int) $disciplina->modulo->curso_id !== (int) $disciplina->curso_id) {
-                return false;
+                return null;
             }
             $ordem = (int) Aula::where('disciplina_id', $disciplina->id)->max('ordem') + 1;
-            Aula::create(['disciplina_id' => $disciplina->id, 'modulo_id' => $disciplina->modulo_id,
+
+            return Aula::create(['disciplina_id' => $disciplina->id, 'modulo_id' => $disciplina->modulo_id,
                 'titulo' => $dados['titulo'], 'video_url' => $dados['video_url'],
                 'pdf_url' => $dados['pdf_url'], 'tipo_conteudo' => $dados['video_url'] ? 'video' : 'texto',
                 'ordem' => $ordem, 'liberada' => false]);
 
-            return true;
         }
         if ($acao === 'liberar_aula') {
             $aula = Aula::whereKey($dados['aula_id'])->lockForUpdate()->first();
             if (! $aula || $aula->liberada || ! $aula->disciplina_id
-                || ! hash_equals($dados['estado_hash'] ?? '', $this->estadoAulaHash($aula))) {
-                return false;
+                || ! hash_equals($dados['estado_hash'] ?? '', $this->estadoRegistroHash($aula))) {
+                return null;
+            }
+            $disciplina = Disciplina::with('modulo')->whereKey($aula->disciplina_id)->lockForUpdate()->first();
+            if (! $disciplina || ! $disciplina->modulo
+                || (int) $disciplina->curso_id !== (int) $disciplina->modulo->curso_id
+                || (int) $aula->modulo_id !== (int) $disciplina->modulo_id) {
+                return null;
             }
             $aula->update(['liberada' => true, 'tipo_liberacao' => 'imediata', 'data_liberacao' => null]);
 
-            return true;
+            return $aula;
         }
         if ($acao === 'concluir_chamada') {
             $chamada = ChamadaFrequencia::whereKey($dados['chamada_id'])->lockForUpdate()->first();
+            if ($chamada !== null) {
+                // O serviço de vínculo também bloqueia a turma; serializa a lista de alunos.
+                Turma::whereKey($chamada->turma_id)->lockForUpdate()->first();
+                $chamada->frequencias()->orderBy('id')->lockForUpdate()->get();
+            }
             if (! $chamada || $chamada->status !== ChamadaFrequencia::STATUS_RASCUNHO
-                || ! $this->chamadaCompleta($chamada)) {
-                return false;
+                || ! $this->chamadaCompleta($chamada)
+                || ! hash_equals($dados['estado_hash'] ?? '', $this->estadoChamadaHash($chamada))) {
+                return null;
             }
             $chamada->update(['status' => ChamadaFrequencia::STATUS_CONCLUIDA,
                 'concluida_por' => $usuario->id]);
 
-            return true;
+            return $chamada;
         }
         if ($acao === 'publicar_aviso') {
-            Aviso::create(['titulo' => $dados['titulo'], 'mensagem' => $dados['mensagem'],
+            return Aviso::create(['titulo' => $dados['titulo'], 'mensagem' => $dados['mensagem'],
                 'tipo' => 'info', 'ativo' => true, 'data_publicacao' => now()]);
 
-            return true;
         }
         if ($acao === 'criar_evento') {
-            EventoCalendario::create(['titulo' => $dados['titulo'], 'descricao' => $dados['descricao'],
+            return EventoCalendario::create(['titulo' => $dados['titulo'], 'descricao' => $dados['descricao'],
                 'data_inicio' => $dados['data_inicio'], 'tipo' => 'academico', 'ativo' => true]);
 
-            return true;
         }
         if ($acao === 'criar_chamada') {
             $turma = Turma::query()->whereKey($dados['turma_id'])->lockForUpdate()->first();
@@ -490,13 +517,13 @@ class ConfirmacoesTelegram
             if (! $turma || ! $disciplina || (int) $turma->curso_id !== (int) $disciplina->curso_id
                 || ChamadaFrequencia::where('turma_id', $turma->id)->where('disciplina_id', $disciplina->id)
                     ->whereDate('data_aula', $dados['data_aula'])->exists()) {
-                return false;
+                return null;
             }
-            ChamadaFrequencia::create(['turma_id' => $turma->id, 'disciplina_id' => $disciplina->id,
+
+            return ChamadaFrequencia::create(['turma_id' => $turma->id, 'disciplina_id' => $disciplina->id,
                 'data_aula' => $dados['data_aula'], 'status' => ChamadaFrequencia::STATUS_RASCUNHO,
                 'criada_por' => $usuario->id]);
 
-            return true;
         }
         if ($acao === 'registrar_presenca') {
             $chamada = ChamadaFrequencia::query()->whereKey($dados['chamada_id'])->lockForUpdate()->first();
@@ -504,16 +531,16 @@ class ConfirmacoesTelegram
                 || ! $this->matriculaElegivel($chamada, (int) $dados['matricula_id'])
                 || Frequencia::where('chamada_frequencia_id', $chamada->id)
                     ->where('matricula_id', $dados['matricula_id'])->exists()) {
-                return false;
+                return null;
             }
-            Frequencia::create(['chamada_frequencia_id' => $chamada->id,
+
+            return Frequencia::create(['chamada_frequencia_id' => $chamada->id,
                 'matricula_id' => $dados['matricula_id'], 'situacao' => $dados['situacao'],
                 'registrado_por' => $usuario->id]);
 
-            return true;
         }
 
-        return false;
+        return null;
     }
 
     private function donoComVinculoBloqueado(string $chatId): User

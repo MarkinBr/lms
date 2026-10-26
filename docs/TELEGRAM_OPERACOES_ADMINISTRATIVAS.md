@@ -21,7 +21,8 @@ Use IDs do banco conectado: IDs locais e da VPS podem diferir. `/buscar`, `/alun
 ## Confirmação e proteção
 
 - Antes da escrita, o bot mostra uma prévia e os botões confirmar/cancelar, válidos por dez minutos. Callback contém somente código aleatório; hash fica no banco.
-- A proposta fica criptografada em `telegram_publicacoes`. Cancelamento, expiração consumida e revogação descartam seu conteúdo. A trilha de auditoria registra ação e transições, sem guardar texto pessoal.
+- A proposta fica criptografada em `telegram_publicacoes`. Cancelamento, expiração consumida e revogação descartam seu conteúdo. A trilha de auditoria registra ação e transições, sem guardar texto pessoal. A confirmação concluída preserva tabela e ID do registro afetado em `recurso_tipo` e `recurso_id`.
+- Conclusão de chamada rejeita mudanças na data, frequência ou lista de alunos após a prévia. Bloqueia turma e frequências durante a validação final, coordenando com o serviço de vínculo de matrículas. O CI PostgreSQL disputa essa conclusão com um novo vínculo em outro processo.
 - Confirmação bloqueia vínculo/proposta e revalida autorização e domínio dentro da transação. Updates repetidos e cliques adicionais não repetem a escrita.
 - Mensagens são entregues pela outbox após a transação; a confirmação não depende de uma chamada HTTP enquanto os dados acadêmicos estão bloqueados.
 - Avisos/eventos são gerais: revise a prévia antes de confirmar. Não existe disparo de comunicação em massa neste incremento.

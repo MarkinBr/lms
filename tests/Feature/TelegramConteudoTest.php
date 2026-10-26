@@ -189,4 +189,32 @@ class TelegramConteudoTest extends TestCase
         $this->assertSame(ChamadaFrequencia::STATUS_CONCLUIDA, $chamada->fresh()->status);
         $this->assertDatabaseHas('chamadas_frequencia', ['id' => $chamada->id]);
     }
+
+    public function test_conclusao_recusa_chamada_ou_frequencia_alterada_apos_previa(): void
+    {
+        $admin = $this->vincular();
+        $disciplina = $this->disciplina();
+        $turma = Turma::create(['curso_id' => $disciplina->curso_id, 'nome' => 'Turma A', 'ano_letivo' => 2026,
+            'valor_total_curso' => 1200, 'qtd_parcelas' => 12, 'status' => Turma::STATUS_ABERTA]);
+        $chamada = ChamadaFrequencia::create(['turma_id' => $turma->id, 'disciplina_id' => $disciplina->id,
+            'data_aula' => '2026-10-26', 'status' => ChamadaFrequencia::STATUS_RASCUNHO, 'criada_por' => $admin->id]);
+        $aluno = User::factory()->create(['nivel' => 'aluno', 'ativo' => true]);
+        $matricula = Matricula::create(['user_id' => $aluno->id, 'curso_id' => $disciplina->curso_id,
+            'turma_id' => $turma->id, 'data_matricula' => now()->toDateString(),
+            'status' => 'ativo', 'numero_matricula' => 'TG-001', 'dia_vencimento' => 10]);
+        $frequencia = Frequencia::create(['chamada_frequencia_id' => $chamada->id, 'matricula_id' => $matricula->id,
+            'situacao' => 'presente', 'registrado_por' => $admin->id]);
+        $this->enviar(2, "/concluirchamada {$chamada->id}");
+        $codigo = $this->codigo();
+        $chamada->update(['data_aula' => '2026-11-03']);
+        $this->clicar(3, $codigo);
+        $this->assertSame(ChamadaFrequencia::STATUS_RASCUNHO, $chamada->fresh()->status);
+
+        $this->enviar(4, "/concluirchamada {$chamada->id}");
+        $codigo = $this->codigo();
+        $frequencia->update(['situacao' => 'falta']);
+        $this->clicar(5, $codigo);
+        $this->assertSame(ChamadaFrequencia::STATUS_RASCUNHO, $chamada->fresh()->status);
+        $this->assertDatabaseCount('telegram_publicacoes', 0);
+    }
 }
