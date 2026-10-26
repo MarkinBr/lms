@@ -83,6 +83,7 @@ class TelegramAdministrativo
                 ->where('status', 'pendente')->update([
                     'status' => 'cancelado', 'consumido_em' => now(), 'updated_at' => now(),
                 ]);
+            DB::table('telegram_publicacoes')->whereIn('confirmacao_id', $pendentes->pluck('id'))->delete();
             if ($vinculo !== null) {
                 DB::table('telegram_vinculos')->where('id', $vinculo->id)->delete();
             }
@@ -173,7 +174,29 @@ class TelegramAdministrativo
             return;
         }
 
-        if (preg_match('/^\\/revisarinscricao\\s+([0-9a-fA-F-]{36})$/D', $texto, $m)) {
+        if (preg_match('/^\\/(aprovarinscricao|rejeitarinscricao|novoaluno|editaraluno|recuperaracesso|ativaracesso|lancarnota|corrigirnota|novanoticia)(?:\\s+(.+))?$/usD', $texto, $m)) {
+            $servico = match ($m[1]) {
+                'aprovarinscricao', 'rejeitarinscricao' => InscricoesAdministrativasTelegram::class,
+                'novoaluno', 'editaraluno', 'recuperaracesso', 'ativaracesso' => AlunosAdministrativosTelegram::class,
+                'lancarnota', 'corrigirnota' => NotasAdministrativasTelegram::class,
+                'novanoticia' => NoticiasAdministrativasTelegram::class,
+            };
+            $resposta = app($servico)->preparar($chatId, $m[1], $m[2] ?? '', $this->updateAtual);
+        } elseif (preg_match('/^\\/novoaviso\\s+(.+)$/usD', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararAviso($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^\\/novaaula\\s+(.+)$/usD', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararAula($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^\\/liberaraula\\s+(.+)$/usD', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararLiberacaoAula($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^\\/concluirchamada\\s+(.+)$/usD', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararConclusaoChamada($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^\\/novoevento\\s+(.+)$/usD', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararEvento($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^\\/novachamada\\s+(.+)$/usD', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararChamada($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^\\/registrarpresenca\\s+(.+)$/usD', $texto, $m)) {
+            $resposta = app(ConfirmacoesTelegram::class)->prepararPresenca($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^\\/revisarinscricao\\s+([0-9a-fA-F-]{36})$/D', $texto, $m)) {
             $resposta = app(ConfirmacoesTelegram::class)->prepararRevisao($chatId, $m[1], $this->updateAtual);
         } elseif ($texto === '/testeconfirmacao') {
             $resposta = app(ConfirmacoesTelegram::class)->preparar($chatId, $this->updateAtual);
@@ -192,11 +215,13 @@ class TelegramAdministrativo
                 '/hoje' => $consulta->hoje(),
                 '/agenda7' => $consulta->agendaSemanal(),
                 '/relatorios' => $consulta->relatorios(),
+                '/financeiro' => $consulta->financeiro(),
                 '/aulaspendentes' => $consulta->aulasPendentes(),
                 '/pendencias' => $consulta->pendencias(),
                 '/agenda' => $consulta->agenda(),
                 '/cursos' => $consulta->cursos(),
                 '/start', '/ajuda', '/menu' => $consulta->menu(),
+                '/administrar' => CatalogoComandosTelegram::menuAdministrativo(),
                 '/buscar' => ['text' => 'Uso: /buscar NOME (digite o nome do aluno após o comando).'],
                 '/aluno' => ['text' => 'Uso: /aluno ID (informe o número do aluno).'],
                 '/notas' => ['text' => 'Uso: /notas ID (informe o número do aluno).'],
@@ -205,6 +230,13 @@ class TelegramAdministrativo
                 '/matricula' => ['text' => 'Uso: /matricula ID (informe o número da matrícula).'],
                 '/inscricao' => ['text' => 'Uso: /inscricao UUID (informe o identificador completo da inscrição).'],
                 '/revisarinscricao' => ['text' => 'Uso: /revisarinscricao UUID (somente pré-análise; não aprova nem matricula).'],
+                '/novoaviso' => ['text' => 'Uso: /novoaviso TÍTULO | MENSAGEM (a publicação exige confirmação).'],
+                '/novaaula' => ['text' => 'Uso: /novaaula DISCIPLINA_ID | TÍTULO | URL_VIDEO | URL_PDF. Use - quando um dos materiais não existir.'],
+                '/liberaraula' => ['text' => 'Uso: /liberaraula AULA_ID.'],
+                '/concluirchamada' => ['text' => 'Uso: /concluirchamada CHAMADA_ID. Registre antes a frequência de todos os alunos ativos.'],
+                '/novoevento' => ['text' => 'Uso: /novoevento TÍTULO | AAAA-MM-DD HH:MM | DESCRIÇÃO.'],
+                '/novachamada' => ['text' => 'Uso: /novachamada TURMA_ID DISCIPLINA_ID AAAA-MM-DD.'],
+                '/registrarpresenca' => ['text' => 'Uso: /registrarpresenca CHAMADA_ID MATRICULA_ID presente|falta|falta_justificada.'],
                 '/filtro' => ['text' => 'Uso: /filtro status ativo, /filtro curso ID ou /filtro turma ID.'],
                 '/status' => ['text' => 'Bot CETSADP disponível. Sua conta administrativa está vinculada. Use /menu.'],
                 '/resumo' => ['text' => $this->resumo()],
@@ -246,11 +278,15 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if (preg_match('/^(confirmar|cancelar):([0-9a-f]{32})$/D', $codigo, $m)) {
             $resposta = app(ConfirmacoesTelegram::class)->decidir($chatId, $m[1], $m[2], $this->updateAtual);
+        } elseif ($codigo === 'administrar') {
+            $resposta = CatalogoComandosTelegram::menuAdministrativo();
+        } elseif (preg_match('/^operacao:([a-z]+)$/D', $codigo, $m)) {
+            $resposta = CatalogoComandosTelegram::orientar($m[1]) ?? ['text' => 'Operação inválida. Use /administrar.'];
         } elseif ($codigo === 'menu') {
             $resposta = $consulta->menu();
         } elseif ($codigo === 'alertas') {
             $resposta = app(PreferenciasAlertasTelegram::class)->consultar($chatId);
-        } elseif (in_array($codigo, ['filtros', 'hoje', 'relatorios', 'aulaspendentes'], true)) {
+        } elseif (in_array($codigo, ['filtros', 'hoje', 'relatorios', 'aulaspendentes', 'financeiro'], true)) {
             $resposta = $consulta->{$codigo}();
         } elseif ($codigo === 'agenda7') {
             $resposta = $consulta->agendaSemanal();
@@ -268,7 +304,7 @@ class TelegramAdministrativo
             $resposta = ['text' => 'Opção inválida. Use /menu.'];
         }
 
-        $novosMenus = in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas'], true)
+        $novosMenus = in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas', 'financeiro'], true)
             || preg_match('/^(filtro|ficha|notas|frequencia):/', $codigo) === 1;
         if ($novosMenus) {
             $this->atualizarCallback($chatId, $callback, $resposta);
@@ -330,7 +366,7 @@ class TelegramAdministrativo
         $userId = $this->podeOperar($usuario) ? (int) $usuario->id : null;
         $codigo = (string) ($this->callbackAtual['data'] ?? '');
         $editar = $userId !== null && $this->callbackAtual !== null && (
-            in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas'], true)
+            in_array($codigo, ['hoje', 'relatorios', 'agenda7', 'aulaspendentes', 'filtros', 'alertas', 'financeiro'], true)
             || preg_match('/^(filtro|ficha|notas|frequencia):/', $codigo) === 1
         );
 

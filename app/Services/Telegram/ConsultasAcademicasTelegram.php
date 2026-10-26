@@ -7,6 +7,7 @@ use App\Models\Aula;
 use App\Models\AulaAoVivo;
 use App\Models\Curso;
 use App\Models\Matricula;
+use App\Models\Mensalidade;
 use App\Models\Nota;
 use App\Models\Turma;
 use App\Models\User;
@@ -27,6 +28,7 @@ class ConsultasAcademicasTelegram
     public function menu(): array
     {
         $teclado = [];
+        $teclado[] = [['text' => 'Administrar', 'callback_data' => 'administrar']];
         foreach (self::TITULOS as $chave => $titulo) {
             $teclado[] = [['text' => $titulo, 'callback_data' => "lista:{$chave}:1"]];
         }
@@ -35,6 +37,7 @@ class ConsultasAcademicasTelegram
         $teclado[] = [['text' => 'Filtros de alunos', 'callback_data' => 'filtros']];
         $teclado[] = [['text' => 'Painel do dia', 'callback_data' => 'hoje']];
         $teclado[] = [['text' => 'Relatórios', 'callback_data' => 'relatorios'], ['text' => 'Agenda 7 dias', 'callback_data' => 'agenda7']];
+        $teclado[] = [['text' => 'Resumo financeiro', 'callback_data' => 'financeiro']];
         $teclado[] = [['text' => 'Aulas não liberadas', 'callback_data' => 'aulaspendentes']];
         $teclado[] = [['text' => 'Pendências', 'callback_data' => 'pendencias']];
         $teclado[] = [['text' => 'Agenda', 'callback_data' => 'agenda'], ['text' => 'Cursos', 'callback_data' => 'cursos']];
@@ -157,7 +160,7 @@ class ConsultasAcademicasTelegram
         }
 
         $notas = Nota::query()->where('user_id', $id)->orderByDesc('id')->limit(5)->get();
-        $linhas = $notas->map(fn ($n) => $this->curto($n->disciplina ?? 'Disciplina não informada')
+        $linhas = $notas->map(fn ($n) => '#'.$n->id.' • '.$this->curto($n->disciplina ?? 'Disciplina não informada')
             .' • média: '.($n->media_final ?? 'não lançada').' • '.$this->curto($n->situacao ?? 'sem situação'))->all();
 
         return ['text' => "Notas legadas do aluno #{$id}\n"
@@ -325,6 +328,23 @@ class ConsultasAcademicasTelegram
         return ['text' => "Relatório por curso\n"
             .($linhas ? implode("\n", $linhas) : 'Nenhum curso ativo.')
             ."\nAté cinco cursos; escopo das matrículas considera status legados."];
+    }
+
+    public function financeiro(): array
+    {
+        // Apenas totais agregados, sem identificar alunos ou expor meios de pagamento.
+        $totais = Mensalidade::query()
+            ->selectRaw('status, COUNT(*) AS quantidade, COALESCE(SUM(valor), 0) AS total')
+            ->groupBy('status')->get()->keyBy('status');
+
+        $linhas = ['CETSADP • Resumo financeiro'];
+        foreach (['Pendente' => 'Pendentes', 'Atrasado' => 'Atrasadas', 'Pago' => 'Pagas'] as $status => $rotulo) {
+            $linha = $totais->get($status);
+            $linhas[] = $rotulo.': '.($linha?->quantidade ?? 0)
+                .' • R$ '.number_format((float) ($linha?->total ?? 0), 2, ',', '.');
+        }
+
+        return ['text' => implode("\n", $linhas)."\nConsulta agregada; detalhes apenas no financeiro autenticado."];
     }
 
     public function filtros(): array

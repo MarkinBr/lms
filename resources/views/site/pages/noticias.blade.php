@@ -1,3 +1,10 @@
+@php
+  // A SPA inclui esta view no HTML inicial; só lê publicações disponíveis, sem cache de conteúdo.
+  $noticiasPublicadas = \Illuminate\Support\Facades\Schema::hasTable('noticias')
+      ? \App\Models\Noticia::query()->publicadas()->orderByDesc('publicada_em')->orderByDesc('id')
+          ->get(['id', 'titulo', 'resumo', 'texto', 'publicada_em'])
+      : collect();
+@endphp
 <div class="page" data-page="noticias">
   <div class="crumb"><div class="wrap"><a data-go="home">INÍCIO</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg><span class="cur">NOTÍCIAS</span></div></div>
   <section class="hero" style="padding-bottom:30px"><div class="watermark-faces" aria-hidden="true"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=60" alt=""><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=60" alt=""></div>
@@ -22,6 +29,20 @@
     <div class="news-layout">
       <div>
         <div class="news-grid">
+          @foreach ($noticiasPublicadas as $noticia)
+            <article class="newscard reveal" data-cat="inst" id="noticia-{{ $noticia->id }}">
+              <div class="body" style="overflow-wrap:anywhere">
+                <span class="cat-pill2 inst" style="align-self:flex-start;margin-bottom:12px">Institucional</span>
+                <h3>{{ $noticia->titulo }}</h3>
+                <p>{{ $noticia->resumo }}</p>
+                <div class="news-meta dark"><time datetime="{{ $noticia->publicada_em->toIso8601String() }}" data-icm="calendar">{{ $noticia->publicada_em->format('d/m/Y') }}</time><span data-icm="user">CETSADP</span></div>
+                <details style="margin-top:14px">
+                  <summary class="readmore" style="cursor:pointer">Ler notícia completa</summary>
+                  <div style="white-space:pre-wrap;line-height:1.7;margin-top:12px">{{ $noticia->texto }}</div>
+                </details>
+              </div>
+            </article>
+          @endforeach
           <article class="newscard feat reveal" data-cat="test" data-toast="Abrindo matéria..."><div class="thumb"><img src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=900&q=70" alt="" onerror="this.style.display='none'"><span class="cat-pill2 test">Testemunho</span></div><div class="body"><h3>“O curso transformou meu ministério e minha vida”</h3><p>Ex-aluna da primeira turma de Liderança Cristã Ministerial conta como a formação bíblica e o discipulado mudaram sua forma de servir na igreja local e na comunidade.</p><div class="news-meta dark"><span data-icm="user">Pra. Juliana Costa</span><span data-icm="calendar">02/07/2026</span><span data-icm="clock">5 min</span></div><span class="readmore">Ler testemunho <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6l6 6-6 6"/></svg></span></div></article>
           <article class="newscard reveal" data-cat="acad" data-toast="Abrindo matéria..."><div class="thumb"><img src="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=700&q=70" alt="" onerror="this.style.display='none'"><span class="cat-pill2 acad">Acadêmico</span></div><div class="body"><h3>Inscrições para Habilitação ao Diaconato seguem até 30/08</h3><p>Curso aberto a homens e mulheres; vagas presenciais, híbridas e EAD disponíveis.</p><div class="news-meta dark"><span data-icm="calendar">28/06/2026</span><span data-icm="clock">2 min</span></div><span class="readmore">Ler mais <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6l6 6-6 6"/></svg></span></div></article>
           <article class="newscard reveal" data-cat="inst" data-toast="Abrindo matéria..."><div class="thumb"><img src="https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=700&q=70" alt="" onerror="this.style.display='none'"><span class="cat-pill2 inst">Institucional</span></div><div class="body"><h3>Pr. Jorge Coutinho participa de conferência nacional de educação teológica</h3><p>Presidente representa o CETSADP em encontro que reuniu instituições de todo o país.</p><div class="news-meta dark"><span data-icm="calendar">21/06/2026</span><span data-icm="clock">3 min</span></div><span class="readmore">Ler mais <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6l6 6-6 6"/></svg></span></div></article>

@@ -62,6 +62,8 @@ jobs:
           php artisan migrate --force
       - name: Disputar confirmações e revogações em dois processos
         run: php tests/infra/telegram_postgres_race.php
+      - name: Homologar decisões e notas administrativas sem efeitos externos
+        run: php tests/infra/telegram_administracao_postgres.php
 
   quality:
     name: PHP e JavaScript
@@ -120,6 +122,9 @@ jobs:
 
       - name: Testes Laravel direcionados
         run: php artisan test --filter='Application|Contato|Newsletter|Acompanhamento|Inscricao|Auth|PortalAlunoPublico|SsoController|PortalRoutesPlaceholderTest|TelegramAdministrativo|TelegramMenuConsulta|TelegramOperacional|TelegramCentralInteligente|TelegramNavegacao35|TelegramAlertasPreferencias|TelegramOutbox|TelegramSegurancaRegressao|TelegramOutboxAutorizacao|TelegramRespostaProtegida|TelegramDesativacaoRevogacao|TelegramPublicarComandos|TelegramRevogacaoAuditoria|TelegramConfirmacoes|TelegramPreAnaliseInscricao|Legado'
+
+      - name: Testes de operações administrativas Telegram
+        run: php artisan test --filter='TelegramConteudoTest|TelegramOperacoesAcademicasTest|TelegramPublicacoesTest|TelegramFinanceiroEAlertasTest|TelegramDecisaoInscricaoTest|TelegramAlunosEscritaTest|TelegramNotasEscritaTest|TelegramNoticiasTest'
 
       - name: Testes da infraestrutura isolada
         run: python3 -m unittest discover -s tests/infra -p 'test_*.py'
