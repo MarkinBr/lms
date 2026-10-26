@@ -144,3 +144,17 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Antes de implantação: revisar dependências de PRs empilhados, homologar migrações em PostgreSQL isolado, fazer backup da base do piloto, planejar rollback e validar a política LGPD. A publicação é uma **ação manual pós-implantação**, não um efeito automático de CI/merge.
 - Depois de homologar e aplicar o código no serviço web, executar `php artisan telegram:comandos-publicar --simular` e só então `php artisan telegram:comandos-publicar`. Testar `/menu`, `/buscar`, `/pendencias` e `/revisarinscricao` com identificadores de teste, em conversa privada, sem gerar matrículas.
 - Se o usuário perder o acesso, o servidor continuará negando consultas; um menu de comandos já registrado no cliente Telegram pode permanecer visível até ser atualizado. Visibilidade do menu não concede autorização.
+
+
+## Central administrativa ampliada — Issue #116 (PR candidata)
+
+- `/central`: contagens agregadas de alunos, matrículas, cursos, turmas, inscrições em análise e aulas não liberadas; botões para acesso rápido a outras áreas.
+- `/prioridades`: apenas contagens de inscrições, aulas e pendências curriculares/estruturais. Não representa diagnóstico automatizado de gravidade.
+- `/pesquisar NOME`: reaproveita a pesquisa literal e limitada a cinco pessoas por nome. `/pesquisar` sem argumento retorna orientação.
+- `/desempenho`: seleciona turma com botões ou recebe `/desempenho ID`; exibe total de matrículas ativas relacionadas e no máximo cinco amostras de percentual de frequência para chamadas concluídas. Não fornece ranking nem substitui revisão pedagógica. Identificadores técnicos são resumidos.
+- `/agendainteligente`: agenda de sete dias com até cinco eventos, reaproveitando consulta acadêmica anterior.
+- `/relatoriosemanal`: relatório de sete dias móveis com novas inscrições, novas matrículas e datas de encontros; não confundir novas matrículas com aprovação/rejeição acadêmica. Envio somente sob demanda.
+- `/notificacoes`, `/notificacoes sim`, `/notificacoes nao`: registro de preferência opt-in por administrador vinculado. **Nenhum disparo automático está habilitado nesta PR**. O controle pode também ser acessado pelo botão do menu.
+- Todos os caminhos usam autorização existente, chat privado e respostas outbox protegidas. Só há escrita técnica de idempotência/saída e preferência; nenhuma escrita acadêmica.
+- Para tornar os botões funcionais no piloto, o webhook precisa aceitar `callback_query` além de `message`. Não executar mudanças no webhook ou no scheduler sem plano de implantação homologado.
+- Dependências a resolver antes de ativar alertas reais: limpeza de payload expirado (auditoria D3), fencing de workers de envio (D5), limites de dados, deduplicação de alertas e agendamento confiável. Ativação automática só em uma entrega separada de segurança.
