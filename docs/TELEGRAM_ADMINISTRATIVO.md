@@ -132,3 +132,15 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Recuperação manual: um operador com acesso autorizado ao console pode executar `php artisan telegram:revogar ID` para remover vínculo remanescente de conta já inativa/rebaixada. O comando não depende de SMTP, token de bot ou rede de saída.
 - **Limitação importante:** eventos Eloquent **não** são emitidos por atualização massiva `User::query()->where(...)->update(...)`, `DB::table('users')->update(...)` ou SQL direto. Esses fluxos precisam ser inventariados e migrados para serviços que revogam explicitamente o Telegram; a correção atual não garante revogação nesses caminhos.
 - Não alterar produção, Docker, scheduler ou banco real sem homologação das migrações anteriores e dos controles de auditoria.
+
+
+## Menu de comandos do Telegram — Issue #114 (candidata não implantada)
+
+- O catálogo `CatalogoComandosTelegram::listar()` descreve somente comandos implementados na branch candidata; os nomes no menu do Telegram **não publicam o código no servidor**.
+- Os comandos com parâmetros (`/buscar`, `/aluno`, `/notas`, `/frequencia`, `/turma`, `/matricula`, `/inscricao`, `/revisarinscricao` e `/filtro`) respondem com um exemplo de uso quando enviados sem argumento. A pré-análise não aprova nem matricula.
+- O novo comando Artisan `php artisan telegram:comandos-publicar --simular` confere o catálogo **sem executar HTTP**. Já `php artisan telegram:comandos-publicar` chama `setMyCommands`, limitado ao **chat privado atualmente vinculado** ao proprietário autorizado; não publica comandos globais para outros usuários.
+- Ambos dependem do código candidato implantado. O comando real requer token presente somente no processo web com acesso de rede Telegram. Não executá-lo via worker/scheduler, na estação local ou antes de homologação; não imprimir token, `docker compose config` ou arquivos `.env`.
+- Para **botões interativos** do menu avançado funcionarem, o webhook do piloto precisará aceitar os tipos `message` **e** `callback_query` em `allowed_updates`. A configuração original do piloto aceitava somente `message`. Alterar o webhook exige planejamento/autorizações e teste de integridade; **esta PR não altera o webhook**.
+- Antes de implantação: revisar dependências de PRs empilhados, homologar migrações em PostgreSQL isolado, fazer backup da base do piloto, planejar rollback e validar a política LGPD. A publicação é uma **ação manual pós-implantação**, não um efeito automático de CI/merge.
+- Depois de homologar e aplicar o código no serviço web, executar `php artisan telegram:comandos-publicar --simular` e só então `php artisan telegram:comandos-publicar`. Testar `/menu`, `/buscar`, `/pendencias` e `/revisarinscricao` com identificadores de teste, em conversa privada, sem gerar matrículas.
+- Se o usuário perder o acesso, o servidor continuará negando consultas; um menu de comandos já registrado no cliente Telegram pode permanecer visível até ser atualizado. Visibilidade do menu não concede autorização.
