@@ -7,9 +7,9 @@ use App\Services\Telegram\TelegramAdministrativo;
 
 class TelegramUsuarioObserver
 {
-    public function updated(User $usuario): void
+    public function updating(User $usuario): void
     {
-        if (! $usuario->wasChanged(['ativo', 'nivel'])) {
+        if (! $usuario->isDirty(['ativo', 'nivel'])) {
             return;
         }
         if ($usuario->ativo && $usuario->nivel === 'admin') {
