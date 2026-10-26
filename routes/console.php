@@ -2,10 +2,10 @@
 
 /**
  * CETSADP v9.3.5 — Console Routes / Scheduled Tasks
- * 
+ *
  * CORREÇÃO D02: O agendamento foi reportado como entregue via Kernel.php na v9.3.2,
  * mas NÃO EXISTIA. No Laravel 12, scheduling é configurado em routes/console.php.
- * 
+ *
  * Tarefas agendadas:
  *   1. sso:cleanup-tokens  — Limpeza de tokens SSO expirados (a cada hora)
  *   2. queue:prune-failed   — Limpar jobs falhos com mais de 7 dias (diário)
@@ -68,7 +68,6 @@ Schedule::command('lembretes:disparar-vencimento --dias=3')
 Schedule::command('cobrancas:disparar-atrasadas')
     ->dailyAt('10:00')->withoutOverlapping()->runInBackground()
     ->appendOutputTo(storage_path('logs/cobrancas.log'));
-
 
 // Telegram CETSADP: por padrão estes agendamentos não existem. Habilitar apenas
 // no processo autorizado que possua credenciais e scheduler em execução.
