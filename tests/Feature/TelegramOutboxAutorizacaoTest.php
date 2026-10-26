@@ -47,7 +47,7 @@ class TelegramOutboxAutorizacaoTest extends TestCase
     public function test_mensagem_generica_nao_requer_vinculo(): void
     {
         $outbox = app(TelegramOutbox::class);
-        $outbox->registrar(99002, '707', 'Acesso restrito.');
+        $outbox->registrar(99002, '707', 'Acesso restrito.', null, null, null, false);
         $id = DB::table('telegram_outbox')->where('update_id', 99002)->value('id');
         $this->assertDatabaseHas('telegram_outbox', ['id' => $id, 'requer_autorizacao' => false]);
         $outbox->entregar((int) $id);
