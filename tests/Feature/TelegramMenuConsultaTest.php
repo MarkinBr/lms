@@ -63,7 +63,7 @@ class TelegramMenuConsultaTest extends TestCase
     {
         $this->donoVinculado();
         $this->enviar($this->mensagem(2, '/menu'))->assertOk();
-        Http::assertSent(fn ($r) => str_contains($r['text'], 'Menu CETSADP')
+        Http::assertSent(fn ($r) => str_contains($r['text'], 'CETSADP • Painel administrativo')
             && isset($r['reply_markup']['inline_keyboard']));
     }
 
