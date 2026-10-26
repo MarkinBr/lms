@@ -112,7 +112,9 @@ class CentralGestaoTelegram
         return [
             'text' => "Agenda inteligente • próximos 7 dias\n"
                 .$agenda['text']
-                ."\n\nLembretes automáticos ainda não habilitados. Configure /notificacoes para registrar preferência.",
+                ."\n\n".((bool) config('services.telegram.avisos_automaticos', false)
+                    ? 'Lembretes diários disponíveis para quem ativou /notificacoes, com scheduler autorizado.'
+                    : 'Lembretes automáticos ainda não habilitados. Configure /notificacoes para registrar preferência.'),
             'reply_markup' => ['inline_keyboard' => [
                 [['text' => 'Notificações', 'callback_data' => 'notificacoes'],
                     ['text' => 'Central', 'callback_data' => 'central']],
@@ -137,7 +139,9 @@ class CentralGestaoTelegram
                 ."Encontros com data no período: {$encontros}\n"
                 ."Inscrições atualmente em análise: {$emAnalise}\n"
                 ."As contagens registram eventos cadastrados, não resultados pedagógicos.\n"
-                .'Envio automático ainda não habilitado.',
+                .((bool) config('services.telegram.avisos_automaticos', false)
+                ? 'Resumo semanal programado somente para quem ativou notificações.'
+                : 'Envio automático ainda não habilitado.'),
             'reply_markup' => ['inline_keyboard' => [
                 [['text' => 'Central', 'callback_data' => 'central'],
                     ['text' => 'Notificações', 'callback_data' => 'notificacoes']],
