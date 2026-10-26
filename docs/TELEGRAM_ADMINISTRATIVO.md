@@ -158,3 +158,16 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Todos os caminhos usam autorização existente, chat privado e respostas outbox protegidas. Só há escrita técnica de idempotência/saída e preferência; nenhuma escrita acadêmica.
 - Para tornar os botões funcionais no piloto, o webhook precisa aceitar `callback_query` além de `message`. Não executar mudanças no webhook ou no scheduler sem plano de implantação homologado.
 - Dependências a resolver antes de ativar alertas reais: limpeza de payload expirado (auditoria D3), fencing de workers de envio (D5), limites de dados, deduplicação de alertas e agendamento confiável. Ativação automática só em uma entrega separada de segurança.
+
+
+## Alertas agregados automáticos — Issue #118 (PR candidata, desativados por padrão)
+
+- O comando `php artisan telegram:avisos-automaticos --tipo=diario` compõe apenas contagens agregadas de novas inscrições nas últimas 24 h, inscrições em análise, aulas não liberadas e eventos nas próximas 24 h.
+- `php artisan telegram:avisos-automaticos --tipo=semanal` compõe novas inscrições, novas matrículas e encontros com data nos últimos 7 dias. Nenhum nome, CPF, documento, telefone, dado financeiro, histórico de conversas ou texto da mensagem é persistido na tabela de deduplicação.
+- A flag `TELEGRAM_AVISOS_AUTOMATICOS=false` **é o padrão**. Com false o comando não envia e o scheduler sequer agenda essas tarefas. `--simular` também não faz HTTP nem grava no banco, inclusive quando a flag está desligada.
+- Exige usuário configurado como dono ativo/admin, chat privado vinculado, preferência `/notificacoes sim`, token e flag ativa. Opt-out e revogação impedem novos envios se observados antes da requisição externa.
+- Reserva atômica de no máximo **uma tentativa por tipo, usuário e período** em `telegram_avisos_programados`. O índice único protege contra execução concorrente. HTTP ocorre fora de transação. Em resposta ambígua, timeout ou falha, não há repetição automática na mesma janela. A política é **at-most-once**: mensagens podem ser perdidas, mas não são repetidas por um retry automatizado.
+- Scheduler Laravel, só com flag true: diariamente às **08:00**, e resumo semanal **segunda às 08:05**, no fuso `America/Sao_Paulo`. O agendamento só funciona quando o scheduler está rodando no processo isolado que possui credenciais Telegram. Não adicionar token a processos que hoje não o recebem.
+- **Nunca** ativar a flag na VPS sem homologar em PostgreSQL isolado, backups, política LGPD e isolamento de rede/credenciais. Implementação ainda é candidata, não é implantação.
+- Limites residuais: ainda existe intervalo de corrida entre última autorização e o envio HTTP, e Telegram pode aceitar uma requisição mesmo que a rede não confirme. Não armazenamos payload de alertas; os achados D3/D5 da outbox interativa permanecem para correção separada. Mensagens já recebidas no Telegram não podem ser apagadas remotamente.
+- Política de retenção das chaves de deduplicação e limpeza da outbox interativa precisa ser aprovada antes de ativação em ambiente real.
