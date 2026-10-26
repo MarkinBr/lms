@@ -70,7 +70,7 @@ class CentralGestaoTelegram
 
             return ['text' => "Desempenho por turma\n"
                 ."Escolha uma turma ou envie /desempenho ID.\n"
-                ."As frequências usam somente chamadas concluídas. Não há ranking de alunos.",
+                .'As frequências usam somente chamadas concluídas. Não há ranking de alunos.',
                 'reply_markup' => ['inline_keyboard' => $teclado]];
         }
 
@@ -137,7 +137,7 @@ class CentralGestaoTelegram
                 ."Encontros com data no período: {$encontros}\n"
                 ."Inscrições atualmente em análise: {$emAnalise}\n"
                 ."As contagens registram eventos cadastrados, não resultados pedagógicos.\n"
-                ."Envio automático ainda não habilitado.",
+                .'Envio automático ainda não habilitado.',
             'reply_markup' => ['inline_keyboard' => [
                 [['text' => 'Central', 'callback_data' => 'central'],
                     ['text' => 'Notificações', 'callback_data' => 'notificacoes']],
