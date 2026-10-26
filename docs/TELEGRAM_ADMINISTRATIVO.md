@@ -114,3 +114,11 @@ Depois da ativação, gerar o código de pareamento do administrador autorizado 
 - Revogação #104: cada confirmação pendente cancelada por revogação ganha registro append-only em `telegram_auditoria_revogacoes`; essa tabela não inventa `update_id` do Telegram. O histórico restringe exclusão física das entidades relacionadas.
 - Limitações: snapshots das relações não garantem atomicidade contra mutações simultâneas sem travas compartilhadas nos serviços acadêmicos; validar em PostgreSQL isolado. Mensagens já entregues não podem ser revogadas do histórico do Telegram.
 - Sem merge, sem deploy, sem mudanças de banco da VPS e sem aprovação acadêmica real.
+
+
+## Auditoria independente Claude — correção D1 (Issue #110)
+- Mensagens nascidas **após consulta autenticada** são classificadas como protegidas na origem (por padrão), independentemente de o vínculo ainda existir no momento do enfileiramento. Se o vínculo foi revogado durante a consulta, a mensagem mantém `requer_autorizacao=true` e é descartada pela Outbox quando `user_id` for nulo.
+- Somente as respostas literais de acesso negado ou erro no código de vinculação são explicitamente registradas como mensagens genéricas. Um vínculo bem-sucedido recebe resposta protegida.
+- Regressão determinística injeta `revogar()` durante a geração de `/aluno` e verifica que **nenhuma requisição HTTP Telegram** foi feita com o conteúdo.
+- Ainda não resolvidos por este PR: D2 (revogação na inativação), D3 (purga sem rede), D4 (UUID de /inscricao), D5 (fencing da Outbox), D6 (editMessageText), G1 (lacuna do CI), efeitos externos do serviço acadêmico.
+- Não houve implantação e não foram habilitadas operações de escrita acadêmica.

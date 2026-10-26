@@ -138,15 +138,16 @@ class TelegramAdministrativo
         $chatId = (string) $chat['id'];
         $texto = trim((string) ($mensagem['text'] ?? ''));
         if (preg_match('/^\\/vincular ([0-9a-f]{32})$/i', $texto, $m)) {
-            $this->enviar($chatId, $this->vincular($chatId, $m[1])
+            $vinculado = $this->vincular($chatId, $m[1]);
+            $this->enviar($chatId, $vinculado
                 ? 'Conta administrativa vinculada. Envie /ajuda.'
-                : 'Código inválido ou expirado. Gere outro no painel administrativo.');
+                : 'Código inválido ou expirado. Gere outro no painel administrativo.', null, $vinculado);
 
             return;
         }
 
         if (! $this->autorizado($chatId)) {
-            $this->enviar($chatId, 'Acesso restrito. Somente o administrador autorizado pode usar este bot.');
+            $this->enviar($chatId, 'Acesso restrito. Somente o administrador autorizado pode usar este bot.', null, false);
 
             return;
         }
@@ -217,7 +218,7 @@ class TelegramAdministrativo
 
         $chatId = (string) $chat['id'];
         if (! $this->autorizado($chatId)) {
-            $this->enviar($chatId, 'Acesso restrito. Somente o administrador autorizado pode usar este bot.');
+            $this->enviar($chatId, 'Acesso restrito. Somente o administrador autorizado pode usar este bot.', null, false);
 
             return;
         }
@@ -299,7 +300,7 @@ class TelegramAdministrativo
             .'Inscrições em análise: '.Application::where('status', Application::STATUS_EM_ANALISE)->count();
     }
 
-    private function enviar(string $chatId, string $texto, ?array $teclado = null): void
+    private function enviar(string $chatId, string $texto, ?array $teclado = null, bool $protegida = true): void
     {
         if ($this->updateAtual === null) {
             throw new \LogicException('Resposta Telegram fora de update identificado.');
@@ -316,7 +317,7 @@ class TelegramAdministrativo
 
         app(TelegramOutbox::class)->registrar(
             $this->updateAtual, $chatId, $texto, $teclado, $userId,
-            $editar ? $this->callbackAtual : null
+            $editar ? $this->callbackAtual : null, $protegida
         );
     }
 }

@@ -28,7 +28,7 @@ class TelegramSegurancaRegressaoTest extends TestCase
     {
         app(TelegramOutbox::class)->registrar(9001, '707', 'Resposta técnica', null, null, [
             'id' => 'callback-ficticio', 'message' => ['message_id' => 31],
-        ]);
+        ], false);
 
         return (int) DB::table('telegram_outbox')->where('update_id', 9001)->value('id');
     }

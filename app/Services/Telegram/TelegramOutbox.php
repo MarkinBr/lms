@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 
 class TelegramOutbox
 {
-    public function registrar(int $updateId, string $chatId, string $texto, ?array $teclado = null, ?int $usuarioId = null, ?array $callback = null): void
+    public function registrar(int $updateId, string $chatId, string $texto, ?array $teclado = null, ?int $usuarioId = null, ?array $callback = null, bool $protegida = true): void
     {
         $payload = ['text' => $texto, 'reply_markup' => $teclado];
         if ($callback !== null) {
@@ -21,7 +21,7 @@ class TelegramOutbox
             'update_id' => $updateId,
             'chat_id' => $chatId,
             'user_id' => $usuarioId,
-            'requer_autorizacao' => $usuarioId !== null,
+            'requer_autorizacao' => $protegida,
             'status' => 'pendente',
             'payload' => json_encode($payload, JSON_THROW_ON_ERROR),
             'expira_em' => now()->addMinutes(15),
