@@ -31,6 +31,12 @@ class ConsultasAcademicasTelegram
             $teclado[] = [['text' => $titulo, 'callback_data' => "lista:{$chave}:1"]];
         }
 
+        $teclado[] = [['text' => '📊 Central de gestão', 'callback_data' => 'central'],
+            ['text' => '🚨 Prioridades', 'callback_data' => 'prioridades']];
+        $teclado[] = [['text' => '📈 Desempenho', 'callback_data' => 'desempenho'],
+            ['text' => '📅 Agenda inteligente', 'callback_data' => 'agendainteligente']];
+        $teclado[] = [['text' => '📑 Relatório semanal', 'callback_data' => 'relatoriosemanal'],
+            ['text' => '🔔 Notificações', 'callback_data' => 'notificacoes']];
         $teclado[] = [['text' => 'Alertas (preferências)', 'callback_data' => 'alertas']];
         $teclado[] = [['text' => 'Filtros de alunos', 'callback_data' => 'filtros']];
         $teclado[] = [['text' => 'Painel do dia', 'callback_data' => 'hoje']];
@@ -39,7 +45,7 @@ class ConsultasAcademicasTelegram
         $teclado[] = [['text' => 'Pendências', 'callback_data' => 'pendencias']];
         $teclado[] = [['text' => 'Agenda', 'callback_data' => 'agenda'], ['text' => 'Cursos', 'callback_data' => 'cursos']];
 
-        return ['text' => "Menu CETSADP • Consultas\nEscolha uma área ou use /buscar NOME, /aluno ID, /notas ID e /frequencia ID.\nInformações detalhadas devem ser consultadas no painel autenticado.",
+        return ['text' => "Menu CETSADP • Consultas\nEscolha uma área ou use /pesquisar NOME, /desempenho ID e /aluno ID.\nInformações detalhadas devem ser consultadas no painel autenticado.",
             'reply_markup' => ['inline_keyboard' => $teclado]];
     }
 

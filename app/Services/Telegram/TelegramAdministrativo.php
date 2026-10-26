@@ -164,10 +164,11 @@ class TelegramAdministrativo
 
         $consulta = app(ConsultasAcademicasTelegram::class);
         $preferencias = app(PreferenciasAlertasTelegram::class);
-        if ($texto === '/alertas' || $texto === '/alertas sim' || $texto === '/alertas nao') {
-            $resposta = $texto === '/alertas'
+        $central = app(CentralGestaoTelegram::class);
+        if (in_array($texto, ['/alertas', '/alertas sim', '/alertas nao', '/notificacoes', '/notificacoes sim', '/notificacoes nao'], true)) {
+            $resposta = in_array($texto, ['/alertas', '/notificacoes'], true)
                 ? $preferencias->consultar($chatId)
-                : $preferencias->definir($chatId, $texto === '/alertas sim');
+                : $preferencias->definir($chatId, str_ends_with($texto, ' sim'));
             $this->enviar($chatId, $resposta['text']);
 
             return;
@@ -177,6 +178,10 @@ class TelegramAdministrativo
             $resposta = app(ConfirmacoesTelegram::class)->prepararRevisao($chatId, $m[1], $this->updateAtual);
         } elseif ($texto === '/testeconfirmacao') {
             $resposta = app(ConfirmacoesTelegram::class)->preparar($chatId, $this->updateAtual);
+        } elseif (preg_match('/^\\/pesquisar\\s+(.+)$/us', $texto, $m)) {
+            $resposta = $consulta->buscarAluno($m[1]);
+        } elseif (preg_match('/^\\/desempenho\\s+([1-9][0-9]{0,8})$/D', $texto, $m)) {
+            $resposta = $central->desempenho((int) $m[1]);
         } elseif (preg_match('/^\\/buscar\\s+(.+)$/us', $texto, $m)) {
             $resposta = $consulta->buscarAluno($m[1]);
         } elseif (preg_match('/^\\/(turma|matricula|aluno|notas|frequencia)\\s+([0-9]{1,12})$/', $texto, $m)) {
@@ -188,6 +193,12 @@ class TelegramAdministrativo
             $resposta = $consulta->inscricao($m[1]);
         } else {
             $resposta = match ($texto) {
+                '/central' => $central->central(),
+                '/prioridades' => $central->prioridades(),
+                '/pesquisar' => ['text' => 'Uso: /pesquisar NOME (digite parte do nome de um aluno).'],
+                '/desempenho' => $central->desempenho(),
+                '/agendainteligente' => $central->agendaInteligente(),
+                '/relatoriosemanal' => $central->relatorioSemanal(),
                 '/filtros' => $consulta->filtros(),
                 '/hoje' => $consulta->hoje(),
                 '/agenda7' => $consulta->agendaSemanal(),
@@ -244,10 +255,25 @@ class TelegramAdministrativo
 
         $codigo = (string) ($callback['data'] ?? '');
         $consulta = app(ConsultasAcademicasTelegram::class);
+        $central = app(CentralGestaoTelegram::class);
         if (preg_match('/^(confirmar|cancelar):([0-9a-f]{32})$/D', $codigo, $m)) {
             $resposta = app(ConfirmacoesTelegram::class)->decidir($chatId, $m[1], $m[2], $this->updateAtual);
         } elseif ($codigo === 'menu') {
             $resposta = $consulta->menu();
+        } elseif ($codigo === 'central') {
+            $resposta = $central->central();
+        } elseif ($codigo === 'prioridades') {
+            $resposta = $central->prioridades();
+        } elseif ($codigo === 'desempenho') {
+            $resposta = $central->desempenho();
+        } elseif (preg_match('/^desempenho:([1-9][0-9]{0,8})$/D', $codigo, $m)) {
+            $resposta = $central->desempenho((int) $m[1]);
+        } elseif ($codigo === 'agendainteligente') {
+            $resposta = $central->agendaInteligente();
+        } elseif ($codigo === 'relatoriosemanal') {
+            $resposta = $central->relatorioSemanal();
+        } elseif ($codigo === 'notificacoes') {
+            $resposta = app(PreferenciasAlertasTelegram::class)->consultar($chatId);
         } elseif ($codigo === 'alertas') {
             $resposta = app(PreferenciasAlertasTelegram::class)->consultar($chatId);
         } elseif (in_array($codigo, ['filtros', 'hoje', 'relatorios', 'aulaspendentes'], true)) {

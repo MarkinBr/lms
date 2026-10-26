@@ -12,6 +12,13 @@ class CatalogoComandosTelegram
     {
         return [
             ['command' => 'menu', 'description' => 'Abrir menu administrativo'],
+            ['command' => 'central', 'description' => 'Central de gestão acadêmica'],
+            ['command' => 'prioridades', 'description' => 'Pendências que exigem atenção'],
+            ['command' => 'pesquisar', 'description' => 'Pesquisar aluno: requer nome'],
+            ['command' => 'desempenho', 'description' => 'Frequência acadêmica por turma'],
+            ['command' => 'agendainteligente', 'description' => 'Agenda dos próximos sete dias'],
+            ['command' => 'relatoriosemanal', 'description' => 'Indicadores dos últimos sete dias'],
+            ['command' => 'notificacoes', 'description' => 'Preferências de notificações'],
             ['command' => 'hoje', 'description' => 'Visão acadêmica de hoje'],
             ['command' => 'resumo', 'description' => 'Resumo acadêmico'],
             ['command' => 'pendencias', 'description' => 'Consultar pendências'],
