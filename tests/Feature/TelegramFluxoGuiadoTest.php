@@ -59,9 +59,10 @@ class TelegramFluxoGuiadoTest extends TestCase
 
     private function saida(int $updateId): array
     {
-        $texto = DB::table('telegram_outbox')->where('update_id', $updateId)->value('payload');
+        $this->assertDatabaseHas('telegram_outbox', ['update_id' => $updateId]);
 
-        return json_decode($texto, true, 512, JSON_THROW_ON_ERROR);
+        // O outbox elimina o payload após entregar; verificamos a requisição simulada.
+        return Http::recorded()->last()[0]->data();
     }
 
     public function test_menu_mostra_areas_e_cadastro_guiado_sem_exigir_comando(): void
