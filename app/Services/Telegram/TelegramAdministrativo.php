@@ -163,6 +163,35 @@ class TelegramAdministrativo
             return;
         }
 
+        $fluxo = app(FluxoCadastroAlunoTelegram::class);
+        if ($texto === '/cancelar' && $fluxo->ativo($chatId)) {
+            $resposta = $fluxo->acao($chatId, 'cancelar', $this->updateAtual);
+            $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+
+            return;
+        }
+
+        if ($texto === '/novoaluno') {
+            $resposta = $fluxo->iniciar($chatId);
+            $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+
+            return;
+        }
+
+        if ($texto !== '' && ! str_starts_with($texto, '/') && $fluxo->ativo($chatId)) {
+            $resposta = $fluxo->responder($chatId, $texto);
+            if ($resposta !== null) {
+                $this->enviar($chatId, $resposta['text'], $resposta['reply_markup'] ?? null);
+
+                return;
+            }
+        }
+
+        // Um comando novo abandona o rascunho anterior sem criar registros.
+        if (str_starts_with($texto, '/') && $fluxo->ativo($chatId)) {
+            $fluxo->cancelar($chatId);
+        }
+
         $consulta = app(ConsultasAcademicasTelegram::class);
         $preferencias = app(PreferenciasAlertasTelegram::class);
         if ($texto === '/alertas' || $texto === '/alertas sim' || $texto === '/alertas nao') {
@@ -220,8 +249,8 @@ class TelegramAdministrativo
                 '/pendencias' => $consulta->pendencias(),
                 '/agenda' => $consulta->agenda(),
                 '/cursos' => $consulta->cursos(),
-                '/start', '/ajuda', '/menu' => $consulta->menu(),
-                '/administrar' => CatalogoComandosTelegram::menuAdministrativo(),
+                '/start', '/ajuda', '/menu', '/administrar' => CatalogoComandosTelegram::menuPrincipal(),
+                '/consultas' => $consulta->menu(),
                 '/buscar' => ['text' => 'Uso: /buscar NOME (digite o nome do aluno após o comando).'],
                 '/aluno' => ['text' => 'Uso: /aluno ID (informe o número do aluno).'],
                 '/notas' => ['text' => 'Uso: /notas ID (informe o número do aluno).'],
@@ -278,12 +307,24 @@ class TelegramAdministrativo
         $consulta = app(ConsultasAcademicasTelegram::class);
         if (preg_match('/^(confirmar|cancelar):([0-9a-f]{32})$/D', $codigo, $m)) {
             $resposta = app(ConfirmacoesTelegram::class)->decidir($chatId, $m[1], $m[2], $this->updateAtual);
+        } elseif (preg_match('/^fluxo:(novoaluno|voltar|pular|cancelar|preparar)$/D', $codigo, $m)) {
+            $resposta = app(FluxoCadastroAlunoTelegram::class)->acao($chatId, $m[1], $this->updateAtual);
+        } elseif (preg_match('/^area:(alunos|cursos|avaliacoes|comunicacao|relatorios|admin)$/D', $codigo, $m)) {
+            $resposta = CatalogoComandosTelegram::menuArea($m[1]);
+        } elseif ($codigo === 'orientar:buscar') {
+            $resposta = ['text' => 'Para localizar um aluno, envie /buscar seguido do nome. Exemplo: /buscar Maria.',
+                'reply_markup' => ['inline_keyboard' => [
+                    [['text' => 'Voltar a alunos', 'callback_data' => 'area:alunos']],
+                ]]];
+        } elseif ($codigo === 'menuconsultas') {
+            $resposta = $consulta->menu();
         } elseif ($codigo === 'administrar') {
             $resposta = CatalogoComandosTelegram::menuAdministrativo();
         } elseif (preg_match('/^operacao:([a-z]+)$/D', $codigo, $m)) {
             $resposta = CatalogoComandosTelegram::orientar($m[1]) ?? ['text' => 'Operação inválida. Use /administrar.'];
         } elseif ($codigo === 'menu') {
-            $resposta = $consulta->menu();
+            app(FluxoCadastroAlunoTelegram::class)->cancelar($chatId);
+            $resposta = CatalogoComandosTelegram::menuPrincipal();
         } elseif ($codigo === 'alertas') {
             $resposta = app(PreferenciasAlertasTelegram::class)->consultar($chatId);
         } elseif (in_array($codigo, ['filtros', 'hoje', 'relatorios', 'aulaspendentes', 'financeiro'], true)) {
