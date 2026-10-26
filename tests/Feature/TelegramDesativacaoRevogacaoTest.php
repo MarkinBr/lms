@@ -86,6 +86,22 @@ class TelegramDesativacaoRevogacaoTest extends TestCase
         $this->assertDatabaseCount('telegram_auditoria_revogacoes', 0);
     }
 
+    public function test_comando_emergencial_revoga_vinculo_de_conta_inativada_por_sql_direto(): void
+    {
+        $admin = $this->donoVinculado();
+        app(ConfirmacoesTelegram::class)->preparar('707', 615);
+        // Simula uma atualização que não emite eventos Eloquent.
+        DB::table('users')->where('id', $admin->id)->update(['ativo' => false]);
+        $this->assertDatabaseHas('telegram_vinculos', ['user_id' => $admin->id]);
+
+        $this->artisan('telegram:revogar', ['usuarioId' => (string) $admin->id])
+            ->assertExitCode(0);
+
+        $this->assertDatabaseMissing('telegram_vinculos', ['user_id' => $admin->id]);
+        $this->assertDatabaseHas('telegram_confirmacoes', ['status' => 'cancelado']);
+        $this->assertDatabaseCount('telegram_auditoria_revogacoes', 1);
+    }
+
     public function test_exclusao_do_administrador_sem_confirmacoes_revoga_vinculo_e_saida_pendente(): void
     {
         $admin = $this->donoVinculado();
