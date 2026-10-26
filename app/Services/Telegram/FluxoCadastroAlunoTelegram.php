@@ -91,7 +91,7 @@ class FluxoCadastroAlunoTelegram
         }
 
         if ($codigo === 'pular') {
-            if (! in_array($estado['etapa'], [1, 2], true)) {
+            if (in_array($estado['etapa'], [1, 2], true) === false) {
                 return $this->pergunta($estado);
             }
 
@@ -103,7 +103,7 @@ class FluxoCadastroAlunoTelegram
         }
 
         $dados = $estado['dados'];
-        if (! isset($dados[0], $dados[1], $dados[2])) {
+        if (isset($dados[0], $dados[1], $dados[2]) === false) {
             $this->limpar($chatId);
 
             return ['text' => 'Rascunho incompleto. Inicie o cadastro novamente.'];
@@ -161,10 +161,10 @@ class FluxoCadastroAlunoTelegram
             1 => "CETSADP • Cadastrar aluno\n2 de 3 • Qual é o e-mail? (Opcional)",
             2 => "CETSADP • Cadastrar aluno\n3 de 3 • Qual é o CPF? (Opcional)",
             default => "CETSADP • Revisar cadastro\n"
-                ."Nome: ".($dados[0] ?? '')."\n"
-                ."E-mail: ".(($dados[1] ?? '-') === '-' ? 'Não informado' : $dados[1])."\n"
-                ."CPF: ".(($dados[2] ?? '-') === '-' ? 'Não informado' : 'Informado')."\n\n"
-                ."Ao avançar, você receberá a confirmação final. Nenhum aluno foi criado ainda.",
+                .'Nome: '.($dados[0] ?? '')."\n"
+                .'E-mail: '.(($dados[1] ?? '-') === '-' ? 'Não informado' : $dados[1])."\n"
+                .'CPF: '.(($dados[2] ?? '-') === '-' ? 'Não informado' : 'Informado')."\n\n"
+                .'Ao avançar, você receberá a confirmação final. Nenhum aluno foi criado ainda.',
         };
 
         $botoes = [];
@@ -199,7 +199,7 @@ class FluxoCadastroAlunoTelegram
     private function carregar(string $chatId): ?array
     {
         $texto = Cache::get($this->chave($chatId));
-        if (! is_string($texto)) {
+        if (is_string($texto) === false) {
             return null;
         }
 
