@@ -2,7 +2,11 @@
 
 namespace App\Filament\Aluno\Pages;
 
+use App\Models\Aula;
+use App\Models\AulaProgresso;
 use App\Models\ChamadaFrequencia;
+use App\Models\Disciplina;
+use App\Models\Modulo;
 use App\Models\Matricula;
 use App\Models\MatriculaTurma;
 use Filament\Pages\Page;
@@ -47,6 +51,94 @@ class MeuCursoDetalhe extends Page
         $this->registro = $registro;
         $this->dados = MeusCursos::prepararMatricula($registro);
         $this->dados['frequencias'] = static::frequenciasDaMatricula($registro);
+        $this->dados['grade'] = static::gradeDaMatricula($registro);
+    }
+
+    /**
+     * Grade curricular da matrícula já autorizada no mount().
+     *
+     * Aulas novas aparecem dentro da disciplina; registros legados sem
+     * vínculo são preservados em um grupo transitório, sem remapeamento
+     * automático nem alteração de histórico ou progresso.
+     *
+     * @return array<string, mixed>
+     */
+    public static function gradeDaMatricula(Matricula $matricula): array
+    {
+        $modulos = $matricula->curso?->modulos()
+            ->with([
+                'disciplinas' => fn ($query) => $query->orderBy('ordem')->orderBy('id'),
+                'aulas' => fn ($query) => $query->orderBy('ordem')->orderBy('id'),
+            ])
+            ->orderBy('ordem')
+            ->orderBy('id')
+            ->get() ?? collect();
+
+        $aulaIds = $modulos
+            ->flatMap(fn (Modulo $modulo) => $modulo->aulas->pluck('id'))
+            ->unique()
+            ->values();
+
+        $concluidas = $aulaIds->isEmpty()
+            ? []
+            : AulaProgresso::query()
+                ->where('aluno_id', $matricula->user_id)
+                ->whereIn('aula_id', $aulaIds->all())
+                ->where('concluida', true)
+                ->pluck('aula_id')
+                ->flip()
+                ->all();
+
+        $grade = $modulos->map(function (Modulo $modulo) use ($concluidas): array {
+            $idsDisciplinas = $modulo->disciplinas->pluck('id')->all();
+
+            $formatarAula = static fn (Aula $aula): array => [
+                'id' => $aula->id,
+                'titulo' => $aula->titulo,
+                'duracao' => $aula->duracao,
+                'liberada' => (bool) $aula->liberada,
+                'concluida' => isset($concluidas[$aula->id]),
+            ];
+
+            $disciplinas = $modulo->disciplinas
+                ->map(fn (Disciplina $disciplina): array => [
+                    'id' => $disciplina->id,
+                    'nome' => $disciplina->nome,
+                    'aulas' => $modulo->aulas
+                        ->where('disciplina_id', $disciplina->id)
+                        ->map($formatarAula)
+                        ->values()
+                        ->all(),
+                ])
+                ->all();
+
+            // Um módulo pode conter aulas anteriores ao vínculo obrigatório.
+            // Também preserva aulas com referência curricular inconsistente.
+            $semDisciplina = $modulo->aulas->reject(
+                fn (Aula $aula): bool => in_array($aula->disciplina_id, $idsDisciplinas, true)
+            );
+
+            if ($semDisciplina->isNotEmpty()) {
+                $disciplinas[] = [
+                    'id' => null,
+                    'nome' => 'Aulas aguardando organização',
+                    'aulas' => $semDisciplina->map($formatarAula)->values()->all(),
+                ];
+            }
+
+            return [
+                'id' => $modulo->id,
+                'titulo' => $modulo->titulo,
+                'total_aulas' => $modulo->aulas->count(),
+                'disciplinas' => $disciplinas,
+            ];
+        });
+
+        return [
+            'modulos' => $grade->all(),
+            'total_aulas' => $aulaIds->count(),
+            'aulas_concluidas' => count($concluidas),
+        ];
     }
 
     /**
