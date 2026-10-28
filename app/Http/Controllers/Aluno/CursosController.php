@@ -106,7 +106,8 @@ class CursosController extends Controller
         $curso = Curso::with([
             'modulos' => function ($query) {
                 $query->orderBy('ordem')->with([
-                    'aulas' => fn ($aulas) => $aulas->orderBy('ordem'),
+                    'aulas' => fn ($aulas) => $aulas->orderBy('ordem')->orderBy('id'),
+                    'disciplinas' => fn ($disciplinas) => $disciplinas->orderBy('ordem')->orderBy('id'),
                 ]);
             },
         ])->findOrFail($id);
