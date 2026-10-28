@@ -19,8 +19,8 @@ class CursosController extends Controller
         $statusValidos = ['ativo', 'ativa', 'concluido'];
 
         $matriculas = Matricula::with([
-                'curso.modulos.aulas' => fn ($query) => $query->orderBy('ordem'),
-            ])
+            'curso.modulos.aulas' => fn ($query) => $query->orderBy('ordem'),
+        ])
             ->where('user_id', $aluno->id)
             ->whereIn(DB::raw('LOWER(status)'), $statusValidos)
             ->orderByDesc('created_at')
@@ -29,11 +29,12 @@ class CursosController extends Controller
         $matriculas->getCollection()->transform(function ($matricula) use ($aluno) {
             $curso = $matricula->curso;
 
-            if (!$curso) {
+            if (! $curso) {
                 $matricula->total_aulas = 0;
                 $matricula->aulas_concluidas = 0;
                 $matricula->progresso = 0;
                 $matricula->tempo_total_minutos = 0;
+
                 return $matricula;
             }
 
@@ -55,6 +56,7 @@ class CursosController extends Controller
 
             $tempoTotalMinutos = $aulas->sum(function ($aula) {
                 preg_match('/(\d+)/', (string) ($aula->duracao ?? ''), $matches);
+
                 return (int) ($matches[1] ?? 0);
             });
 
