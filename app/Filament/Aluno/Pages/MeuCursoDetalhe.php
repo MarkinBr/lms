@@ -115,7 +115,7 @@ class MeuCursoDetalhe extends Page
             // Um módulo pode conter aulas anteriores ao vínculo obrigatório.
             // Também preserva aulas com referência curricular inconsistente.
             $semDisciplina = $modulo->aulas->reject(
-                fn (Aula $aula): bool => in_array($aula->disciplina_id, $idsDisciplinas, true)
+                fn (Aula $aula): bool => in_array((int) $aula->disciplina_id, $idsDisciplinas, true)
             );
 
             if ($semDisciplina->isNotEmpty()) {
