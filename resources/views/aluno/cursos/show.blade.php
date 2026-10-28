@@ -125,10 +125,31 @@
 
                                 <!-- Lista de Aulas -->
                                 <div id="modulo-{{ $modulo->id }}" class="mt-4 space-y-2 hidden">
-                                    @foreach($modulo->aulas as $aula)
+                                    @php
+                                        // Ordena as aulas pela disciplina curricular; mantém o legado
+                                        // visível até a Secretaria concluir o vínculo manual.
+                                        $idsDisciplinas = $modulo->disciplinas->pluck('id')->all();
+                                        $aulasDasDisciplinas = $modulo->disciplinas->flatMap(
+                                            fn ($disciplina) => $modulo->aulas->where('disciplina_id', $disciplina->id)
+                                        );
+                                        $aulasSemDisciplina = $modulo->aulas->reject(
+                                            fn ($item) => in_array((int) $item->disciplina_id, $idsDisciplinas, true)
+                                        );
+                                        $aulasOrdenadas = $aulasDasDisciplinas->concat($aulasSemDisciplina);
+                                        $grupoAnterior = '__inicio__';
+                                    @endphp
+                                    @foreach($aulasOrdenadas as $aula)
                                         @php
+                                            $disciplina = $modulo->disciplinas->firstWhere('id', $aula->disciplina_id);
+                                            $grupoAtual = $disciplina ? (string) $disciplina->id : 'sem-disciplina';
                                             $concluida = (bool) ($aula->concluida_portal ?? false);
                                         @endphp
+                                        @if($grupoAtual !== $grupoAnterior)
+                                            <h4 class="rounded-md bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-900 dark:bg-gray-700 dark:text-blue-200">
+                                                {{ $disciplina?->nome ?? 'Aulas aguardando organização' }}
+                                            </h4>
+                                            @php $grupoAnterior = $grupoAtual; @endphp
+                                        @endif
 
                                         <a href="{{ route('aluno.aula', $aula->id) }}" 
                                            class="flex items-center p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">

@@ -49,6 +49,71 @@
             @endif
         </div>
 
+        {{-- Grade curricular real: curso → módulo → disciplina → aula. --}}
+        <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+            <div class="mb-4 flex flex-wrap items-start justify-between gap-2">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Conteúdo do curso</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        Aulas organizadas por módulo e disciplina, conforme a matriz curricular.
+                    </p>
+                </div>
+                <span class="text-sm text-gray-600 dark:text-gray-300">
+                    {{ $dados['grade']['aulas_concluidas'] }} / {{ $dados['grade']['total_aulas'] }} aulas concluídas
+                </span>
+            </div>
+
+            <div class="space-y-3">
+                @forelse($dados['grade']['modulos'] as $modulo)
+                    <details class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700" {{ $loop->first ? 'open' : '' }}>
+                        <summary class="flex cursor-pointer items-center justify-between gap-3 bg-gray-50 px-4 py-3 font-semibold text-gray-900 dark:bg-gray-800 dark:text-white">
+                            <span>{{ $modulo['titulo'] }}</span>
+                            <span class="text-xs font-normal text-gray-500 dark:text-gray-400">{{ $modulo['total_aulas'] }} aula(s)</span>
+                        </summary>
+                        <div class="space-y-4 p-4">
+                            @forelse($modulo['disciplinas'] as $disciplina)
+                                <div>
+                                    <h4 class="mb-2 font-medium text-gray-800 dark:text-gray-100">{{ $disciplina['nome'] }}</h4>
+                                    @if(empty($disciplina['aulas']))
+                                        <p class="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                                            Nenhuma aula publicada nesta disciplina.
+                                        </p>
+                                    @else
+                                        <ul class="space-y-2">
+                                            @foreach($disciplina['aulas'] as $aula)
+                                                <li>
+                                                    @if($aula['liberada'])
+                                                        <a href="{{ route('aluno.aula', $aula['id']) }}"
+                                                           class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm transition hover:border-primary-400 hover:bg-primary-50 dark:border-gray-700 dark:hover:bg-primary-500/10">
+                                                            <span class="font-medium text-gray-900 dark:text-white">{{ $aula['titulo'] }}</span>
+                                                            <span class="shrink-0 text-xs {{ $aula['concluida'] ? 'text-success-600 dark:text-success-400' : 'text-gray-500 dark:text-gray-400' }}">
+                                                                {{ $aula['concluida'] ? 'Concluída' : ($aula['duracao'] ?: 'Assistir') }}
+                                                            </span>
+                                                        </a>
+                                                    @else
+                                                        <div class="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-gray-800">
+                                                            <span class="font-medium text-gray-500 dark:text-gray-400">{{ $aula['titulo'] }}</span>
+                                                            <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">Bloqueada</span>
+                                                        </div>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                </div>
+                            @empty
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Este módulo ainda não tem disciplinas cadastradas.</p>
+                            @endforelse
+                        </div>
+                    </details>
+                @empty
+                    <p class="rounded-lg bg-gray-50 p-4 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        O conteúdo curricular deste curso ainda está sendo preparado.
+                    </p>
+                @endforelse
+            </div>
+        </section>
+
         {{-- Issue #32 — Frequência real do aluno (somente a própria), resumida por turma/disciplina. --}}
         <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
             <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
