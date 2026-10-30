@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -120,17 +121,26 @@ class SsoController extends Controller
             $identifier = preg_replace('/[^a-zA-Z0-9._\-]/', '', $identifier);
 
             // Encontrar ou criar usuário no LMS
-            $user = $this->findOrCreateUser($identifier, $userName, $userType);
+            $user = DB::transaction(function () use ($identifier, $userName, $userType, $request) {
+                $user = $this->findOrCreateUser($identifier, $userName, $userType);
+                if (! $user || ! $user->ativo || $user->nivel !== $userType
+                    || ($user->nivel === 'aluno' && ($user->senha_definitiva_pendente || $user->primeiro_acesso_pendente))) {
+                    return null;
+                }
+                Auth::login($user, true);
+                $request->session()->regenerate();
+                if ($user->nivel === 'aluno') {
+                    $request->session()->put('aluno_acesso_versao', (int) $user->acesso_versao);
+                }
+
+                return $user;
+            });
 
             if (! $user) {
                 return redirect('/login')->withErrors([
                     'sso' => 'Não foi possível criar a conta no LMS.',
                 ]);
             }
-
-            // Fazer login automático
-            Auth::login($user, true); // remember = true
-            $request->session()->regenerate();
 
             // Atualizar campo last_sso_at
             $user->update([
@@ -211,10 +221,12 @@ class SsoController extends Controller
             // Tentar encontrar por CPF ou username
             $user = User::where('cpf', $identifier)
                 ->orWhere('username', $identifier)
+                ->lockForUpdate()
                 ->first();
 
             if ($user) {
-                if (! $user->ativo) {
+                if (! $user->ativo || $user->nivel !== $type
+                    || ($user->nivel === 'aluno' && ($user->senha_definitiva_pendente || $user->primeiro_acesso_pendente))) {
                     Log::warning('SSO: tentativa de acesso por conta inativa', [
                         'user_id' => $user->id,
                     ]);
@@ -226,10 +238,6 @@ class SsoController extends Controller
                 $updateData = [];
                 if ($user->name !== $name) {
                     $updateData['name'] = $name;
-                }
-                // Garantir que o nivel está correto (para SSO re-auth)
-                if ($user->nivel !== $type) {
-                    $updateData['nivel'] = $type;
                 }
                 if (! empty($updateData)) {
                     $user->update($updateData);

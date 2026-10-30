@@ -12,6 +12,7 @@
  *   3. sanctum:prune-expired — Limpar tokens Sanctum expirados (diário)
  */
 
+use App\Services\Acessos\EntregasAcesso;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -74,3 +75,9 @@ Schedule::command('telegram:alertas-diarios')
     ->dailyAt('08:00')->timezone('America/Sao_Paulo')->withoutOverlapping();
 Schedule::command('telegram:outbox-drenar')
     ->everyMinute()->withoutOverlapping();
+
+Artisan::command('acessos:limpar-entregas', function () {
+    $total = app(EntregasAcesso::class)->limparExpiradas();
+    $this->info('Conteúdos expirados removidos: '.$total);
+})->purpose('Remove o conteúdo cifrado das entregas de acesso expiradas, preservando o histórico');
+Schedule::command('acessos:limpar-entregas')->everyMinute()->withoutOverlapping();

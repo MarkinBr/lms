@@ -44,6 +44,12 @@ class ApplicationController extends Controller
             'naturalidade_cidade' => 'nullable|string|max:100',
             'naturalidade_estado' => 'nullable|string|max:2',
             'escolaridade' => 'required|string|max:100',
+            'ano_conclusao' => 'nullable|integer|min:1900|max:'.now()->year,
+            'formacao_teologica' => 'nullable|boolean',
+            'instituicao_anterior' => 'nullable|string|max:255',
+            'como_conheceu' => ['nullable', 'string', Rule::in(Application::ORIGENS_CONHECIMENTO)],
+            'indicacao_nome' => 'nullable|string|max:255',
+            'aceite_termos' => 'sometimes|boolean|accepted',
 
             // Endereço
             'cep' => 'required|string|max:10',
@@ -53,6 +59,24 @@ class ApplicationController extends Controller
             'bairro' => 'required|string|max:100',
             'cidade' => 'required|string|max:100',
             'estado' => 'required|string|max:2',
+        ];
+    }
+
+    /**
+     * Preserva respostas negativas e só registra aceite explícito, com evidência do servidor.
+     */
+    private function dadosComplementares(array $validated): array
+    {
+        $aceitou = (bool) ($validated['aceite_termos'] ?? false);
+
+        return [
+            'ano_conclusao' => $validated['ano_conclusao'] ?? null,
+            'formacao_teologica' => $validated['formacao_teologica'] ?? null,
+            'instituicao_anterior' => $validated['instituicao_anterior'] ?? null,
+            'como_conheceu' => $validated['como_conheceu'] ?? null,
+            'indicacao_nome' => $validated['indicacao_nome'] ?? null,
+            'aceite_termos_em' => $aceitou ? now() : null,
+            'termos_versao' => $aceitou ? Application::TERMOS_VERSAO : null,
         ];
     }
 
@@ -154,6 +178,7 @@ class ApplicationController extends Controller
 
         // Cria a inscrição
         $application = Application::create([
+            ...$this->dadosComplementares($validated),
             'protocol' => $protocol,
             'nome_completo' => $validated['nome_completo'],
             'email' => $validated['email'],
@@ -294,12 +319,15 @@ class ApplicationController extends Controller
             ], 422);
         }
 
+        $complementares = $this->dadosComplementares($validated);
+
         // Criação em transação: se qualquer item falhar, nenhum registro é gravado
-        $inscricoesCriadas = DB::transaction(function () use ($validated) {
+        $inscricoesCriadas = DB::transaction(function () use ($validated, $complementares) {
             $criadas = [];
 
             foreach ($validated['inscricoes'] as $inscricao) {
                 $criadas[] = Application::create([
+                    ...$complementares,
                     'protocol' => $this->gerarProtocolo(),
                     'nome_completo' => $validated['nome_completo'],
                     'email' => $validated['email'],

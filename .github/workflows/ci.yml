@@ -64,6 +64,8 @@ jobs:
         run: php tests/infra/telegram_postgres_race.php
       - name: Homologar decisões e notas administrativas sem efeitos externos
         run: php tests/infra/telegram_administracao_postgres.php
+      - name: Homologar cadastro e concorrência da Gestão de Acessos
+        run: php tests/infra/secretaria_acessos_postgres.php
 
   quality:
     name: PHP e JavaScript
@@ -125,6 +127,9 @@ jobs:
 
       - name: Testes de operações administrativas Telegram
         run: php artisan test --filter='TelegramConteudoTest|TelegramOperacoesAcademicasTest|TelegramPublicacoesTest|TelegramFinanceiroEAlertasTest|TelegramDecisaoInscricaoTest|TelegramAlunosEscritaTest|TelegramNotasEscritaTest|TelegramNoticiasTest'
+
+      - name: Testes da Gestão de Acessos e inscrição complementar
+        run: php artisan test --filter='GestaoCadastroAcessosTest|CredenciaisAcessoTest|EntregasAcessoTest|CentralAcessosHttpTest|AtendimentoSeguroHttpTest|InscricaoCamposComplementaresTest'
 
       - name: Testes da infraestrutura isolada
         run: python3 -m unittest discover -s tests/infra -p 'test_*.py'
