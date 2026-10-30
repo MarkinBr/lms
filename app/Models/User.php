@@ -4,6 +4,7 @@ namespace App\Models;
 
 // Importações necessárias para o Filament funcionar
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
@@ -12,7 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable implements CanResetPasswordContract, FilamentUser
+class User extends Authenticatable implements CanResetPasswordContract, FilamentUser, HasAvatar
 {
     use CanResetPassword, HasApiTokens, HasFactory, Notifiable;
 
@@ -93,6 +94,10 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
      * Conversão de tipos.
      */
     protected $casts = [
+        'acesso_versao' => 'integer',
+        'senha_definitiva_pendente' => 'boolean',
+        'ano_conclusao' => 'integer',
+        'formacao_teologica' => 'boolean',
         'email_verified_at' => 'datetime',
         'primeiro_acesso_pendente' => 'boolean',
         'email_confirmacao_expira_em' => 'datetime',
@@ -120,7 +125,7 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
     public function canAccessPanel(Panel $panel): bool
     {
         // 1. Usuário inativo nunca entra no sistema
-        if (! $this->ativo) {
+        if (! $this->ativo || ($this->nivel === 'aluno' && $this->senha_definitiva_pendente)) {
             return false;
         }
 
@@ -156,6 +161,30 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
     public function setMatriculaLoginAttribute(?string $valor): void
     {
         $this->attributes['matricula_login'] = $valor === null ? null : mb_strtolower(trim($valor));
+    }
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        $foto = (string) $this->foto;
+        if ($foto === '') {
+            return null;
+        }
+        if (str_starts_with($foto, 'acessos/fotos/')) {
+            return route('aluno.foto', ['aluno' => $this->id]);
+        }
+        if (filter_var($foto, FILTER_VALIDATE_URL) && in_array(parse_url($foto, PHP_URL_SCHEME), ['https', 'http'], true)) {
+            return $foto;
+        }
+        if (str_contains($foto, '..') || str_contains($foto, ':') || str_starts_with($foto, '/') || str_starts_with($foto, 'applications/')) {
+            return null;
+        }
+
+        return asset('storage/'.$foto);
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->foto_url;
     }
 
     public function scopeProfessores($query)

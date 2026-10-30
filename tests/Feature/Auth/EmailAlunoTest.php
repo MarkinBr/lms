@@ -214,7 +214,9 @@ class EmailAlunoTest extends PortalAuthTestCase
         auth()->logout();
         $this->post(route('password.update'), ['email' => $aluno->email, 'token' => $token,
             'password' => 'OutraSenha#2026', 'password_confirmation' => 'OutraSenha#2026'])->assertRedirect(route('aluno.login'));
-        $this->actingAs($aluno->fresh())->get($url)->assertForbidden();
+        $this->actingAs($aluno->fresh())
+            ->withSession(['aluno_acesso_versao' => (int) $aluno->fresh()->acesso_versao])
+            ->get($url)->assertForbidden();
         $this->assertSame('antigo@example.test', $aluno->fresh()->email);
     }
 

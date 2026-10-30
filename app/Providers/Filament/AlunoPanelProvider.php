@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\ValidarSessaoAluno;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -51,6 +52,7 @@ class AlunoPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                ValidarSessaoAluno::class,
             ]);
     }
 }

@@ -37,6 +37,9 @@ use App\Http\Controllers\SsoController;
 use App\Http\Controllers\ValidacaoDeclaracaoController;
 use Illuminate\Support\Facades\Route;
 
+require __DIR__.'/secretaria-central.php';
+require __DIR__.'/acesso-assistido.php';
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
