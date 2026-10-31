@@ -107,7 +107,7 @@ class PrimeiroAcessoSolicitacaoTest extends PortalAuthTestCase
     public function test_email_duplicado_nao_recebe_link_de_primeiro_acesso(): void
     {
         $this->alunoPendente(['email' => 'primeiro@example.test']);
-        $this->alunoPendente(['email' => 'PRIMEIRO@example.test']);
+        $this->alunoPendente(['email' => 'PRIMEIRO@example.test', 'matricula_login' => '2026-000002']);
 
         $this->post(route('aluno.primeiro-acesso.solicitar'), ['email' => 'primeiro@example.test'])
             ->assertSessionHas('status');
