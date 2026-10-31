@@ -51,6 +51,31 @@ class IdentificadorAluno
         return $aluno->nivel === 'aluno' && $aluno->ativo && $aluno->email_verified_at !== null ? $aluno : null;
     }
 
+    /** Busca uma conta única elegível para receber um link de primeiro acesso por e-mail.
+     * A conta com credencial assistida pendente continua sob atendimento da Secretaria.
+     */
+    public function porEmailPrimeiroAcesso(string $email): ?User
+    {
+        $contas = User::query()
+            ->whereRaw('LOWER(TRIM(email)) = ?', [$this->normalizar($email)])
+            ->limit(2)
+            ->get();
+
+        if ($contas->count() !== 1) {
+            return null;
+        }
+
+        $aluno = $contas->sole();
+
+        return $aluno->nivel === 'aluno'
+            && $aluno->ativo
+            && $aluno->primeiro_acesso_pendente
+            && $aluno->email_verified_at === null
+            && ! $aluno->senha_definitiva_pendente
+            ? $aluno
+            : null;
+    }
+
     private function cpf(string $valor): ?string
     {
         if (! preg_match('/^[0-9.\-\s]+$/', trim($valor))) {
