@@ -63,6 +63,18 @@ class CentralAcessosController extends Controller
         return view('secretaria.central.show', compact('aluno', 'inscricoes', 'historico', 'estado', 'entregas'));
     }
 
+    /**
+     * Resumo exclusivamente de leitura, com acesso restrito à equipe autorizada.
+     * Senha, hash, códigos e tokens nunca são apresentados.
+     */
+    public function formasDeAcesso(Request $request, User $aluno)
+    {
+        AtendimentoAluno::autorizar($request->user(), $aluno);
+        $aluno->load('matriculas.curso');
+
+        return view('secretaria.central.formas-acesso', compact('aluno'));
+    }
+
     public function create()
     {
         return view('secretaria.central.form', ['aluno' => null, 'estado' => null]);
