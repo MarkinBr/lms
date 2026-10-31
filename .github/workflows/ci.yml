@@ -129,7 +129,7 @@ jobs:
         run: php artisan test --filter='TelegramConteudoTest|TelegramOperacoesAcademicasTest|TelegramPublicacoesTest|TelegramFinanceiroEAlertasTest|TelegramDecisaoInscricaoTest|TelegramAlunosEscritaTest|TelegramNotasEscritaTest|TelegramNoticiasTest'
 
       - name: Testes da Gestão de Acessos e inscrição complementar
-        run: php artisan test --filter='GestaoCadastroAcessosTest|CredenciaisAcessoTest|EntregasAcessoTest|CentralAcessosHttpTest|AtendimentoSeguroHttpTest|InscricaoCamposComplementaresTest'
+        run: php artisan test --filter='GestaoCadastroAcessosTest|CredenciaisAcessoTest|EntregasAcessoTest|CentralAcessosHttpTest|CentralAcessosFormasTest|AtendimentoSeguroHttpTest|InscricaoCamposComplementaresTest'
 
       - name: Testes da infraestrutura isolada
         run: python3 -m unittest discover -s tests/infra -p 'test_*.py'
