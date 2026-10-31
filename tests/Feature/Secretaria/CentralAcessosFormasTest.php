@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Secretaria;
 
-use App\Models\Matricula;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
