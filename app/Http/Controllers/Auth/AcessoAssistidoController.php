@@ -64,7 +64,20 @@ class AcessoAssistidoController extends Controller
         abort_if(Auth::check(), 403);
         $sessao = (array) $request->session()->get('acesso_assistido', []);
         abort_unless($credenciais->validarSessao($sessao), 403, 'Atendimento expirado. Solicite uma nova credencial.');
-        $request->validate(['password' => ['required', 'string', 'max:1024'], 'password_confirmation' => ['required', 'string', 'max:1024']]);
+        $request->validate(
+            [
+                'password' => ['required', 'string', 'max:1024'],
+                'password_confirmation' => ['required', 'string', 'max:1024'],
+            ],
+            [
+                'password.required' => 'Informe sua nova senha.',
+                'password.string' => 'Informe uma senha válida.',
+                'password.max' => 'A senha não pode ultrapassar 1024 caracteres.',
+                'password_confirmation.required' => 'Confirme sua nova senha.',
+                'password_confirmation.string' => 'A confirmação da senha deve ser um texto válido.',
+                'password_confirmation.max' => 'A confirmação da senha não pode ultrapassar 1024 caracteres.',
+            ],
+        );
         $credenciais->definirSenha($sessao, $request->string('password')->toString(), $request->string('password_confirmation')->toString());
         $request->session()->invalidate();
         $request->session()->regenerateToken();
