@@ -76,6 +76,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/portal/login', [AlunoLoginController::class, 'login'])->middleware('throttle:20,1')->name('aluno.login.submit');
     Route::get('/senha/esqueci', [RedefinirSenhaController::class, 'esqueci'])->name('password.request');
     Route::post('/senha/esqueci', [RedefinirSenhaController::class, 'enviarLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::post('/acesso/primeiro', [RedefinirSenhaController::class, 'solicitarPrimeiroAcesso'])
+        ->middleware('throttle:5,1')->name('aluno.primeiro-acesso.solicitar');
     Route::get('/senha/redefinir/{token}', [RedefinirSenhaController::class, 'redefinir'])->name('password.reset');
     Route::post('/senha/redefinir', [RedefinirSenhaController::class, 'atualizar'])->middleware('throttle:10,1')->name('password.update');
 });

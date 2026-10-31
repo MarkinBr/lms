@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\AtivarAcessoAluno;
 use App\Services\Acessos\AtendimentoAluno;
 use App\Services\Auth\IdentificadorAluno;
 use Illuminate\Auth\Events\PasswordReset;
@@ -12,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Throwable;
@@ -19,6 +21,8 @@ use Throwable;
 class RedefinirSenhaController extends Controller
 {
     private const MENSAGEM_NEUTRA = 'Se este e-mail pertencer a um aluno ativo, enviaremos as instruções de acesso em instantes. Verifique também a caixa de spam.';
+
+    private const MENSAGEM_NEUTRA_PRIMEIRO = 'Se houver uma conta elegível para primeiro acesso com este e-mail, enviaremos um link de ativação. Verifique também o spam. Se não tiver acesso ao e-mail cadastrado, procure a Secretaria.';
 
     public function esqueci(Request $request): View
     {
@@ -45,12 +49,57 @@ class RedefinirSenhaController extends Controller
             if ($aluno) {
                 Password::broker()->sendResetLink(['email' => $aluno->email, 'id' => $aluno->id, 'nivel' => 'aluno', 'ativo' => true]);
             }
-        } catch (Throwable) {
-            // A resposta permanece idêntica para não revelar a existência da conta
-            // nem detalhes do provedor de e-mail.
+        } catch (Throwable $exception) {
+            // A resposta permanece idêntica, sem revelar contas nem dados do transporte.
+            Log::warning('Falha ao solicitar recuperação de senha do aluno.', [
+                'exception' => $exception::class,
+            ]);
         }
 
         return back()->with('status', self::MENSAGEM_NEUTRA);
+    }
+
+    /**
+     * Primeiro acesso não reutiliza a recuperação de senha: contas ainda não
+     * confirmadas exigem o link assinado de ativação, com token individual.
+     */
+    public function solicitarPrimeiroAcesso(Request $request, IdentificadorAluno $identificadores): RedirectResponse
+    {
+        $request->merge([
+            'email' => mb_strtolower(trim((string) $request->input('email'))),
+        ]);
+
+        $dados = $request->validate([
+            'email' => ['required', 'string', 'email:filter', 'max:255'],
+        ]);
+
+        try {
+            $aluno = $identificadores->porEmailPrimeiroAcesso($dados['email']);
+
+            if ($aluno) {
+                Password::broker()->sendResetLink(
+                    [
+                        'id' => $aluno->id,
+                        'email' => $aluno->email,
+                        'nivel' => 'aluno',
+                        'ativo' => true,
+                        'primeiro_acesso_pendente' => true,
+                        'email_verified_at' => null,
+                        'senha_definitiva_pendente' => false,
+                    ],
+                    function (User $usuario, string $token): void {
+                        $usuario->notify(new AtivarAcessoAluno($token));
+                    },
+                );
+            }
+        } catch (Throwable $exception) {
+            // Resposta pública neutra; detalhes técnicos apenas no log interno.
+            Log::warning('Falha ao solicitar primeiro acesso do aluno.', [
+                'exception' => $exception::class,
+            ]);
+        }
+
+        return back()->with('status', self::MENSAGEM_NEUTRA_PRIMEIRO);
     }
 
     public function redefinir(Request $request, string $token): View

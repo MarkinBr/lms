@@ -18,7 +18,9 @@
 
                 <p class="welcome">{{ $primeiroAcesso ? 'Vamos preparar sua conta.' : 'Recupere seu acesso com segurança.' }}</p>
                 <p class="desc">
-                    Informe o mesmo e-mail usado na inscrição. Se sua matrícula já foi aprovada e sua conta estiver ativa, você receberá um link pessoal e temporário para definir uma nova senha.
+                    {{ $primeiroAcesso
+                        ? 'Informe o e-mail usado na inscrição para solicitar seu link individual de ativação. Se estiver com uma credencial de atendimento pendente ou sem acesso ao e-mail, procure a Secretaria.'
+                        : 'Informe seu e-mail confirmado no Portal do Aluno para receber um link temporário de redefinição de senha. Se ainda não confirmou seu e-mail, procure a Secretaria.' }}
                 </p>
 
                 <div class="login-feats">
@@ -43,14 +45,14 @@
                 </div>
             </div>
 
-            <form class="login-card" method="POST" action="{{ route('password.email') }}" data-auth-form>
+            <form class="login-card" method="POST" action="{{ $primeiroAcesso ? route('aluno.primeiro-acesso.solicitar') : route('password.email') }}" data-auth-form>
                 @csrf
 
                 <div class="lc-ic" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 10.2-10.2M16 7l3 3M14 9l2 2"/></svg>
                 </div>
                 <h2>{{ $primeiroAcesso ? 'DEFINIR MINHA SENHA' : 'RECUPERAR ACESSO' }}</h2>
-                <p class="lc-sub">Enviaremos as instruções somente quando a conta pertencer a um aluno ativo.</p>
+                <p class="lc-sub">{{ $primeiroAcesso ? 'O link de ativação é enviado apenas para contas elegíveis de primeiro acesso.' : 'O link de recuperação é enviado somente para alunos ativos com e-mail confirmado.' }}</p>
 
                 @if (session('status'))
                     <div class="auth-alert auth-alert--success" role="status">
