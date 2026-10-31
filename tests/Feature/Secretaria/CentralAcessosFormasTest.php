@@ -31,7 +31,7 @@ class CentralAcessosFormasTest extends TestCase
             ->assertOk()
             ->assertSee('Formas de acesso')
             ->assertSee('12345678901')
-            ->assertSee('MAT-2026-0088')
+            ->assertSee($aluno->matricula_login)
             ->assertSee($aluno->email)
             ->assertSee('5521999999999')
             ->assertSee('Protegida — não pode ser visualizada')
