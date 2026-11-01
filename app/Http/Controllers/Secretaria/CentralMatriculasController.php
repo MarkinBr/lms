@@ -144,10 +144,16 @@ class CentralMatriculasController extends Controller
         $turmasDisponiveis = $matricula->curso_id
             ? Turma::query()->where('curso_id', $matricula->curso_id)
                 ->where('ativa', true)->where('status', Turma::STATUS_ABERTA)
-                ->orderBy('nome')->get(['id', 'nome', 'capacidade'])
+                ->orderBy('nome')->get(['id', 'nome', 'capacidade', 'disciplina_id'])
             : collect();
 
-        return view('secretaria.central.matriculas.show', compact('matricula', 'historico', 'turmasDisponiveis'));
+        $outrasMatriculas = $matricula->user_id
+            ? Matricula::query()->where('user_id', $matricula->user_id)->whereKeyNot($matricula->id)
+                ->with('curso:id,titulo')->orderByDesc('id')->limit(8)->get()
+            : collect();
+
+        return view('secretaria.central.matriculas.show',
+            compact('matricula', 'historico', 'turmasDisponiveis', 'outrasMatriculas'));
     }
 
     public function turmas(Request $request): View
