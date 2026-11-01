@@ -304,7 +304,7 @@ class CentralAcessosController extends Controller
         }
         if ($senha === '' || ! Hash::check($senha, $ator->password)) {
             RateLimiter::hit($chave, 600);
-            throw ValidationException::withMessages(['senha_confirmacao' => 'Confirme sua senha de Secretaria para executar este atendimento.']);
+            throw ValidationException::withMessages(['senha_confirmacao' => 'Confirme senha administrativa para executar este atendimento.']);
         }
         RateLimiter::clear($chave);
         $request->session()->put('acessos.confirmacao', ['ator' => $ator->id, 'hash' => $fingerprint, 'expira' => now()->addMinutes(10)->timestamp]);
