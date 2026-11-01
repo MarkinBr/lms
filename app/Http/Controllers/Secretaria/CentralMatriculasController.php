@@ -292,6 +292,160 @@ class CentralMatriculasController extends Controller
             ->with('status', 'Vínculo com a turma registrado com sucesso.');
     }
 
+    /**
+     * Transfere somente o vínculo de uma disciplina, mantendo o anterior
+     * cancelado no histórico. Não movimenta mensalidades nem outras turmas.
+     */
+    public function transferirTurma(Request $request, Matricula $matricula, VincularMatriculaTurmaService $vinculos): RedirectResponse
+    {
+        $dados = $request->validate([
+            'turma_origem_id' => ['required', 'integer', 'exists:turmas,id'],
+            'turma_destino_id' => ['required', 'integer', 'different:turma_origem_id', 'exists:turmas,id'],
+            'motivo' => ['required', 'string', 'min:5', 'max:500'],
+            'senha_confirmacao' => ['required', 'string'],
+        ]);
+        $this->confirmarSenha($request);
+
+        DB::transaction(function () use ($matricula, $dados, $request, $vinculos) {
+            $registro = Matricula::query()->lockForUpdate()->findOrFail($matricula->id);
+            abort_unless($registro->user?->nivel === 'aluno', 403);
+
+            if (! in_array(mb_strtolower((string) $registro->status), ['ativo', 'ativa'], true)) {
+                throw ValidationException::withMessages(['turma_destino_id' => 'A matrícula precisa estar ativa para realizar a transferência.']);
+            }
+
+            $turmas = Turma::query()->whereIn('id', [$dados['turma_origem_id'], $dados['turma_destino_id']])
+                ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $origem = $turmas->get((int) $dados['turma_origem_id']);
+            $destino = $turmas->get((int) $dados['turma_destino_id']);
+            if (! $origem || ! $destino ||
+                (int) $origem->curso_id !== (int) $registro->curso_id ||
+                (int) $destino->curso_id !== (int) $registro->curso_id ||
+                ! $origem->disciplina_id || (int) $origem->disciplina_id !== (int) $destino->disciplina_id) {
+                throw ValidationException::withMessages(['turma_destino_id' => 'A transferência exige turmas do mesmo curso e da mesma disciplina definida.']);
+            }
+            if (! $destino->ativa || $destino->status !== Turma::STATUS_ABERTA) {
+                throw ValidationException::withMessages(['turma_destino_id' => 'A turma de destino precisa estar aberta.']);
+            }
+
+            $origemVinculo = MatriculaTurma::query()->where('matricula_id', $registro->id)
+                ->where('turma_id', $origem->id)->lockForUpdate()->first();
+            $origemLegada = (int) $registro->turma_id === (int) $origem->id;
+            if (! $origemLegada && $origemVinculo?->status !== MatriculaTurma::STATUS_ATIVO) {
+                throw ValidationException::withMessages(['turma_origem_id' => 'A matrícula não possui vínculo ativo com a turma de origem.']);
+            }
+            if ((int) $registro->turma_id === (int) $destino->id ||
+                MatriculaTurma::query()->where('matricula_id', $registro->id)->where('turma_id', $destino->id)->exists()) {
+                throw ValidationException::withMessages(['turma_destino_id' => 'Já existe vínculo com a turma de destino.']);
+            }
+
+            if ($destino->capacidade !== null) {
+                $ocupacao = Matricula::query()->ativas()->where(function ($q) use ($destino) {
+                    $q->where('turma_id', $destino->id)
+                        ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $destino->id)
+                            ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
+                })->count();
+                if ($ocupacao >= $destino->capacidade) {
+                    throw ValidationException::withMessages(['turma_destino_id' => 'A turma de destino está sem vagas disponíveis.']);
+                }
+            }
+
+            $motivo = trim($dados['motivo']);
+            if ($origemVinculo) {
+                $origemVinculo->update(['status' => MatriculaTurma::STATUS_CANCELADO,
+                    'observacao' => 'Transferido para '.$destino->nome.'. Motivo: '.$motivo]);
+            } else {
+                MatriculaTurma::query()->create([
+                    'matricula_id' => $registro->id, 'turma_id' => $origem->id,
+                    'status' => MatriculaTurma::STATUS_CANCELADO,
+                    'observacao' => 'Vínculo legado encerrado por transferência. Motivo: '.$motivo,
+                ]);
+            }
+
+            // O ponteiro legado, quando apontava à origem, passa a apontar ao destino.
+            // Outras turmas/disciplinas vinculadas não são alteradas.
+            if ($origemLegada) {
+                $registro->turma_id = $destino->id;
+                $registro->save();
+            }
+            $vinculos->executar($registro, $destino, MatriculaTurma::STATUS_ATIVO, $motivo);
+            $this->auditar((int) $request->user()->id, $registro->id, $destino->id,
+                'transferencia_turma', $origem->nome, $destino->nome, $motivo);
+        });
+
+        return redirect()->route('secretaria.matriculas.show', $matricula)
+            ->with('status', 'Transferência registrada. Confira possíveis impactos financeiros e de frequência.');
+    }
+
+    /** Não altera cobrança; toda mudança registra motivo e deixa aviso de conferência. */
+    public function alterarSituacao(Request $request, Matricula $matricula): RedirectResponse
+    {
+        $dados = $request->validate([
+            'situacao' => ['required', 'in:ativa,trancada,concluida,cancelada'],
+            'situacao_anterior' => ['required', 'string', 'max:30'],
+            'motivo' => ['required', 'string', 'min:5', 'max:500'],
+            'ciente_financeiro' => ['accepted'],
+            'senha_confirmacao' => ['required', 'string'],
+        ]);
+        $this->confirmarSenha($request);
+
+        DB::transaction(function () use ($request, $dados, $matricula) {
+            $registro = Matricula::query()->lockForUpdate()->findOrFail($matricula->id);
+            abort_unless($registro->user?->nivel === 'aluno', 403);
+            $anterior = (string) $registro->status;
+            if ($anterior !== $dados['situacao_anterior']) {
+                throw ValidationException::withMessages(['situacao' => 'A situação mudou. Reabra a ficha antes de continuar.']);
+            }
+            $situacaoNormalizada = match (mb_strtolower($anterior)) {
+                'ativo', 'ativa' => 'ativa',
+                'trancado', 'trancada' => 'trancada',
+                'concluido', 'concluida' => 'concluida',
+                'cancelado', 'cancelada' => 'cancelada',
+                default => null,
+            };
+            if (! $situacaoNormalizada || $dados['situacao'] === $situacaoNormalizada) {
+                throw ValidationException::withMessages(['situacao' => 'Selecione uma situação diferente da atual.']);
+            }
+            // Não reativa um aluno em turmas que já ultrapassaram a capacidade.
+            if ($dados['situacao'] === 'ativa') {
+                $turmaIds = $registro->turmasHistorico()
+                    ->wherePivot('status', MatriculaTurma::STATUS_ATIVO)->pluck('turmas.id')->all();
+                if ($registro->turma_id) {
+                    $turmaIds[] = $registro->turma_id;
+                }
+                foreach (Turma::query()->whereIn('id', array_unique($turmaIds))->orderBy('id')->lockForUpdate()->get() as $turma) {
+                    if (! $turma->ativa || $turma->status !== Turma::STATUS_ABERTA) {
+                        throw ValidationException::withMessages(['situacao' => 'Existe uma turma encerrada ou indisponível; regularize o vínculo antes de reativar.']);
+                    }
+                    if ($turma->capacidade === null) {
+                        continue;
+                    }
+                    $ocupacao = Matricula::query()->ativas()->where(function ($q) use ($turma) {
+                        $q->where('turma_id', $turma->id)
+                            ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $turma->id)
+                                ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
+                    })->count();
+                    if ($ocupacao >= $turma->capacidade) {
+                        throw ValidationException::withMessages(['situacao' => 'Não é possível reativar: uma turma vinculada está lotada.']);
+                    }
+                }
+            }
+
+            $registro->status = $dados['situacao'];
+            if ($dados['situacao'] === 'concluida') {
+                $registro->data_conclusao ??= today()->toDateString();
+            } elseif ($situacaoNormalizada === 'concluida') {
+                $registro->data_conclusao = null;
+            }
+            $registro->save();
+            $this->auditar((int) $request->user()->id, $registro->id, null,
+                'situacao_matricula', $anterior, $dados['situacao'], trim($dados['motivo']));
+        });
+
+        return redirect()->route('secretaria.matriculas.show', $matricula)
+            ->with('status', 'Situação atualizada. Revise os efeitos acadêmicos e financeiros; mensalidades não foram modificadas automaticamente.');
+    }
+
     private function confirmarSenha(Request $request): void
     {
         $senha = (string) $request->input('senha_confirmacao', '');
