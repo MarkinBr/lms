@@ -251,6 +251,30 @@ class CentralMatriculasTest extends TestCase
             ->assertSee($matricula->user->name);
     }
 
+    public function test_nao_adiciona_outra_turma_ativa_na_mesma_disciplina(): void
+    {
+        $curso = $this->curso();
+        $modulo = Modulo::create(['curso_id' => $curso->id, 'titulo' => 'Módulo', 'ordem' => 1]);
+        $disciplina = Disciplina::create([
+            'curso_id' => $curso->id, 'modulo_id' => $modulo->id,
+            'nome' => 'Teologia', 'codigo' => 'TEO-01', 'carga_horaria' => 30, 'ordem' => 1,
+        ]);
+        $origem = $this->turma($curso, ['nome' => 'A', 'disciplina_id' => $disciplina->id]);
+        $destino = $this->turma($curso, ['nome' => 'B', 'disciplina_id' => $disciplina->id]);
+        $matricula = $this->matricula($curso);
+        $matricula->update(['turma_id' => $origem->id]);
+        $this->actingAs($this->ator());
+
+        $this->post(route('secretaria.matriculas.vincular-turma', $matricula), $this->confirmacao([
+            'turma_id' => $destino->id,
+        ]))->assertSessionHasErrors('turma_id');
+
+        $this->assertDatabaseMissing('matricula_turma', [
+            'matricula_id' => $matricula->id, 'turma_id' => $destino->id,
+        ]);
+        $this->assertDatabaseCount('matricula_movimentacoes', 0);
+    }
+
     public function test_transferencia_preserva_origem_e_outras_disciplinas_sem_duplicar_vagas(): void
     {
         $curso = $this->curso();
