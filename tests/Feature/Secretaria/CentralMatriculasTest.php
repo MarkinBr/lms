@@ -251,6 +251,32 @@ class CentralMatriculasTest extends TestCase
             ->assertSee($matricula->user->name);
     }
 
+    public function test_ocupacao_unifica_legado_e_novo_sem_contar_matricula_duas_vezes(): void
+    {
+        $curso = $this->curso();
+        $matricula = $this->matricula($curso);
+        $turma = $this->turma($curso, ['capacidade' => 1]);
+        $matricula->update(['turma_id' => $turma->id]);
+        MatriculaTurma::create([
+            'matricula_id' => $matricula->id,
+            'turma_id' => $turma->id,
+            'status' => MatriculaTurma::STATUS_ATIVO,
+        ]);
+        $this->actingAs($this->ator());
+
+        $this->get(route('secretaria.matriculas.turmas'))
+            ->assertOk()->assertSee('1 de 1 vagas')
+            ->assertSee('Sem vagas');
+
+        $this->get(route('secretaria.matriculas.painel'))
+            ->assertOk()->assertSee('Turmas sem vagas')
+            ->assertSee($turma->nome);
+
+        $this->get(route('secretaria.matriculas.turma', $turma))
+            ->assertOk()->assertSee('1 de 1')
+            ->assertSee($matricula->user->name);
+    }
+
     public function test_nao_adiciona_outra_turma_ativa_na_mesma_disciplina(): void
     {
         $curso = $this->curso();
