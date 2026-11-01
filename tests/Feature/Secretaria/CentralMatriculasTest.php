@@ -76,7 +76,7 @@ class CentralMatriculasTest extends TestCase
 
         $this->get(route('secretaria.central'))
             ->assertOk()
-            ->assertSee(route('secretaria.matriculas.index'))
+            ->assertSee(route('secretaria.matriculas.painel'))
             ->assertSee('Matrículas e turmas');
 
         $this->get(route('secretaria.matriculas.index', ['busca' => $matricula->numero_matricula]))
@@ -216,4 +216,125 @@ class CentralMatriculasTest extends TestCase
             ->assertSessionHasErrors('turma_id');
         $this->assertDatabaseCount('matricula_movimentacoes', 0);
     }
+    public function test_painel_e_movimentacoes_usam_dados_reais_e_filtros(): void
+    {
+        $curso = $this->curso();
+        $matricula = $this->matricula($curso);
+        $this->turma($curso, ['status' => Turma::STATUS_ABERTA]);
+        $this->actingAs($this->ator());
+
+        $this->get(route('secretaria.matriculas.painel'))
+            ->assertOk()->assertSee('Pendências que exigem atendimento')
+            ->assertSee($matricula->user->name)
+            ->assertSee(route('secretaria.matriculas.movimentacoes'));
+
+        $this->get(route('secretaria.matriculas.index', ['turma' => 'sem', 'situacao' => 'ativas']))
+            ->assertOk()->assertSee($matricula->numero_matricula);
+
+        $this->get(route('secretaria.matriculas.turmas', ['situacao' => 'aberta']))
+            ->assertOk()->assertSee('Turma Sabado');
+
+        $this->get(route('secretaria.matriculas.movimentacoes'))
+            ->assertOk()->assertSee('Nenhuma movimentação encontrada');
+
+        $this->post(route('secretaria.matriculas.corrigir-numero', $matricula), $this->confirmacao([
+            'numero_atual' => $matricula->numero_matricula,
+            'numero_matricula' => 'MAT-2026-003',
+        ]))->assertRedirect();
+
+        $this->get(route('secretaria.matriculas.movimentacoes', ['tipo' => 'correcao_numero']))
+            ->assertOk()->assertSee('MAT-2026-003')
+            ->assertSee($matricula->user->name);
+    }
+
+    public function test_transferencia_preserva_origem_e_outras_disciplinas_sem_duplicar_vagas(): void
+    {
+        $curso = $this->curso();
+        $matricula = $this->matricula($curso);
+        $disciplina = \App\Models\Disciplina::create([
+            'curso_id' => $curso->id, 'nome' => 'História da Igreja', 'codigo' => 'HIS-001',
+            'carga_horaria' => 30, 'ordem' => 1, 'ativa' => true,
+        ]);
+        $origem = $this->turma($curso, ['nome' => 'Turma origem', 'disciplina_id' => $disciplina->id]);
+        $destino = $this->turma($curso, ['nome' => 'Turma destino', 'disciplina_id' => $disciplina->id, 'capacidade' => 2]);
+        $outra = $this->turma($curso, ['nome' => 'Outra disciplina']);
+        $matricula->update(['turma_id' => $origem->id]);
+        \App\Models\MatriculaTurma::create([
+            'matricula_id' => $matricula->id, 'turma_id' => $outra->id, 'status' => 'ativo',
+        ]);
+        $this->actingAs($this->ator());
+
+        $this->post(route('secretaria.matriculas.transferir-turma', $matricula), $this->confirmacao([
+            'turma_origem_id' => $origem->id, 'turma_destino_id' => $destino->id,
+        ]))->assertRedirect(route('secretaria.matriculas.show', $matricula));
+
+        $this->assertSame($destino->id, $matricula->fresh()->turma_id);
+        $this->assertDatabaseHas('matricula_turma', ['matricula_id' => $matricula->id,
+            'turma_id' => $origem->id, 'status' => 'cancelado']);
+        $this->assertDatabaseHas('matricula_turma', ['matricula_id' => $matricula->id,
+            'turma_id' => $destino->id, 'status' => 'ativo']);
+        $this->assertDatabaseHas('matricula_turma', ['matricula_id' => $matricula->id,
+            'turma_id' => $outra->id, 'status' => 'ativo']);
+        $this->assertDatabaseHas('matricula_movimentacoes', ['matricula_id' => $matricula->id,
+            'tipo' => 'transferencia_turma', 'valor_anterior' => $origem->nome, 'valor_novo' => $destino->nome]);
+    }
+
+    public function test_transferencia_rejeita_disciplinas_diferentes(): void
+    {
+        $curso = $this->curso();
+        $matricula = $this->matricula($curso);
+        $origem = $this->turma($curso, ['nome' => 'Origem sem disciplina']);
+        $destino = $this->turma($curso, ['nome' => 'Destino sem disciplina']);
+        $matricula->update(['turma_id' => $origem->id]);
+        $this->actingAs($this->ator());
+
+        $this->post(route('secretaria.matriculas.transferir-turma', $matricula), $this->confirmacao([
+            'turma_origem_id' => $origem->id, 'turma_destino_id' => $destino->id,
+        ]))->assertSessionHasErrors('turma_destino_id');
+
+        $this->assertSame($origem->id, $matricula->fresh()->turma_id);
+        $this->assertDatabaseCount('matricula_movimentacoes', 0);
+    }
+
+    public function test_trancamento_gera_historico_e_nao_altera_login_ou_mensalidades(): void
+    {
+        $matricula = $this->matricula($this->curso());
+        $login = $matricula->user->matricula_login;
+        $this->actingAs($this->ator());
+
+        $this->post(route('secretaria.matriculas.situacao', $matricula), $this->confirmacao([
+            'situacao_anterior' => 'ativo',
+            'situacao' => 'trancada',
+            'ciente_financeiro' => '1',
+        ]))->assertRedirect(route('secretaria.matriculas.show', $matricula));
+
+        $this->assertSame('trancada', $matricula->fresh()->status);
+        $this->assertSame($login, $matricula->user->fresh()->matricula_login);
+        $this->assertDatabaseHas('matricula_movimentacoes', [
+            'matricula_id' => $matricula->id, 'tipo' => 'situacao_matricula',
+            'valor_anterior' => 'ativo', 'valor_novo' => 'trancada',
+        ]);
+        $this->assertDatabaseCount('mensalidades', 0);
+    }
+
+    public function test_alteracao_situacao_exige_justificativa_confirmacao_e_tela_atual(): void
+    {
+        $matricula = $this->matricula($this->curso());
+        $this->actingAs($this->ator());
+
+        $this->post(route('secretaria.matriculas.situacao', $matricula), $this->confirmacao([
+            'situacao_anterior' => 'ativo',
+            'situacao' => 'trancada',
+        ]))->assertSessionHasErrors('ciente_financeiro');
+
+        $this->post(route('secretaria.matriculas.situacao', $matricula), $this->confirmacao([
+            'situacao_anterior' => 'cancelada',
+            'situacao' => 'trancada',
+            'ciente_financeiro' => '1',
+        ]))->assertSessionHasErrors('situacao');
+
+        $this->assertSame('ativo', $matricula->fresh()->status);
+        $this->assertDatabaseCount('matricula_movimentacoes', 0);
+    }
+
 }
