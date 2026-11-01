@@ -8,6 +8,7 @@ use App\Models\Turma;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CentralMatriculasTest extends TestCase
@@ -32,7 +33,7 @@ class CentralMatriculasTest extends TestCase
     {
         $aluno ??= User::factory()->create([
             'nivel' => 'aluno', 'ativo' => true,
-            'matricula_login' => 'ACESSO-'.strtoupper(\Illuminate\Support\Str::random(10)),
+            'matricula_login' => 'ACESSO-'.strtoupper(Str::random(10)),
         ]);
 
         return Matricula::create([
