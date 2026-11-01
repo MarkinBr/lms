@@ -49,7 +49,7 @@ class CentralMatriculasController extends Controller
             'matriculas' => Matricula::count(),
             'ativas' => Matricula::ativas()->count(),
             'sem_turma' => Matricula::query()->whereNull('turma_id')
-                ->whereDoesntHave('turmasHistorico', fn ($q) => $q->wherePivot('status', MatriculaTurma::STATUS_ATIVO))
+                ->whereDoesntHave('turmasHistorico', fn ($q) => $q->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO))
                 ->count(),
             'turmas' => Turma::count(),
         ];
@@ -195,7 +195,7 @@ class CentralMatriculasController extends Controller
                     $q->where('turma_id', $turma->id)
                         ->orWhereHas('turmasHistorico', fn ($v) =>
                             $v->where('turmas.id', $turma->id)
-                                ->wherePivot('status', MatriculaTurma::STATUS_ATIVO));
+                                ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
                 })->ativas()->count();
                 if ($ocupacao >= $turma->capacidade) {
                     throw ValidationException::withMessages(['turma_id' => 'A turma já atingiu sua capacidade.']);
