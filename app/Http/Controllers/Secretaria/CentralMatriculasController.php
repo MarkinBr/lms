@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -463,7 +464,7 @@ class CentralMatriculasController extends Controller
     }
 
     /** Conta matrículas distintas por turma, sem duplicar vínculos legados. */
-    private function ocupacoesTurmas(array $turmaIds): \Illuminate\Support\Collection
+    private function ocupacoesTurmas(array $turmaIds): Collection
     {
         if ($turmaIds === []) {
             return collect();
