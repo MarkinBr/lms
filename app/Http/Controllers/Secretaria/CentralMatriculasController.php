@@ -193,9 +193,8 @@ class CentralMatriculasController extends Controller
             if ($turma->capacidade !== null) {
                 $ocupacao = Matricula::query()->where(function ($q) use ($turma) {
                     $q->where('turma_id', $turma->id)
-                        ->orWhereHas('turmasHistorico', fn ($v) =>
-                            $v->where('turmas.id', $turma->id)
-                                ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
+                        ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $turma->id)
+                            ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
                 })->ativas()->count();
                 if ($ocupacao >= $turma->capacidade) {
                     throw ValidationException::withMessages(['turma_id' => 'A turma já atingiu sua capacidade.']);
