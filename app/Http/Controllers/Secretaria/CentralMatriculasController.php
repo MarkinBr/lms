@@ -18,14 +18,78 @@ use Illuminate\View\View;
 
 class CentralMatriculasController extends Controller
 {
+    /**
+     * Mesa de trabalho: indicadores e pendências calculados do banco, sem
+     * carregar todas as matrículas na memória.
+     */
+    public function painel(): View
+    {
+        $semTurma = Matricula::query()
+            ->ativas()
+            ->whereNull('turma_id')
+            ->whereDoesntHave('turmasHistorico', fn ($q) => $q->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
+
+        $totais = [
+            'matriculas_ativas' => Matricula::query()->ativas()->count(),
+            'sem_turma' => (clone $semTurma)->count(),
+            'turmas_abertas' => Turma::query()->where('status', Turma::STATUS_ABERTA)->count(),
+            'movimentacoes' => DB::table('matricula_movimentacoes')->count(),
+        ];
+
+        $pendencias = (clone $semTurma)
+            ->with(['user:id,name', 'curso:id,titulo'])
+            ->latest('id')->limit(6)->get();
+
+        $trancadas = Matricula::query()
+            ->whereRaw("LOWER(COALESCE(status, '')) IN ('trancada', 'trancado')")
+            ->with(['user:id,name', 'curso:id,titulo'])
+            ->latest('id')->limit(4)->get();
+
+        $ultimas = DB::table('matricula_movimentacoes as mm')
+            ->join('matriculas as m', 'm.id', '=', 'mm.matricula_id')
+            ->leftJoin('users as aluno', 'aluno.id', '=', 'm.user_id')
+            ->select('mm.id', 'mm.tipo', 'mm.created_at', 'aluno.name as aluno', 'm.numero_matricula')
+            ->orderByDesc('mm.id')->limit(5)->get();
+
+        return view('secretaria.central.matriculas.painel', compact('totais', 'pendencias', 'trancadas', 'ultimas'));
+    }
+
+    public function movimentacoes(Request $request): View
+    {
+        $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 150);
+        $tipo = (string) $request->query('tipo', '');
+
+        $historico = DB::table('matricula_movimentacoes as mm')
+            ->join('matriculas as m', 'm.id', '=', 'mm.matricula_id')
+            ->leftJoin('users as aluno', 'aluno.id', '=', 'm.user_id')
+            ->leftJoin('users as ator', 'ator.id', '=', 'mm.ator_id')
+            ->select('mm.*', 'm.numero_matricula', 'aluno.name as aluno', 'ator.name as responsavel')
+            ->when($busca !== '', function ($query) use ($busca) {
+                $term = '%'.mb_strtolower($busca).'%';
+                $query->where(function ($q) use ($term) {
+                    $q->whereRaw('LOWER(aluno.name) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(m.numero_matricula) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(mm.tipo) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(mm.motivo) LIKE ?', [$term]);
+                });
+            })
+            ->when(in_array($tipo, ['correcao_numero', 'vinculo_turma', 'transferencia_turma', 'situacao_matricula'], true),
+                fn ($q) => $q->where('mm.tipo', $tipo))
+            ->orderByDesc('mm.id')
+            ->paginate(20)->withQueryString();
+
+        return view('secretaria.central.matriculas.movimentacoes', compact('historico', 'busca', 'tipo'));
+    }
+
     public function index(Request $request): View
     {
         $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 150);
         $cursoId = filter_var($request->query('curso'), FILTER_VALIDATE_INT) ?: null;
         $situacao = (string) $request->query('situacao', '');
+        $turmaId = (string) $request->query('turma', '');
 
         $matriculas = Matricula::query()
-            ->with(['user:id,name', 'curso:id,titulo', 'turma:id,nome'])
+            ->with(['user:id,name', 'curso:id,titulo', 'turma:id,nome', 'turmasHistorico:id,nome'])
             ->when($busca !== '', function ($query) use ($busca) {
                 $term = '%'.mb_strtolower($busca).'%';
                 $query->where(function ($q) use ($term) {
@@ -34,6 +98,11 @@ class CentralMatriculasController extends Controller
                 });
             })
             ->when($cursoId, fn ($q) => $q->where('curso_id', $cursoId))
+            ->when($turmaId === 'sem', fn ($q) => $q->whereNull('turma_id')
+                ->whereDoesntHave('turmasHistorico', fn ($v) => $v->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO)))
+            ->when(ctype_digit($turmaId) && (int) $turmaId > 0, fn ($q) => $q->where(function ($v) use ($turmaId) {
+                $v->where('turma_id', (int) $turmaId)->orWhereHas('turmasHistorico', fn ($t) => $t->where('turmas.id', (int) $turmaId));
+            }))
             ->when(in_array($situacao, ['ativas', 'trancadas', 'concluidas', 'canceladas'], true),
                 fn ($q) => match ($situacao) {
                     'ativas' => $q->ativas(),
@@ -45,6 +114,7 @@ class CentralMatriculasController extends Controller
             ->paginate(15)->withQueryString();
 
         $cursos = Curso::query()->orderBy('titulo')->get(['id', 'titulo']);
+        $turmasFiltro = Turma::query()->orderBy('nome')->get(['id', 'nome']);
         $totais = [
             'matriculas' => Matricula::count(),
             'ativas' => Matricula::ativas()->count(),
@@ -54,7 +124,7 @@ class CentralMatriculasController extends Controller
             'turmas' => Turma::count(),
         ];
 
-        return view('secretaria.central.matriculas.index', compact('matriculas', 'busca', 'cursoId', 'situacao', 'cursos', 'totais'));
+        return view('secretaria.central.matriculas.index', compact('matriculas', 'busca', 'cursoId', 'situacao', 'cursos', 'turmasFiltro', 'turmaId', 'totais'));
     }
 
     public function show(Matricula $matricula): View
@@ -84,22 +154,26 @@ class CentralMatriculasController extends Controller
     {
         $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 150);
         $cursoId = filter_var($request->query('curso'), FILTER_VALIDATE_INT) ?: null;
+        $situacao = (string) $request->query('situacao', '');
         $turmas = Turma::query()
-            ->with(['curso:id,titulo', 'professor:id,name', 'periodoLetivo:id,nome'])
+            ->with(['curso:id,titulo', 'professor:id,name', 'periodoLetivo:id,nome', 'disciplina:id,nome'])
             ->withCount(['matriculas as legadas_count', 'matriculasTurmas as vinculos_count'])
             ->when($busca !== '', function ($q) use ($busca) {
                 $term = '%'.mb_strtolower($busca).'%';
                 $q->where(function ($q) use ($term) {
                     $q->whereRaw('LOWER(nome) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(codigo) LIKE ?', [$term]);
+                        ->orWhereRaw('LOWER(codigo) LIKE ?', [$term])
+                        ->orWhereHas('professor', fn ($p) => $p->whereRaw('LOWER(name) LIKE ?', [$term]))
+                        ->orWhereHas('disciplina', fn ($p) => $p->whereRaw('LOWER(nome) LIKE ?', [$term]));
                 });
             })
             ->when($cursoId, fn ($q) => $q->where('curso_id', $cursoId))
+            ->when(in_array($situacao, Turma::STATUS_PERMITIDOS, true), fn ($q) => $q->where('status', $situacao))
             ->orderByDesc('ano_letivo')->orderBy('nome')
             ->paginate(15)->withQueryString();
         $cursos = Curso::query()->orderBy('titulo')->get(['id', 'titulo']);
 
-        return view('secretaria.central.matriculas.turmas', compact('turmas', 'busca', 'cursoId', 'cursos'));
+        return view('secretaria.central.matriculas.turmas', compact('turmas', 'busca', 'cursoId', 'situacao', 'cursos'));
     }
 
     public function turma(Turma $turma): View
