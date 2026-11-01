@@ -4,6 +4,7 @@ namespace Tests\Feature\Secretaria;
 
 use App\Models\Curso;
 use App\Models\Matricula;
+use App\Models\Modulo;
 use App\Models\Turma;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -251,8 +252,10 @@ class CentralMatriculasTest extends TestCase
     {
         $curso = $this->curso();
         $matricula = $this->matricula($curso);
+        $modulo = Modulo::create(['curso_id' => $curso->id, 'titulo' => 'Módulo histórico', 'ordem' => 1]);
         $disciplina = \App\Models\Disciplina::create([
-            'curso_id' => $curso->id, 'nome' => 'História da Igreja', 'codigo' => 'HIS-001',
+            'curso_id' => $curso->id, 'modulo_id' => $modulo->id,
+            'nome' => 'História da Igreja', 'codigo' => 'HIS-001',
             'carga_horaria' => 30, 'ordem' => 1, 'ativa' => true,
         ]);
         $origem = $this->turma($curso, ['nome' => 'Turma origem', 'disciplina_id' => $disciplina->id]);
