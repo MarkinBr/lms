@@ -29,11 +29,20 @@ class CentralMatriculasController extends Controller
             ->whereNull('turma_id')
             ->whereDoesntHave('turmasHistorico', fn ($q) => $q->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
 
+        $turmasAbertas = Turma::query()->where('status', Turma::STATUS_ABERTA)
+            ->get(['id', 'nome', 'curso_id', 'capacidade']);
+        $ocupacaoPorTurma = $this->ocupacoesTurmas($turmasAbertas->pluck('id')->all());
+        $turmasLotadas = $turmasAbertas->filter(fn (Turma $t) => $t->capacidade !== null
+            && (int) ($ocupacaoPorTurma->get($t->id) ?? 0) >= (int) $t->capacidade);
+        $lotadas = $turmasLotadas->count();
+        $turmasLotadas = $turmasLotadas->take(5);
+        $turmasLotadas->each(fn (Turma $t) => $t->setAttribute('ocupacao_ativa', (int) ($ocupacaoPorTurma->get($t->id) ?? 0)));
+
         $totais = [
             'matriculas_ativas' => Matricula::query()->ativas()->count(),
             'sem_turma' => (clone $semTurma)->count(),
-            'turmas_abertas' => Turma::query()->where('status', Turma::STATUS_ABERTA)->count(),
-            'movimentacoes' => DB::table('matricula_movimentacoes')->count(),
+            'turmas_abertas' => $turmasAbertas->count(),
+            'turmas_lotadas' => $lotadas,
         ];
 
         $pendencias = (clone $semTurma)
@@ -51,7 +60,7 @@ class CentralMatriculasController extends Controller
             ->select('mm.id', 'mm.tipo', 'mm.created_at', 'aluno.name as aluno', 'm.numero_matricula')
             ->orderByDesc('mm.id')->limit(5)->get();
 
-        return view('secretaria.central.matriculas.painel', compact('totais', 'pendencias', 'trancadas', 'ultimas'));
+        return view('secretaria.central.matriculas.painel', compact('totais', 'pendencias', 'trancadas', 'ultimas', 'turmasLotadas'));
     }
 
     public function movimentacoes(Request $request): View
@@ -178,14 +187,10 @@ class CentralMatriculasController extends Controller
             ->orderByDesc('ano_letivo')->orderBy('nome')
             ->paginate(15)->withQueryString();
         $cursos = Curso::query()->orderBy('titulo')->get(['id', 'titulo']);
-        $turmas->getCollection()->each(function (Turma $turma) {
-            $turma->setAttribute('ocupacao_ativa', Matricula::query()->ativas()
-                ->where(function ($q) use ($turma) {
-                    $q->where('turma_id', $turma->id)
-                        ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $turma->id)
-                            ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
-                })->count());
-        });
+        $ocupacoes = $this->ocupacoesTurmas($turmas->getCollection()->pluck('id')->all());
+        $turmas->getCollection()->each(fn (Turma $turma) => $turma->setAttribute(
+            'ocupacao_ativa', (int) ($ocupacoes->get($turma->id) ?? 0)
+        ));
 
         return view('secretaria.central.matriculas.turmas', compact('turmas', 'busca', 'cursoId', 'situacao', 'cursos'));
     }
@@ -203,12 +208,7 @@ class CentralMatriculasController extends Controller
             })
             ->orderByDesc('created_at')->paginate(25);
 
-        $ocupacaoAtiva = Matricula::query()->ativas()
-            ->where(function ($q) use ($turma) {
-                $q->where('turma_id', $turma->id)
-                    ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $turma->id)
-                        ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
-            })->count();
+        $ocupacaoAtiva = (int) ($this->ocupacoesTurmas([$turma->id])->get($turma->id) ?? 0);
 
         return view('secretaria.central.matriculas.turma', compact('turma', 'matriculas', 'ocupacaoAtiva'));
     }
@@ -460,6 +460,30 @@ class CentralMatriculasController extends Controller
 
         return redirect()->route('secretaria.matriculas.show', $matricula)
             ->with('status', 'Situação atualizada. Revise os efeitos acadêmicos e financeiros; mensalidades não foram modificadas automaticamente.');
+    }
+
+    /** Conta matrículas distintas por turma, sem duplicar vínculos legados. */
+    private function ocupacoesTurmas(array $turmaIds): \Illuminate\Support\Collection
+    {
+        if ($turmaIds === []) {
+            return collect();
+        }
+
+        $legados = DB::table('matriculas')
+            ->select('turma_id', DB::raw('id as matricula_id'))
+            ->whereIn('turma_id', $turmaIds)
+            ->whereRaw("LOWER(COALESCE(status, '')) IN ('ativo', 'ativa')");
+        $vinculos = DB::table('matricula_turma as mt')
+            ->join('matriculas as m', 'm.id', '=', 'mt.matricula_id')
+            ->select('mt.turma_id', 'mt.matricula_id')
+            ->whereIn('mt.turma_id', $turmaIds)
+            ->where('mt.status', MatriculaTurma::STATUS_ATIVO)
+            ->whereRaw("LOWER(COALESCE(m.status, '')) IN ('ativo', 'ativa')");
+
+        return DB::query()->fromSub($legados->union($vinculos), 'ocupacao')
+            ->selectRaw('turma_id, COUNT(*) as total')
+            ->groupBy('turma_id')
+            ->pluck('total', 'turma_id');
     }
 
     private function confirmarSenha(Request $request): void
