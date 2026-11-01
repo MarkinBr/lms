@@ -192,15 +192,25 @@ class CentralMatriculasController extends Controller
 
     public function turma(Turma $turma): View
     {
-        $turma->load(['curso:id,titulo', 'professor:id,name', 'periodoLetivo:id,nome']);
-        $matriculas = Matricula::query()->with('user:id,name')
+        $turma->load(['curso:id,titulo', 'professor:id,name', 'periodoLetivo:id,nome', 'disciplina:id,nome']);
+        $matriculas = Matricula::query()->with([
+            'user:id,name',
+            'turmasHistorico' => fn ($q) => $q->where('turmas.id', $turma->id),
+        ])
             ->where(function ($q) use ($turma) {
                 $q->where('turma_id', $turma->id)
                     ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $turma->id));
             })
             ->orderByDesc('created_at')->paginate(25);
 
-        return view('secretaria.central.matriculas.turma', compact('turma', 'matriculas'));
+        $ocupacaoAtiva = Matricula::query()->ativas()
+            ->where(function ($q) use ($turma) {
+                $q->where('turma_id', $turma->id)
+                    ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $turma->id)
+                        ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
+            })->count();
+
+        return view('secretaria.central.matriculas.turma', compact('turma', 'matriculas', 'ocupacaoAtiva'));
     }
 
     /**
