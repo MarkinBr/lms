@@ -3,7 +3,9 @@
 namespace Tests\Feature\Secretaria;
 
 use App\Models\Curso;
+use App\Models\Disciplina;
 use App\Models\Matricula;
+use App\Models\MatriculaTurma;
 use App\Models\Modulo;
 use App\Models\Turma;
 use App\Models\User;
@@ -254,7 +256,7 @@ class CentralMatriculasTest extends TestCase
         $curso = $this->curso();
         $matricula = $this->matricula($curso);
         $modulo = Modulo::create(['curso_id' => $curso->id, 'titulo' => 'Módulo histórico', 'ordem' => 1]);
-        $disciplina = \App\Models\Disciplina::create([
+        $disciplina = Disciplina::create([
             'curso_id' => $curso->id, 'modulo_id' => $modulo->id,
             'nome' => 'História da Igreja', 'codigo' => 'HIS-001',
             'carga_horaria' => 30, 'ordem' => 1, 'ativa' => true,
@@ -263,7 +265,7 @@ class CentralMatriculasTest extends TestCase
         $destino = $this->turma($curso, ['nome' => 'Turma destino', 'disciplina_id' => $disciplina->id, 'capacidade' => 2]);
         $outra = $this->turma($curso, ['nome' => 'Outra disciplina']);
         $matricula->update(['turma_id' => $origem->id]);
-        \App\Models\MatriculaTurma::create([
+        MatriculaTurma::create([
             'matricula_id' => $matricula->id, 'turma_id' => $outra->id, 'status' => 'ativo',
         ]);
         $this->actingAs($this->ator());
