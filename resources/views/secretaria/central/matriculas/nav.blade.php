@@ -1,4 +1,11 @@
-<nav class="sc-heading-actions" aria-label="Gestão de matrículas e turmas">
-    <a class="sc-button {{ ($secao ?? 'matriculas') === 'matriculas' ? 'sc-primary' : '' }}" href="{{ route('secretaria.matriculas.index') }}">Matrículas</a>
-    <a class="sc-button {{ ($secao ?? '') === 'turmas' ? 'sc-primary' : '' }}" href="{{ route('secretaria.matriculas.turmas') }}">Turmas</a>
+<nav class="sc-ac-tabs" aria-label="Áreas da Gestão de Matrículas e Turmas">
+    @foreach ([
+        ['painel', 'Visão de trabalho', 'painel'],
+        ['matriculas', 'Matrículas', 'index'],
+        ['turmas', 'Turmas', 'turmas'],
+        ['movimentacoes', 'Movimentações', 'movimentacoes'],
+    ] as [$chave, $rotulo, $rota])
+        <a class="sc-ac-tab" href="{{ route('secretaria.matriculas.'.$rota) }}"
+            @if(($secao ?? '') === $chave) aria-current="page" @endif>{{ $rotulo }}</a>
+    @endforeach
 </nav>
