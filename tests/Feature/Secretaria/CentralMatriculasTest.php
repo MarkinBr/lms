@@ -217,6 +217,7 @@ class CentralMatriculasTest extends TestCase
             ->assertSessionHasErrors('turma_id');
         $this->assertDatabaseCount('matricula_movimentacoes', 0);
     }
+
     public function test_painel_e_movimentacoes_usam_dados_reais_e_filtros(): void
     {
         $curso = $this->curso();
