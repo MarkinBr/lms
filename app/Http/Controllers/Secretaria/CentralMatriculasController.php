@@ -172,6 +172,14 @@ class CentralMatriculasController extends Controller
             ->orderByDesc('ano_letivo')->orderBy('nome')
             ->paginate(15)->withQueryString();
         $cursos = Curso::query()->orderBy('titulo')->get(['id', 'titulo']);
+        $turmas->getCollection()->each(function (Turma $turma) {
+            $turma->setAttribute('ocupacao_ativa', Matricula::query()->ativas()
+                ->where(function ($q) use ($turma) {
+                    $q->where('turma_id', $turma->id)
+                        ->orWhereHas('turmasHistorico', fn ($v) => $v->where('turmas.id', $turma->id)
+                            ->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
+                })->count());
+        });
 
         return view('secretaria.central.matriculas.turmas', compact('turmas', 'busca', 'cursoId', 'situacao', 'cursos'));
     }
