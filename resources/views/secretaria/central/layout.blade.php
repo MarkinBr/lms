@@ -10,6 +10,7 @@
     <link rel="icon" href="{{ asset('assets/images/logo.png') }}">
     <link rel="stylesheet" href="{{ asset('vendor/portal/fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('css/secretaria-central.css') }}?v={{ filemtime(public_path('css/secretaria-central.css')) }}">
+    @stack('styles')
     <script src="{{ asset('js/secretaria-central.js') }}?v={{ filemtime(public_path('js/secretaria-central.js')) }}" defer></script>
 </head>
 <body class="central">
