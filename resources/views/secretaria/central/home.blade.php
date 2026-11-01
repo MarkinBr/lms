@@ -16,9 +16,9 @@
             <h3>Acessos dos alunos</h3><p>Inscrições, cadastro, ativação e segurança dos acessos.</p>
             <span class="sc-module-footer"><strong>Abrir gestão de acessos</strong>@include('secretaria.central.icone', ['nome' => 'seta'])</span>
         </a>
-        <a class="sc-module sc-module-active" href="{{ route('secretaria.matriculas.index') }}">
+        <a class="sc-module sc-module-active" href="{{ route('secretaria.matriculas.painel') }}">
             <span class="sc-icon-box">@include('secretaria.central.icone', ['nome' => 'pessoas'])</span>
-            <h3>Matrículas e turmas</h3><p>Vínculos acadêmicos, organização das turmas e correção de número de matrícula.</p>
+            <h3>Matrículas e turmas</h3><p>Visão de trabalho, matrículas, turmas e movimentações acadêmicas.</p>
             <span class="sc-module-footer"><strong>Abrir gestão de matrículas</strong>@include('secretaria.central.icone', ['nome' => 'seta'])</span>
         </a>
         @foreach ([['livro', 'Ensino e aprendizagem', 'Aulas, disciplinas, notas e frequência.'], ['documento', 'Documentos e solicitações', 'Documentação, declarações e atendimento ao aluno.'], ['carteira', 'Financeiro', 'Mensalidades e acompanhamento dos pagamentos.'], ['agenda', 'Comunicação e agenda', 'Avisos, notícias e encontros da comunidade.']] as [$icone, $titulo, $descricao])
