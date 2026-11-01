@@ -123,7 +123,7 @@ class CentralMatriculasController extends Controller
     public function corrigirNumero(Request $request, Matricula $matricula): RedirectResponse
     {
         $dados = $request->validate([
-            'numero_matricula' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9._\\/-]+$/D'],
+            'numero_matricula' => ['required', 'string', 'max:20', 'regex:~^[A-Za-z0-9._/-]+$~D'],
             'numero_atual' => ['present', 'nullable', 'string', 'max:100'],
             'motivo' => ['required', 'string', 'min:5', 'max:500'],
             'senha_confirmacao' => ['required', 'string'],
