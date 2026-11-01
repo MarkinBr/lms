@@ -23,6 +23,8 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
         Route::post('/{aluno}/entrega/{entrega}', [CentralAcessosController::class, 'enviar'])->middleware('throttle:10,1')->name('entrega.enviar');
     });
     Route::prefix('matriculas')->name('secretaria.matriculas.')->group(function () {
+        Route::get('/painel', [CentralMatriculasController::class, 'painel'])->name('painel');
+        Route::get('/movimentacoes', [CentralMatriculasController::class, 'movimentacoes'])->name('movimentacoes');
         Route::get('/', [CentralMatriculasController::class, 'index'])->name('index');
         Route::get('/turmas', [CentralMatriculasController::class, 'turmas'])->name('turmas');
         Route::get('/turmas/{turma}', [CentralMatriculasController::class, 'turma'])
