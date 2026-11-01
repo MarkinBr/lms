@@ -18,7 +18,7 @@
         <div class="sc-ac-metric"><dt>Matrículas ativas</dt><dd>{{ number_format($totais['matriculas_ativas'],0,',','.') }}</dd><small>Em cursos do CETSADP</small></div>
         <div class="sc-ac-metric"><dt>Alunos sem turma</dt><dd>{{ number_format($totais['sem_turma'],0,',','.') }}</dd><a href="{{ route('secretaria.matriculas.index', ['situacao'=>'ativas','turma'=>'sem']) }}">Resolver pendências</a></div>
         <div class="sc-ac-metric"><dt>Turmas abertas</dt><dd>{{ number_format($totais['turmas_abertas'],0,',','.') }}</dd><a href="{{ route('secretaria.matriculas.turmas',['situacao'=>'aberta']) }}">Consultar turmas</a></div>
-        <div class="sc-ac-metric"><dt>Movimentações</dt><dd>{{ number_format($totais['movimentacoes'],0,',','.') }}</dd><a href="{{ route('secretaria.matriculas.movimentacoes') }}">Ver trilha de auditoria</a></div>
+        <div class="sc-ac-metric"><dt>Turmas sem vagas</dt><dd>{{ number_format($totais['turmas_lotadas'],0,',','.') }}</dd><a href="{{ route('secretaria.matriculas.turmas',['situacao'=>'aberta']) }}">Conferir ocupação</a></div>
     </dl>
     <div class="sc-ac-split">
         <div class="sc-stack">
@@ -37,6 +37,14 @@
                 @empty
                     <div class="sc-panel-body"><p class="sc-ac-muted">Nenhuma matrícula ativa sem turma identificada.</p></div>
                 @endforelse
+                @foreach ($turmasLotadas as $turma)
+                    <div class="sc-ac-row">
+                        <span class="sc-ac-emblem" aria-hidden="true">@include('secretaria.central.icone',['nome'=>'pessoas'])</span>
+                        <div><h3>{{ $turma->nome }} · turma lotada</h3>
+                            <p>{{ $turma->ocupacao_ativa }} de {{ $turma->capacidade }} vagas ocupadas</p></div>
+                        <a class="sc-button sc-button-small" href="{{ route('secretaria.matriculas.turma',$turma) }}">Ver turma →</a>
+                    </div>
+                @endforeach
                 @foreach ($trancadas as $matricula)
                     <div class="sc-ac-row">
                         <span class="sc-ac-emblem" aria-hidden="true">@include('secretaria.central.icone',['nome'=>'relogio'])</span>
