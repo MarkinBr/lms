@@ -1,6 +1,89 @@
 @extends('secretaria.central.layout')
 @section('title', 'Ficha da matrícula')
-@section('breadcrumb')<span aria-hidden="true">/</span><a href="{{ route('secretaria.matriculas.index') }}">Matrículas e turmas</a><span aria-hidden="true">/</span><span aria-current="page">Ficha da matrícula</span>@endsection
+@section('breadcrumb')<span aria-hidden="true">/</span><a href="{{ route('secretaria.matriculas.index') }}">Matrículas e turmas</a><span aria-hidden="true">/</span><span aria-current="page">Ficha da matrícula</span>
+    <section class="sc-panel" aria-labelledby="mudar-situacao" style="margin-top:20px">
+        <div class="sc-panel-heading">
+            <h2 id="mudar-situacao">Alterar situação da matrícula</h2>
+            <p>Trancar, reativar, concluir ou cancelar uma matrícula, preservando o histórico e registrando o motivo.</p>
+        </div>
+        <form method="post" class="sc-panel-body sc-ac-form" action="{{ route('secretaria.matriculas.situacao',$matricula) }}">
+            @csrf
+            <input type="hidden" name="situacao_anterior" value="{{ $matricula->status }}">
+            <div><label for="situacao-nova">Nova situação acadêmica</label>
+                <select name="situacao" id="situacao-nova" required>
+                    <option value="">Selecione a nova situação</option>
+                    @foreach(['ativa'=>'Ativa','trancada'=>'Trancada','concluida'=>'Concluída','cancelada'=>'Cancelada'] as $valor=>$rotulo)
+                        <option value="{{ $valor }}" @selected(old('situacao') === $valor)>{{ $rotulo }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div><label for="situacao-motivo">Justificativa</label><textarea id="situacao-motivo" name="motivo" rows="2" minlength="5" maxlength="500" required>{{ old('motivo') }}</textarea></div>
+            <div class="sc-ac-warning">
+                Esta operação não altera mensalidades automaticamente. A Secretaria precisa conferir as consequências acadêmicas e financeiras após registrar a mudança.
+            </div>
+            <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500" for="ciente-financeiro">
+                <input id="ciente-financeiro" type="checkbox" name="ciente_financeiro" value="1" style="width:auto;min-height:0;margin-top:3px" required>
+                Estou ciente de que pode ser necessária revisão das cobranças e do histórico.
+            </label>
+            <div><label for="situacao-senha">Senha administrativa</label><input id="situacao-senha" type="password" name="senha_confirmacao" autocomplete="current-password" required></div>
+            <button class="sc-button sc-primary" type="submit">Confirmar alteração de situação</button>
+        </form>
+    </section>
+    @php
+        $origens = collect();
+        if ($matricula->turma) { $origens->push($matricula->turma); }
+        foreach($matricula->turmasHistorico as $turmaVinculada) {
+            if($turmaVinculada->pivot->status === \App\Models\MatriculaTurma::STATUS_ATIVO && !$origens->contains('id',$turmaVinculada->id)) {
+                $origens->push($turmaVinculada);
+            }
+        }
+    @endphp
+    <section class="sc-panel" aria-labelledby="transferir-turma" style="margin-top:20px">
+        <div class="sc-panel-heading"><h2 id="transferir-turma">Transferir entre turmas</h2>
+            <p>Transferência apenas entre turmas da mesma disciplina e do mesmo curso, preservando o vínculo anterior no histórico.</p>
+        </div>
+        <div class="sc-panel-body">
+            @if($origens->isNotEmpty() && $turmasDisponiveis->isNotEmpty())
+                <form class="sc-ac-form" method="post" action="{{ route('secretaria.matriculas.transferir-turma',$matricula) }}">
+                    @csrf
+                    <div><label for="transferencia-origem">Turma de origem</label>
+                        <select id="transferencia-origem" name="turma_origem_id" required>
+                            <option value="">Selecione a turma atual</option>
+                            @foreach($origens as $turmaAtual)
+                                <option value="{{ $turmaAtual->id }}" @selected(old('turma_origem_id')==$turmaAtual->id)>{{ $turmaAtual->nome }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div><label for="transferencia-destino">Turma de destino</label>
+                        <select name="turma_destino_id" id="transferencia-destino" required>
+                            <option value="">Selecione outra turma da mesma disciplina</option>
+                            @foreach($turmasDisponiveis as $turmaDisponivel)
+                                @if(!$origens->contains('id',$turmaDisponivel->id))
+                                    <option value="{{ $turmaDisponivel->id }}" @selected(old('turma_destino_id')==$turmaDisponivel->id)>{{ $turmaDisponivel->nome }}</option>
+                                @endif
+                            @endforeach
+                        </select><small>O sistema validará novamente disciplina, situação, curso e capacidade antes de confirmar.</small>
+                    </div>
+                    <div><label for="transferencia-motivo">Justificativa</label><textarea id="transferencia-motivo" name="motivo" minlength="5" maxlength="500" rows="2" required>{{ old('motivo') }}</textarea></div>
+                    <div><label for="transferencia-senha">Senha administrativa</label><input id="transferencia-senha" name="senha_confirmacao" type="password" autocomplete="current-password" required></div>
+                    <button type="submit" class="sc-button sc-primary">Confirmar transferência</button>
+                </form>
+            @else
+                <p class="sc-ac-muted">Não há turmas de origem e destino disponíveis para transferência. Consulte as turmas antes de movimentar o aluno.</p>
+            @endif
+        </div>
+    </section>
+    @if($outrasMatriculas->isNotEmpty())
+        <section class="sc-panel" style="margin-top:20px">
+            <div class="sc-panel-heading"><h2>Outras matrículas deste aluno</h2><p>Cada curso possui matrícula acadêmica independente.</p></div>
+            <div class="sc-panel-body sc-ac-button-row">
+                @foreach($outrasMatriculas as $outra)
+                    <a class="sc-button sc-button-small" href="{{ route('secretaria.matriculas.show',$outra) }}">{{ $outra->curso?->titulo ?? 'Curso' }} · {{ $outra->numero_matricula ?: 'Sem número' }}</a>
+                @endforeach
+            </div>
+        </section>
+    @endif
+@endsection
 @section('content')
     <a href="{{ route('secretaria.matriculas.index') }}" class="sc-back">@include('secretaria.central.icone', ['nome' => 'voltar']) Voltar às matrículas</a>
     <div class="sc-intro">
@@ -8,6 +91,25 @@
         <a class="sc-button" href="{{ route('filament.secretario.resources.matricula-secretarias.edit', $matricula) }}">Editar dados acadêmicos @include('secretaria.central.icone', ['nome' => 'seta'])</a>
     </div>
     @include('secretaria.central.matriculas.nav', ['secao' => 'matriculas'])
+    <section class="sc-profile-hero" style="margin-bottom:22px">
+        <span class="sc-avatar sc-avatar-large" aria-hidden="true">@include('secretaria.central.icone',['nome'=>'pessoas'])</span>
+        <div class="sc-profile-person">
+            <h2>{{ $matricula->user?->name ?? 'Aluno não vinculado' }}</h2>
+            <p>{{ $matricula->curso?->titulo ?? 'Curso não informado' }} · Nº acadêmico {{ $matricula->numero_matricula ?: 'Não informado' }}</p>
+            <div class="sc-badges"><span class="sc-ac-badge is-neutral">{{ ucfirst($matricula->status ?? 'Sem situação') }}</span>
+                @if(!$matricula->turma && !$matricula->turmasHistorico->contains(fn($t) => $t->pivot->status === \App\Models\MatriculaTurma::STATUS_ATIVO))
+                    <span class="sc-ac-badge is-amber">Sem turma ativa</span>
+                @endif
+            </div>
+        </div>
+        <div class="sc-profile-context">
+            <dl><div><dt>Registro acadêmico</dt><dd class="sc-ac-mono">{{ $matricula->numero_matricula ?: 'Não informado' }}</dd></div>
+                <div><dt>Data da matrícula</dt><dd>{{ $matricula->data_matricula?->format('d/m/Y') ?? 'Não informada' }}</dd></div></dl>
+        </div>
+    </section>
+    <div class="sc-ac-warning" style="margin-bottom:20px">
+        A ficha acadêmica preserva os identificadores de login e os dados cadastrais do aluno. Trancamentos, conclusão e transferências podem exigir revisão de mensalidades e frequência.
+    </div>
     <section class="sc-panel">
         <div class="sc-panel-heading"><h2>Identificação e situação</h2><p>O número acadêmico é independente do login do aluno.</p></div>
         <dl class="sc-data-grid">
