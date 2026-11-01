@@ -340,5 +340,4 @@ class CentralMatriculasTest extends TestCase
         $this->assertSame('ativo', $matricula->fresh()->status);
         $this->assertDatabaseCount('matricula_movimentacoes', 0);
     }
-
 }
