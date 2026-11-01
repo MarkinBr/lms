@@ -35,6 +35,10 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
             ->middleware('throttle:10,1')->whereNumber('matricula')->name('corrigir-numero');
         Route::post('/{matricula}/vincular-turma', [CentralMatriculasController::class, 'vincularTurma'])
             ->middleware('throttle:10,1')->whereNumber('matricula')->name('vincular-turma');
+        Route::post('/{matricula}/transferir-turma', [CentralMatriculasController::class, 'transferirTurma'])
+            ->middleware('throttle:10,1')->whereNumber('matricula')->name('transferir-turma');
+        Route::post('/{matricula}/situacao', [CentralMatriculasController::class, 'alterarSituacao'])
+            ->middleware('throttle:10,1')->whereNumber('matricula')->name('situacao');
     });
 });
 Route::match(['GET', 'POST'], '/acesso/confirmar-email/{aluno}', [CentralAcessosController::class, 'confirmarEmail'])
