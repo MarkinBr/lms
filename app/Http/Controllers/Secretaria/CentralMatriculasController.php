@@ -288,6 +288,18 @@ class CentralMatriculasController extends Controller
                 throw ValidationException::withMessages(['turma_id' => 'O aluno já possui vínculo com esta turma.']);
             }
 
+            // Para uma disciplina, o aluno deve ter uma turma ativa por vez.
+            if ($turma->disciplina_id) {
+                $outrasTurmas = $matriculaAtual->turmasHistorico()
+                    ->wherePivot('status', MatriculaTurma::STATUS_ATIVO)->pluck('turmas.id')->all();
+                if ($matriculaAtual->turma_id) {
+                    $outrasTurmas[] = $matriculaAtual->turma_id;
+                }
+                if (Turma::query()->whereIn('id', $outrasTurmas)->where('disciplina_id', $turma->disciplina_id)->exists()) {
+                    throw ValidationException::withMessages(['turma_id' => 'Já existe turma ativa nesta disciplina. Utilize a transferência para preservar o histórico.']);
+                }
+            }
+
             // Conta matrículas distintas, considerando legado e novo relacionamento.
             if ($turma->capacidade !== null) {
                 $ocupacao = Matricula::query()->where(function ($q) use ($turma) {
