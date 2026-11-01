@@ -32,7 +32,7 @@ class CentralMatriculasTest extends TestCase
     {
         $aluno ??= User::factory()->create([
             'nivel' => 'aluno', 'ativo' => true,
-            'matricula_login' => 'ACESSO-UNICO-2026',
+            'matricula_login' => 'ACESSO-'.strtoupper(\\Illuminate\\Support\\Str::random(10)),
         ]);
 
         return Matricula::create([
