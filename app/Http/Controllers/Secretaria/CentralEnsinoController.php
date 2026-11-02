@@ -102,9 +102,10 @@ class CentralEnsinoController extends Controller
     {
         $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 120);
         $notas = Nota::query()->with('aluno:id,name')
-            ->when($busca !== '', fn ($q) => $q->whereHas('aluno', fn ($u) =>
-                $u->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($busca).'%']))
-                ->orWhereRaw('LOWER(disciplina) LIKE ?', ['%'.mb_strtolower($busca).'%']))
+            ->when($busca !== '', fn ($q) => $q->where(function ($filtro) use ($busca) {
+                $filtro->whereHas('aluno', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($busca).'%']))
+                    ->orWhereRaw('LOWER(disciplina) LIKE ?', ['%'.mb_strtolower($busca).'%']);
+            }))
             ->orderByDesc('id')->paginate(20)->withQueryString();
 
         return view('secretaria.central.ensino.notas', compact('notas', 'busca'));
@@ -115,8 +116,7 @@ class CentralEnsinoController extends Controller
         $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 120);
         $chamadas = ChamadaFrequencia::query()
             ->with(['turma:id,nome', 'disciplina:id,nome'])->withCount('frequencias')
-            ->when($busca !== '', fn ($q) => $q->whereHas('turma', fn ($t) =>
-                $t->whereRaw('LOWER(nome) LIKE ?', ['%'.mb_strtolower($busca).'%'])))
+            ->when($busca !== '', fn ($q) => $q->whereHas('turma', fn ($t) => $t->whereRaw('LOWER(nome) LIKE ?', ['%'.mb_strtolower($busca).'%'])))
             ->orderByDesc('data_aula')->paginate(18)->withQueryString();
 
         return view('secretaria.central.ensino.frequencias', compact('chamadas', 'busca'));
@@ -126,8 +126,7 @@ class CentralEnsinoController extends Controller
     {
         $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 120);
         $registros = Progresso::query()->with(['user:id,name', 'aula:id,titulo,disciplina_id'])
-            ->when($busca !== '', fn ($q) => $q->whereHas('user', fn ($u) =>
-                $u->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($busca).'%'])))
+            ->when($busca !== '', fn ($q) => $q->whereHas('user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($busca).'%'])))
             ->orderByDesc('id')->paginate(20)->withQueryString();
 
         return view('secretaria.central.ensino.ead', compact('registros', 'busca'));
@@ -171,8 +170,7 @@ class CentralEnsinoController extends Controller
     {
         $instrumento->load(['disciplina:id,nome', 'aula:id,titulo', 'questoes']);
         $questoesDisponiveis = BancoQuestao::query()->where('disciplina_id', $instrumento->disciplina_id)
-            ->where('status', 'revisada')->whereDoesntHave('instrumentos', fn ($q) =>
-                $q->where('instrumentos_avaliacao.id', $instrumento->id))
+            ->where('status', 'revisada')->whereDoesntHave('instrumentos', fn ($q) => $q->where('instrumentos_avaliacao.id', $instrumento->id))
             ->orderByDesc('id')->limit(150)->get(['id', 'enunciado', 'dificuldade', 'tipo']);
 
         return view('secretaria.central.ensino.instrumento',
