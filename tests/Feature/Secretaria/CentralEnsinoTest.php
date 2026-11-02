@@ -201,6 +201,7 @@ class CentralEnsinoTest extends TestCase
         ]);
         $this->assertSame([], BancoQuestao::firstOrFail()->gabarito);
     }
+
     public function test_previa_do_simulado_corrige_sem_gravar_nota_ou_tentativa(): void
     {
         [$curso, $modulo, $disciplina] = $this->catalogo();
@@ -231,5 +232,4 @@ class CentralEnsinoTest extends TestCase
         $this->assertDatabaseCount('notas', 0);
         $this->assertDatabaseCount('progressos', 0);
     }
-
 }
