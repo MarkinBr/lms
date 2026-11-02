@@ -117,7 +117,7 @@ class EnsinoConteudoController extends Controller
         }
 
         return redirect()->route('secretaria.ensino.aula', $aula)
-            ->with('status', 'Aula e materiais salvos. A publicação na sala do aluno deve ser conferida no Portal.');
+            ->with('status', 'Aula e materiais salvos. Anexos serão visíveis na sala aos alunos matriculados se a aula estiver liberada e downloads permitidos.');
     }
 
     public function material(Aula $aula, int $indice): BinaryFileResponse
