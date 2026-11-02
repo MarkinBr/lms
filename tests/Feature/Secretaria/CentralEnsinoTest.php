@@ -229,7 +229,7 @@ class CentralEnsinoTest extends TestCase
         $this->actingAs($outro)->get($rota)->assertForbidden();
         $this->actingAs($aluno)->get($rota)->assertOk();
         $this->get(route('aluno.aula', $aula->id))->assertOk()
-            ->assertSee($rota);
+            ->assertSee('apostila.pdf');
 
         $aula->update(['liberada' => false]);
         $this->get($rota)->assertForbidden();
