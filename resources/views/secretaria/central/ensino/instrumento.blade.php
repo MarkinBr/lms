@@ -7,6 +7,9 @@
 <p>{{ ucfirst($instrumento->tipo) }} · {{ $instrumento->disciplina?->nome }}{{ $instrumento->aula ? ' · Aula: '.$instrumento->aula->titulo : ' · separado das aulas' }}</p></div>
 <span class="sc-en-badge {{ $instrumento->status==='rascunho'?'warn':'' }}">{{ ucfirst($instrumento->status) }}</span></div>
 @include('secretaria.central.ensino.nav',['secao'=>'avaliacoes'])
+<div class="sc-en-inline" style="margin-bottom:17px">
+<a class="sc-button sc-primary" href="{{ route('secretaria.ensino.previa',$instrumento) }}">Resolver prévia do {{ $instrumento->tipo }} →</a>
+</div>
 <div class="sc-en-banner">
 <strong>Separação pedagógica:</strong> este é o editor e a prévia administrativa. A disponibilização das novas provas, quizzes e simulados aos estudantes, o registro de tentativas e o lançamento das notas dependem da integração com o Portal do Aluno. Nenhuma nota é lançada aqui automaticamente.
 </div>
