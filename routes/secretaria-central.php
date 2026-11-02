@@ -50,6 +50,8 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
             ->whereNumber('instrumento')->middleware('throttle:10,1')->name('instrumento.publicar');
         Route::get('/questoes', [CentralEnsinoController::class, 'questoes'])->name('questoes');
         Route::post('/questoes', [EnsinoAvaliacoesController::class, 'salvarQuestao'])->middleware('throttle:20,1')->name('questoes.salvar');
+        Route::put('/questoes/{questao}', [EnsinoAvaliacoesController::class, 'salvarQuestao'])
+            ->whereNumber('questao')->middleware('throttle:20,1')->name('questoes.atualizar');
         Route::post('/questoes/sugerir', [EnsinoAvaliacoesController::class, 'sugerirQuestao'])
             ->middleware('throttle:5,1')->name('questoes.sugerir');
     });
