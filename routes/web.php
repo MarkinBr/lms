@@ -145,6 +145,8 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
     Route::get('/cursos', [CursosController::class, 'index'])->name('cursos');
     Route::get('/curso/{id}', [CursosController::class, 'show'])->name('curso.show');
     Route::get('/aula/{id}', [AulaController::class, 'show'])->name('aula');
+    Route::get('/aula/{aula}/materiais/{indice}', [AulaController::class, 'material'])
+        ->whereNumber('aula')->whereNumber('indice')->middleware('throttle:60,1')->name('aula.material');
     Route::post('/aula/{id}/caderno', [CadernoAulaController::class, 'salvar'])
         ->middleware('throttle:90,1')->name('aula.caderno');
 

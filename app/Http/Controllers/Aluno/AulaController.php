@@ -11,6 +11,8 @@ use App\Models\Progresso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AulaController extends Controller
 {
@@ -34,6 +36,27 @@ class AulaController extends Controller
         abort_unless($matriculado, 403, 'Você não está matriculado neste curso.');
 
         abort_unless($aula->liberada, 403, 'Esta aula ainda não foi liberada.');
+    }
+
+    /** Entrega anexos privados apenas ao aluno matriculado e com aula liberada. */
+    public function material(Request $request, Aula $aula, int $indice): BinaryFileResponse
+    {
+        $this->autorizarVinculo((int) $request->user()->id, $aula);
+        abort_unless($aula->permite_download, 403, 'O download está desabilitado nesta aula.');
+
+        $arquivo = ($aula->anexos ?? [])[$indice] ?? null;
+        $caminho = is_array($arquivo) ? ($arquivo['caminho'] ?? null) : null;
+        if (! is_string($caminho) || ! str_starts_with($caminho, 'ensino/aulas/'.$aula->id.'/')) {
+            abort(404);
+        }
+
+        $disco = Storage::disk('local');
+        abort_unless($disco->exists($caminho), 404);
+
+        return response()->download($disco->path($caminho), basename($arquivo['nome'] ?? 'material'), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /**
