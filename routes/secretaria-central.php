@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Secretaria\CentralAcessosController;
 use App\Http\Controllers\Secretaria\CentralMatriculasController;
+use App\Http\Controllers\Secretaria\CentralEnsinoController;
+use App\Http\Controllers\Secretaria\EnsinoConteudoController;
+use App\Http\Controllers\Secretaria\EnsinoAvaliacoesController;
 use App\Http\Middleware\AtendimentoSecretaria;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +24,34 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
         Route::post('/{aluno}/email', [CentralAcessosController::class, 'email'])->middleware('throttle:5,1')->name('email');
         Route::get('/{aluno}/entrega/{entrega}', [CentralAcessosController::class, 'entrega'])->name('entrega');
         Route::post('/{aluno}/entrega/{entrega}', [CentralAcessosController::class, 'enviar'])->middleware('throttle:10,1')->name('entrega.enviar');
+    });
+    Route::prefix('ensino')->name('secretaria.ensino.')->group(function () {
+        Route::get('/', [CentralEnsinoController::class, 'painel'])->name('painel');
+        Route::get('/modulos', [CentralEnsinoController::class, 'modulos'])->name('modulos');
+        Route::post('/modulos', [EnsinoConteudoController::class, 'salvarModulo'])->middleware('throttle:15,1')->name('modulos.salvar');
+        Route::get('/disciplinas', [CentralEnsinoController::class, 'disciplinas'])->name('disciplinas');
+        Route::get('/aulas', [CentralEnsinoController::class, 'aulas'])->name('aulas');
+        Route::get('/aulas/nova', [CentralEnsinoController::class, 'aula'])->name('aulas.nova');
+        Route::post('/aulas', [EnsinoConteudoController::class, 'salvarAula'])->middleware('throttle:15,1')->name('aulas.salvar');
+        Route::get('/aulas/{aula}', [CentralEnsinoController::class, 'aula'])->whereNumber('aula')->name('aula');
+        Route::put('/aulas/{aula}', [EnsinoConteudoController::class, 'salvarAula'])->whereNumber('aula')->middleware('throttle:15,1')->name('aulas.atualizar');
+        Route::get('/aulas/{aula}/materiais/{indice}', [EnsinoConteudoController::class, 'material'])
+            ->whereNumber('aula')->whereNumber('indice')->name('aulas.material');
+        Route::get('/notas', [CentralEnsinoController::class, 'notas'])->name('notas');
+        Route::get('/frequencia-presencial', [CentralEnsinoController::class, 'frequencias'])->name('frequencias');
+        Route::get('/frequencia-ead', [CentralEnsinoController::class, 'ead'])->name('ead');
+        Route::get('/avaliacoes', [CentralEnsinoController::class, 'avaliacoes'])->name('avaliacoes');
+        Route::post('/avaliacoes', [EnsinoAvaliacoesController::class, 'salvarInstrumento'])->middleware('throttle:15,1')->name('avaliacoes.salvar');
+        Route::get('/avaliacoes/{instrumento}', [CentralEnsinoController::class, 'instrumento'])
+            ->whereNumber('instrumento')->name('instrumento');
+        Route::post('/avaliacoes/{instrumento}/questoes', [EnsinoAvaliacoesController::class, 'associarQuestao'])
+            ->whereNumber('instrumento')->middleware('throttle:20,1')->name('instrumento.questoes');
+        Route::post('/avaliacoes/{instrumento}/publicar', [EnsinoAvaliacoesController::class, 'publicar'])
+            ->whereNumber('instrumento')->middleware('throttle:10,1')->name('instrumento.publicar');
+        Route::get('/questoes', [CentralEnsinoController::class, 'questoes'])->name('questoes');
+        Route::post('/questoes', [EnsinoAvaliacoesController::class, 'salvarQuestao'])->middleware('throttle:20,1')->name('questoes.salvar');
+        Route::post('/questoes/sugerir', [EnsinoAvaliacoesController::class, 'sugerirQuestao'])
+            ->middleware('throttle:5,1')->name('questoes.sugerir');
     });
     Route::prefix('matriculas')->name('secretaria.matriculas.')->group(function () {
         Route::get('/painel', [CentralMatriculasController::class, 'painel'])->name('painel');
