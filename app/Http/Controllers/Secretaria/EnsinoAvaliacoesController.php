@@ -215,7 +215,7 @@ class EnsinoAvaliacoesController extends Controller
             if ($instrumento->status !== 'rascunho' || ! $instrumento->questoes()->exists()) {
                 throw ValidationException::withMessages(['confirmar_publicacao' => 'Adicione questões antes de publicar.']);
             }
-            if ($instrumento->questoes()->where('status', '!=', 'revisada')->exists()) {
+            if ($instrumento->questoes()->where('banco_questoes.status', '!=', 'revisada')->exists()) {
                 throw ValidationException::withMessages(['confirmar_publicacao' => 'Existem questões não revisadas.']);
             }
             $instrumento->update(['status' => 'publicado']);
