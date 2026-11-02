@@ -7,6 +7,7 @@ use App\Models\BancoQuestao;
 use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Models\InstrumentoAvaliacao;
+use App\Models\Matricula;
 use App\Models\Modulo;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -200,6 +201,40 @@ class CentralEnsinoTest extends TestCase
             'origem' => 'texto_assistido', 'status' => 'rascunho', 'tipo' => 'dissertativa',
         ]);
         $this->assertSame([], BancoQuestao::firstOrFail()->gabarito);
+    }
+
+    public function test_anexos_privados_so_sao_entregues_ao_aluno_matriculado_na_aula_liberada(): void
+    {
+        Storage::fake('local');
+        [$curso, $modulo, $disciplina] = $this->catalogo();
+        $aula = Aula::create([
+            'modulo_id' => $modulo->id, 'disciplina_id' => $disciplina->id,
+            'titulo' => 'Sala com material', 'conteudo_texto' => 'Texto de apoio',
+            'tipo_conteudo' => 'texto', 'ordem' => 1, 'duracao' => 10,
+            'liberada' => true, 'permite_download' => true,
+        ]);
+        $arquivo = 'ensino/aulas/'.$aula->id.'/apostila.pdf';
+        Storage::disk('local')->put($arquivo, '%PDF-1.4 Conteúdo fictício');
+        $aula->update(['anexos' => [['caminho' => $arquivo, 'nome' => 'apostila.pdf']]]);
+
+        $aluno = User::factory()->create(['nivel' => 'aluno', 'ativo' => true]);
+        $outro = User::factory()->create(['nivel' => 'aluno', 'ativo' => true]);
+        Matricula::create([
+            'user_id' => $aluno->id, 'curso_id' => $curso->id,
+            'numero_matricula' => 'MAT-ENS-001', 'data_matricula' => today()->toDateString(),
+            'dia_vencimento' => 10, 'status' => 'ativo',
+        ]);
+        $rota = route('aluno.aula.material', [$aula, 0]);
+
+        $this->actingAs($outro)->get($rota)->assertForbidden();
+        $this->actingAs($aluno)->get($rota)->assertOk();
+        $this->get(route('aluno.aula', $aula->id))->assertOk()
+            ->assertSee($rota);
+
+        $aula->update(['liberada' => false]);
+        $this->get($rota)->assertForbidden();
+        $aula->update(['liberada' => true, 'permite_download' => false]);
+        $this->get($rota)->assertForbidden();
     }
 
     public function test_previa_do_simulado_corrige_sem_gravar_nota_ou_tentativa(): void
