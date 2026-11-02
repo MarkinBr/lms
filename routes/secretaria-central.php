@@ -1,10 +1,10 @@
 <?php
 
 use App\Http\Controllers\Secretaria\CentralAcessosController;
-use App\Http\Controllers\Secretaria\CentralMatriculasController;
 use App\Http\Controllers\Secretaria\CentralEnsinoController;
-use App\Http\Controllers\Secretaria\EnsinoConteudoController;
+use App\Http\Controllers\Secretaria\CentralMatriculasController;
 use App\Http\Controllers\Secretaria\EnsinoAvaliacoesController;
+use App\Http\Controllers\Secretaria\EnsinoConteudoController;
 use App\Http\Middleware\AtendimentoSecretaria;
 use Illuminate\Support\Facades\Route;
 
