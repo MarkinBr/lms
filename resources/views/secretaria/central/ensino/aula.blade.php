@@ -6,7 +6,7 @@
 <div class="sc-intro"><div><p class="sc-eyebrow">Editor da sala de aula</p><h1>{{ $aula?->exists ? $aula->titulo : 'Preparar nova aula' }}</h1>
 <p>Selecione uma disciplina, monte o conteúdo e anexe os materiais que precisam acompanhar o estudante.</p></div></div>
 @include('secretaria.central.ensino.nav',['secao'=>'aulas'])
-<div class="sc-en-banner"><strong>Atenção à publicação:</strong> arquivos enviados são guardados em armazenamento privado. Confira a integração com o Portal do Aluno antes de considerar os anexos disponíveis aos estudantes.</div>
+<div class="sc-en-banner"><strong>Segurança da publicação:</strong> arquivos são privados e acessados na sala de aula por alunos matriculados, apenas quando a aula está liberada e o download autorizado.</div>
 <div class="sc-en-two">
 <section class="sc-panel"><div class="sc-panel-heading"><h2>Conteúdos da aula</h2><p>Todos os campos são salvos no cadastro real de aulas do LMS.</p></div>
 <div class="sc-panel-body">
