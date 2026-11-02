@@ -5,10 +5,23 @@
         return is_array($value) ? $value : [];
     };
     $materiaisEstudio = [];
-    foreach (array_merge($toArray($aula->materiais), $toArray($aula->anexos), $toArray($aula->materiais_complementares)) as $item) {
+    foreach (array_merge($toArray($aula->materiais), $toArray($aula->materiais_complementares)) as $item) {
         if (is_string($item)) { $item = ['url' => $item]; }
         if (!is_array($item)) { continue; }
         $url = $item['url'] ?? $item['arquivo'] ?? $item['path'] ?? '';
+        if (!$url) { continue; }
+        $materiaisEstudio[] = ['url' => $url, 'titulo' => $item['titulo'] ?? $item['nome'] ?? 'Material de apoio', 'tipo' => $item['tipo'] ?? ''];
+    }
+    foreach ($toArray($aula->anexos) as $indice => $item) {
+        if (is_string($item)) { $item = ['url' => $item]; }
+        if (!is_array($item)) { continue; }
+        // Novos anexos ficam em disco privado; nunca expor o caminho físico.
+        if (isset($item['caminho']) && is_string($item['caminho'])) {
+            if (!$aula->permite_download) { continue; }
+            $url = route('aluno.aula.material', ['aula' => $aula->id, 'indice' => $indice]);
+        } else {
+            $url = $item['url'] ?? $item['arquivo'] ?? $item['path'] ?? '';
+        }
         if (!$url) { continue; }
         $materiaisEstudio[] = ['url' => $url, 'titulo' => $item['titulo'] ?? $item['nome'] ?? 'Material de apoio', 'tipo' => $item['tipo'] ?? ''];
     }
