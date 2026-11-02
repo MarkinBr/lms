@@ -140,10 +140,11 @@ class CentralEnsinoController extends Controller
             ->withCount('questoes')
             ->when(in_array($tipo, ['quiz', 'prova', 'avaliacao', 'simulado'], true), fn ($q) => $q->where('tipo', $tipo))
             ->orderByDesc('id')->paginate(18)->withQueryString();
+        $aulas = Aula::query()->whereNotNull('disciplina_id')->orderBy('titulo')->get(['id', 'titulo', 'disciplina_id']);
         $totais = InstrumentoAvaliacao::query()->select('tipo', DB::raw('count(*) as total'))
             ->groupBy('tipo')->pluck('total', 'tipo');
 
-        return view('secretaria.central.ensino.avaliacoes', ['instrumentos' => $instrumentos, 'tipo' => $tipo, 'totais' => $totais] + $this->catalogo());
+        return view('secretaria.central.ensino.avaliacoes', ['instrumentos' => $instrumentos, 'tipo' => $tipo, 'totais' => $totais, 'aulas' => $aulas] + $this->catalogo());
     }
 
     public function questoes(Request $request): View
@@ -156,15 +157,25 @@ class CentralEnsinoController extends Controller
             ->when($f['busca'] !== '', fn ($q) => $q->whereRaw('LOWER(enunciado) LIKE ?', ['%'.mb_strtolower($f['busca']).'%']))
             ->orderByDesc('id')->paginate(18)->withQueryString();
 
+        $edicao = filter_var($request->query('editar'), FILTER_VALIDATE_INT)
+            ? BancoQuestao::query()->findOrFail((int) $request->query('editar'))
+            : null;
+        $aulas = Aula::query()->whereNotNull('disciplina_id')->orderBy('titulo')->get(['id', 'titulo', 'disciplina_id']);
+
         return view('secretaria.central.ensino.questoes', [
-            'questoesLista' => $questoes, 'f' => $f, 'dificuldade' => $dificuldade,
+            'questoesLista' => $questoes, 'f' => $f, 'dificuldade' => $dificuldade, 'edicao' => $edicao, 'aulas' => $aulas,
         ] + $this->catalogo());
     }
 
     public function instrumento(InstrumentoAvaliacao $instrumento): View
     {
         $instrumento->load(['disciplina:id,nome', 'aula:id,titulo', 'questoes']);
+        $questoesDisponiveis = BancoQuestao::query()->where('disciplina_id', $instrumento->disciplina_id)
+            ->where('status', 'revisada')->whereDoesntHave('instrumentos', fn ($q) =>
+                $q->where('instrumentos_avaliacao.id', $instrumento->id))
+            ->orderByDesc('id')->limit(150)->get(['id', 'enunciado', 'dificuldade', 'tipo']);
 
-        return view('secretaria.central.ensino.instrumento', ['instrumento' => $instrumento] + $this->catalogo());
+        return view('secretaria.central.ensino.instrumento',
+            ['instrumento' => $instrumento, 'questoesDisponiveis' => $questoesDisponiveis] + $this->catalogo());
     }
 }
