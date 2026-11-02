@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class EnsinoAvaliacoesController extends Controller
 {
@@ -205,6 +206,54 @@ class EnsinoAvaliacoesController extends Controller
         });
 
         return back()->with('status', 'Questão adicionada ao instrumento.');
+    }
+
+    /** Prévia administrativa: corrige objetivas sem criar nota ou tentativa do aluno. */
+    public function previa(InstrumentoAvaliacao $instrumento): View
+    {
+        $instrumento->load(['questoes', 'aula:id,titulo', 'disciplina:id,nome']);
+
+        return view('secretaria.central.ensino.previa', ['instrumento' => $instrumento, 'resultado' => null]);
+    }
+
+    public function corrigirPrevia(Request $request, InstrumentoAvaliacao $instrumento): \Illuminate\View\View
+    {
+        $dados = $request->validate([
+            'respostas' => ['nullable', 'array', 'max:50'],
+            'respostas.*' => ['array', 'max:4'],
+            'respostas.*.*' => ['string', Rule::in(['A', 'B', 'C', 'D', 'V', 'F'])],
+        ]);
+        $instrumento->load(['questoes', 'aula:id,titulo', 'disciplina:id,nome']);
+        $pontos = 0;
+        $maximo = 0;
+        $detalhes = [];
+        foreach ($instrumento->questoes as $questao) {
+            $marcadas = array_values(array_unique($dados['respostas'][$questao->id] ?? []));
+            sort($marcadas);
+            $gabarito = $questao->gabarito ?? [];
+            sort($gabarito);
+            $discursiva = $questao->tipo === 'dissertativa';
+            if (! $discursiva) {
+                $maximo += $questao->pivot->pontos;
+                if ($marcadas === $gabarito) {
+                    $pontos += $questao->pivot->pontos;
+                }
+            }
+            $detalhes[$questao->id] = [
+                'marcadas' => $marcadas,
+                'gabarito' => $gabarito,
+                'correta' => ! $discursiva && $marcadas === $gabarito,
+                'manual' => $discursiva,
+            ];
+        }
+        $resultado = [
+            'pontos' => $pontos,
+            'maximo' => $maximo,
+            'percentual' => $maximo > 0 ? round(100 * $pontos / $maximo, 1) : null,
+            'questoes' => $detalhes,
+        ];
+
+        return view('secretaria.central.ensino.previa', compact('instrumento', 'resultado'));
     }
 
     public function publicar(Request $request, InstrumentoAvaliacao $instrumento): RedirectResponse
