@@ -201,4 +201,35 @@ class CentralEnsinoTest extends TestCase
         ]);
         $this->assertSame([], BancoQuestao::firstOrFail()->gabarito);
     }
+    public function test_previa_do_simulado_corrige_sem_gravar_nota_ou_tentativa(): void
+    {
+        [$curso, $modulo, $disciplina] = $this->catalogo();
+        $ator = $this->equipe();
+        $questao = BancoQuestao::create([
+            'disciplina_id' => $disciplina->id, 'criada_por' => $ator->id,
+            'enunciado' => 'Qual alternativa expressa a ideia principal da referência?',
+            'tipo' => 'unica', 'dificuldade' => 'facil',
+            'alternativas' => ['A' => 'Primeiro conceito', 'B' => 'Segundo conceito',
+                'C' => 'Terceiro conceito', 'D' => 'Quarto conceito'],
+            'gabarito' => ['B'], 'status' => 'revisada',
+        ]);
+        $instrumento = InstrumentoAvaliacao::create([
+            'disciplina_id' => $disciplina->id, 'criado_por' => $ator->id,
+            'tipo' => 'simulado', 'titulo' => 'Prévia do simulado', 'status' => 'rascunho',
+            'tentativas_permitidas' => 2,
+        ]);
+        $instrumento->questoes()->attach($questao->id, ['ordem' => 1, 'pontos' => 3]);
+
+        $this->actingAs($ator)
+            ->get(route('secretaria.ensino.previa', $instrumento))->assertOk()
+            ->assertSee('Corrigir respostas desta prévia');
+
+        $this->post(route('secretaria.ensino.previa.corrigir', $instrumento), [
+            'respostas' => [$questao->id => ['B']],
+        ])->assertOk()->assertSee('3 de 3 pontos')->assertSee('100%');
+
+        $this->assertDatabaseCount('notas', 0);
+        $this->assertDatabaseCount('progressos', 0);
+    }
+
 }
