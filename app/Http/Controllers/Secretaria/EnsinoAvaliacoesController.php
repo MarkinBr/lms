@@ -15,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 class EnsinoAvaliacoesController extends Controller
 {
-    public function salvarQuestao(Request $request): RedirectResponse
+    public function salvarQuestao(Request $request, ?BancoQuestao $questao = null): RedirectResponse
     {
         $dados = $request->validate([
             'disciplina_id' => ['required', 'integer', 'exists:disciplinas,id'],
@@ -70,10 +70,15 @@ class EnsinoAvaliacoesController extends Controller
             throw ValidationException::withMessages(['gabarito' => 'Questões dissertativas precisam ser corrigidas por um professor.']);
         }
 
-        BancoQuestao::query()->create([
+        if ($questao?->exists && $questao->instrumentos()
+            ->where('instrumentos_avaliacao.status', 'publicado')->exists()) {
+            throw ValidationException::withMessages(['enunciado' => 'Questões de instrumentos já publicados não podem ser alteradas.']);
+        }
+
+        ($questao?->exists ? $questao : new BancoQuestao)->fill([
             'disciplina_id' => $disciplina->id,
             'aula_id' => $dados['aula_id'] ?? null,
-            'criada_por' => $request->user()->id,
+            'criada_por' => $questao?->criada_por ?? $request->user()->id,
             'tipo' => $tipo,
             'dificuldade' => $dados['dificuldade'],
             'enunciado' => trim($dados['enunciado']),
@@ -83,9 +88,9 @@ class EnsinoAvaliacoesController extends Controller
             'referencia' => $dados['referencia'] ?? null,
             'origem' => 'manual',
             'status' => $request->boolean('revisada') ? 'revisada' : 'rascunho',
-        ]);
+        ])->save();
 
-        return redirect()->route('secretaria.ensino.questoes')->with('status', 'Questão adicionada ao banco.');
+        return redirect()->route('secretaria.ensino.questoes')->with('status', 'Questão salva no banco.');
     }
 
     /**
