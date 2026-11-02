@@ -109,8 +109,7 @@ class EnsinoAvaliacoesController extends Controller
         abort_unless($aula->disciplina_id, 422);
         $fonte = trim(strip_tags((string) ($aula->transcricao_video ?: $aula->conteudo_texto)));
         if (mb_strlen($fonte) < 80) {
-            throw ValidationException::withMessages(['aula_id' =>
-                'A aula precisa ter pelo menos 80 caracteres de texto ou transcrição revisada. Não é possível interpretar o link do vídeo diretamente.']);
+            throw ValidationException::withMessages(['aula_id' => 'A aula precisa ter pelo menos 80 caracteres de texto ou transcrição revisada. Não é possível interpretar o link do vídeo diretamente.']);
         }
         $trechos = collect(preg_split('/(?<=[.!?])\s+/u', $fonte))
             ->map(fn ($v) => trim($v))
