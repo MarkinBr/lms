@@ -216,7 +216,7 @@ class EnsinoAvaliacoesController extends Controller
         return view('secretaria.central.ensino.previa', ['instrumento' => $instrumento, 'resultado' => null]);
     }
 
-    public function corrigirPrevia(Request $request, InstrumentoAvaliacao $instrumento): \Illuminate\View\View
+    public function corrigirPrevia(Request $request, InstrumentoAvaliacao $instrumento): View
     {
         $dados = $request->validate([
             'respostas' => ['nullable', 'array', 'max:50'],
