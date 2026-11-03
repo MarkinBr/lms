@@ -203,15 +203,15 @@ class CentralDocumentosController extends Controller
             'assinatura_id' => ['nullable', 'integer', 'exists:secretaria_assinaturas,id'],
         ]);
         $matricula = Matricula::query()->findOrFail($dados['matricula_id']);
-        if (! empty($dados['requerimento_id'])) {
+        if (filled($dados['requerimento_id'] ?? null)) {
             $requerimento = Requerimento::query()->findOrFail($dados['requerimento_id']);
             if ((int) $requerimento->aluno_id !== (int) $matricula->user_id) {
                 throw ValidationException::withMessages(['requerimento_id' => 'Protocolo e matrícula devem pertencer ao mesmo aluno.']);
             }
         }
-        if (! empty($dados['assinatura_id'])) {
+        if (filled($dados['assinatura_id'] ?? null)) {
             $assinatura = SecretariaAssinatura::query()->findOrFail($dados['assinatura_id']);
-            if ((int) $assinatura->responsavel_id !== (int) $request->user()->id || ! $assinatura->ativa) {
+            if ((int) $assinatura->responsavel_id !== (int) $request->user()->id || $assinatura->ativa === false) {
                 throw ValidationException::withMessages(['assinatura_id' => 'Somente sua assinatura ativa pode ser usada na prévia.']);
             }
         }
@@ -271,7 +271,7 @@ class CentralDocumentosController extends Controller
         $request->validate(['confirmar_envio' => ['accepted']]);
         DB::transaction(function () use ($request, $documento) {
             $registro = SecretariaDocumento::query()->lockForUpdate()->findOrFail($documento->id);
-            if (! in_array($registro->status, ['rascunho', 'devolvido'], true)) {
+            if (in_array($registro->status, ['rascunho', 'devolvido'], true) === false) {
                 throw ValidationException::withMessages(['confirmar_envio' => 'O documento não está disponível para envio.']);
             }
             $registro->load('matricula.user', 'matricula.curso', 'matricula.turma');
