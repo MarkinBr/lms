@@ -3,6 +3,7 @@
 use App\Http\Controllers\Secretaria\CentralAcessosController;
 use App\Http\Controllers\Secretaria\CentralDocumentosController;
 use App\Http\Controllers\Secretaria\CentralEnsinoController;
+use App\Http\Controllers\Secretaria\CentralFinanceiroController;
 use App\Http\Controllers\Secretaria\CentralMatriculasController;
 use App\Http\Controllers\Secretaria\EnsinoAvaliacoesController;
 use App\Http\Controllers\Secretaria\EnsinoConteudoController;
@@ -60,6 +61,20 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
             ->whereNumber('questao')->middleware('throttle:20,1')->name('questoes.atualizar');
         Route::post('/questoes/sugerir', [EnsinoAvaliacoesController::class, 'sugerirQuestao'])
             ->middleware('throttle:5,1')->name('questoes.sugerir');
+    });
+    Route::prefix('financeiro')->name('secretaria.financeiro.')->group(function () {
+        Route::get('/', [CentralFinanceiroController::class, 'index'])->name('painel');
+        Route::post('/mensalidades/{mensalidade}/pix', [CentralFinanceiroController::class, 'gerarPix'])
+            ->whereNumber('mensalidade')->middleware('throttle:6,1')->name('pix');
+        Route::post('/mensalidades/{mensalidade}/boleto', [CentralFinanceiroController::class, 'gerarBoleto'])
+            ->whereNumber('mensalidade')->middleware('throttle:6,1')->name('boleto');
+        Route::get('/mensalidades/{mensalidade}/recibo', [CentralFinanceiroController::class, 'recibo'])
+            ->whereNumber('mensalidade')->name('recibo');
+        Route::post('/mensalidades/{mensalidade}/agendar', [CentralFinanceiroController::class, 'agendar'])
+            ->whereNumber('mensalidade')->middleware('throttle:10,1')->name('agendar');
+        Route::post('/envios/{envio}/cancelar', [CentralFinanceiroController::class, 'cancelarEnvio'])
+            ->whereNumber('envio')->middleware('throttle:10,1')->name('envio.cancelar');
+        Route::get('/relatorio', [CentralFinanceiroController::class, 'relatorio'])->name('relatorio');
     });
     Route::prefix('documentos')->name('secretaria.documentos.')->group(function () {
         Route::get('/', [CentralDocumentosController::class, 'painel'])->name('painel');
