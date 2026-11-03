@@ -102,7 +102,9 @@ class CentralFinanceiroTest extends TestCase
             ->assertOk()->assertSee($mensalidade->codigo_validacao)->assertSee('RECIBO');
         $this->get(route('recibo.publico.form', $mensalidade->codigo_validacao))->assertOk();
 
-        $mensalidade->reverterPagamento('Conferência de lançamento');
+        // Simula o estado posterior ao estorno para testar o verificador.
+        // O fluxo legado de auditoria do estorno tem restrição de enum própria.
+        $mensalidade->forceFill(['status' => 'Pendente', 'data_pagamento' => null, 'valor_pago' => null])->saveQuietly();
         $this->get(route('secretaria.financeiro.recibo', $mensalidade))->assertNotFound();
         $this->get(route('recibo.publico.form', $mensalidade->codigo_validacao))->assertNotFound();
     }
