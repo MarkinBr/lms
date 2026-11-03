@@ -231,6 +231,40 @@ class CentralDocumentosController extends Controller
             ->with('status', 'Rascunho criado. Revise a prévia antes de encaminhar.');
     }
 
+    public function atualizar(Request $request, SecretariaDocumento $documento): RedirectResponse
+    {
+        $dados = $request->validate([
+            'modelo' => ['required', Rule::in(array_keys(SecretariaDocumento::MODELOS))],
+            'finalidade' => ['required', 'string', 'min:5', 'max:500'],
+            'assinatura_id' => ['nullable', 'integer', 'exists:secretaria_assinaturas,id'],
+        ]);
+        if (filled($dados['assinatura_id'] ?? null)) {
+            $assinatura = SecretariaAssinatura::query()->findOrFail($dados['assinatura_id']);
+            if ((int) $assinatura->responsavel_id !== (int) $request->user()->id || $assinatura->ativa === false) {
+                throw ValidationException::withMessages(['assinatura_id' => 'Somente sua assinatura ativa pode ser usada.']);
+            }
+        }
+
+        DB::transaction(function () use ($request, $documento, $dados) {
+            $registro = SecretariaDocumento::query()->lockForUpdate()->findOrFail($documento->id);
+            if ((int) $registro->preparado_por !== (int) $request->user()->id ||
+                in_array($registro->status, ['rascunho', 'devolvido'], true) === false) {
+                abort(403, 'Somente o preparador pode editar um rascunho ou documento devolvido.');
+            }
+            $registro->update([
+                'modelo' => $dados['modelo'],
+                'finalidade' => trim($dados['finalidade']),
+                'assinatura_id' => $dados['assinatura_id'] ?? null,
+                'dados_congelados' => null,
+                'observacao_revisao' => null,
+            ]);
+            $this->auditar($request->user()->id, 'declaracao', (string) $registro->id,
+                'corrigir_rascunho', $registro->status, $registro->status, 'Revisão do conteúdo e modelo visual.');
+        });
+
+        return back()->with('status', 'Rascunho atualizado. Confira novamente a prévia PDF.');
+    }
+
     public function declaracao(SecretariaDocumento $documento): View
     {
         $documento->load(['matricula.user', 'matricula.curso', 'matricula.turma', 'assinatura.responsavel', 'preparadoPor', 'revisadoPor']);
