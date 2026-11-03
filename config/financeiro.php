@@ -18,7 +18,7 @@ return [
     'habilitar_emissao_mercadopago_secretaria' => (bool) env('FINANCEIRO_MP_SECRETARIA_HABILITADO', false),
     'habilitar_envios_automaticos_secretaria' => (bool) env('FINANCEIRO_ENVIOS_HABILITADOS', false),
 
-    'multa_pct'     => (float) env('FINANCEIRO_MULTA_PCT', 0.02),  // 2%
+    'multa_pct' => (float) env('FINANCEIRO_MULTA_PCT', 0.02), // 2%
     'juros_mes_pct' => (float) env('FINANCEIRO_JUROS_MES_PCT', 0.01), // 1% a.m.
 
     /*
@@ -45,8 +45,8 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'categoria_mensalidades'  => 'Mensalidades',
-    'categoria_multas_juros'  => 'Multas e Juros',
+    'categoria_mensalidades' => 'Mensalidades',
+    'categoria_multas_juros' => 'Multas e Juros',
     'categoria_taxas_avulsas' => 'Taxas Avulsas',
 
     /*
@@ -55,8 +55,8 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'conta_caixa_padrao'  => 'Caixa Secretaria',
-    'conta_banco_padrao'  => 'Mercado Pago',
+    'conta_caixa_padrao' => 'Caixa Secretaria',
+    'conta_banco_padrao' => 'Mercado Pago',
 
     /*
     |--------------------------------------------------------------------------
@@ -65,13 +65,13 @@ return [
     */
 
     'metodos_pagamento' => [
-        'dinheiro'       => '💵 Dinheiro',
-        'pix'            => '📱 PIX',
+        'dinheiro' => '💵 Dinheiro',
+        'pix' => '📱 PIX',
         'cartao_credito' => '💳 Cartão de Crédito',
-        'cartao_debito'  => '💳 Cartão de Débito',
-        'boleto'         => '📄 Boleto',
-        'transferencia'  => '🏦 Transferência',
-        'mercadopago'    => '🔵 Mercado Pago',
+        'cartao_debito' => '💳 Cartão de Débito',
+        'boleto' => '📄 Boleto',
+        'transferencia' => '🏦 Transferência',
+        'mercadopago' => '🔵 Mercado Pago',
     ],
 
     /*
@@ -91,7 +91,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'enviar_whatsapp_auto'  => (bool) env('FINANCEIRO_AUTO_WHATSAPP', true),
-    'enviar_email_auto'     => (bool) env('FINANCEIRO_AUTO_EMAIL', true),
-    'enviar_push_auto'      => (bool) env('FINANCEIRO_AUTO_PUSH', true),
+    'enviar_whatsapp_auto' => (bool) env('FINANCEIRO_AUTO_WHATSAPP', true),
+    'enviar_email_auto' => (bool) env('FINANCEIRO_AUTO_EMAIL', true),
+    'enviar_push_auto' => (bool) env('FINANCEIRO_AUTO_PUSH', true),
 ];
