@@ -120,13 +120,7 @@ jobs:
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base="$(git rev-parse HEAD^)"; fi
           # Mantém o Pint restrito aos PHP existentes e alterados.
           mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base" "$GITHUB_SHA" -- '*.php')
-          if [ "${#files[@]}" -gt 0 ]; then
-            vendor/bin/pint --test "${files[@]}" || {
-              vendor/bin/pint "${files[@]}"
-              git --no-pager diff -- app/Services/MercadoPagoService.php
-              exit 1
-            }
-          fi
+          if [ "${#files[@]}" -gt 0 ]; then vendor/bin/pint --test "${files[@]}"; fi
 
       - name: Testes Laravel direcionados
         run: php artisan test --filter='Application|Contato|Newsletter|Acompanhamento|Inscricao|Auth|PortalAlunoPublico|SsoController|PortalRoutesPlaceholderTest|TelegramAdministrativo|TelegramMenuConsulta|TelegramOperacional|TelegramCentralInteligente|TelegramNavegacao35|TelegramAlertasPreferencias|TelegramOutbox|TelegramSegurancaRegressao|TelegramOutboxAutorizacao|TelegramRespostaProtegida|TelegramDesativacaoRevogacao|TelegramPublicarComandos|TelegramRevogacaoAuditoria|TelegramConfirmacoes|TelegramPreAnaliseInscricao|Legado'
