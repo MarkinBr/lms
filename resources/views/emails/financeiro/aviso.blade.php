@@ -17,6 +17,13 @@
 @if($link)
 <p style="text-align:center;margin:28px 0"><a href="{{ $link }}" style="background:#0d355e;color:#fff;text-decoration:none;padding:13px 22px;border-radius:7px;font-weight:bold">{{ $cta }}</a></p>
 @endif
+@if(!empty($pix_copia_cola))
+<div style="padding:15px;background:#f4f7fa;border:1px solid #d6e1eb;margin:20px 0">
+<strong style="display:block;font-size:12px;color:#0b2d55;margin-bottom:8px">PIX copia e cola · Mercado Pago</strong>
+<p style="font-size:11px;word-break:break-all;margin:0;color:#315268">{{ $pix_copia_cola }}</p>
+<p style="font-size:11px;color:#6a8091;margin-bottom:0">Copie o código no aplicativo do banco. A confirmação será realizada após o retorno do provedor.</p>
+</div>
+@endif
 <p style="line-height:1.7">Caso já tenha efetuado o pagamento, desconsidere a cobrança e entre em contato para conferência.</p>
 <p style="line-height:1.7">Atenciosamente,<br><strong>Secretaria Acadêmica — CETSADP</strong></p>
 </td></tr><tr><td style="padding:17px 29px;background:#f9fbfd;font-size:11px;color:#718597;line-height:1.6">
