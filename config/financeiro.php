@@ -10,6 +10,14 @@ return [
     | Política padrão CETSADP: 2% multa + 1% ao mês (pro-rata diário).
     */
 
+    /*
+     * A emissão de cobranças pelo Mercado Pago e os disparos programados
+     * permanecem DESATIVADOS por padrão até homologação da operação,
+     * credenciais privadas e provedor de comunicações autorizados.
+     */
+    'habilitar_emissao_mercadopago_secretaria' => (bool) env('FINANCEIRO_MP_SECRETARIA_HABILITADO', false),
+    'habilitar_envios_automaticos_secretaria' => (bool) env('FINANCEIRO_ENVIOS_HABILITADOS', false),
+
     'multa_pct'     => (float) env('FINANCEIRO_MULTA_PCT', 0.02),  // 2%
     'juros_mes_pct' => (float) env('FINANCEIRO_JUROS_MES_PCT', 0.01), // 1% a.m.
 
