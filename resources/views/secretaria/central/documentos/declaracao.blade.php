@@ -24,6 +24,21 @@
 <div><dt>Situação</dt><dd>{{ ucfirst(str_replace('_',' ',$documento->status)) }}</dd></div>
 @if($documento->revisado_em)<div><dt>Última revisão</dt><dd>{{ $documento->revisadoPor?->name }} · {{ $documento->revisado_em->format('d/m/Y') }}</dd></div>@endif</dl>
 @if(in_array($documento->status,['rascunho','devolvido'],true))
+@if($documento->preparado_por===auth()->id())
+<form class="sc-doc-form" method="post" action="{{ route('secretaria.documentos.declaracao.atualizar',$documento) }}" style="margin-bottom:22px">@csrf @method('PUT')
+<div><label for="doc-modelo">Modelo visual</label><select id="doc-modelo" name="modelo" required>
+@foreach(\App\Models\SecretariaDocumento::MODELOS as $chave=>$rotulo)
+<option value="{{ $chave }}" @selected(old('modelo',$documento->modelo)===$chave)>{{ $rotulo }}</option>
+@endforeach</select></div>
+<div><label for="doc-finalidade">Finalidade</label><textarea id="doc-finalidade" name="finalidade" minlength="5" maxlength="500" required>{{ old('finalidade',$documento->finalidade) }}</textarea></div>
+<div><label for="doc-assinatura">Assinatura gráfica</label><select id="doc-assinatura" name="assinatura_id">
+<option value="">Sem assinatura</option>
+@foreach(\App\Models\SecretariaAssinatura::query()->where('responsavel_id',auth()->id())->where('ativa',true)->get() as $assinatura)
+<option value="{{ $assinatura->id }}" @selected((int)old('assinatura_id',$documento->assinatura_id)===$assinatura->id)>{{ $assinatura->cargo }} · #{{ $assinatura->id }}</option>
+@endforeach</select></div>
+<button type="submit" class="sc-button">Salvar ajustes</button>
+</form>
+@endif
 <form class="sc-doc-form" method="post" action="{{ route('secretaria.documentos.declaracao.enviar',$documento) }}">@csrf
 <label class="sc-doc-check"><input type="checkbox" name="confirmar_envio" value="1" required> Conferi os dados e estou encaminhando apenas para aprovação interna.</label>
 <button class="sc-button sc-primary" type="submit">Encaminhar para revisão</button></form>
