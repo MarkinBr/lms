@@ -70,6 +70,8 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
             ->whereNumber('requerimento')->middleware('throttle:15,1')->name('solicitacao.responder');
         Route::get('/atendimento', [CentralDocumentosController::class, 'atendimento'])->name('atendimento');
         Route::get('/documentacao', [CentralDocumentosController::class, 'documentacao'])->name('documentacao');
+        Route::get('/documentacao/{documento}/conferir', [CentralDocumentosController::class, 'conferirDocumento'])
+            ->name('documentacao.conferir');
         Route::get('/documentacao/{documento}/arquivo', [CentralDocumentosController::class, 'documentoArquivo'])
             ->name('documentacao.arquivo');
         Route::post('/documentacao/{documento}/decidir', [CentralDocumentosController::class, 'decidirDocumento'])
