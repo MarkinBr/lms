@@ -79,6 +79,8 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
         Route::get('/declaracoes', [CentralDocumentosController::class, 'declaracoes'])->name('declaracoes');
         Route::post('/declaracoes', [CentralDocumentosController::class, 'preparar'])
             ->middleware('throttle:12,1')->name('declaracoes.preparar');
+        Route::put('/declaracoes/{documento}', [CentralDocumentosController::class, 'atualizar'])
+            ->whereNumber('documento')->middleware('throttle:10,1')->name('declaracao.atualizar');
         Route::get('/declaracoes/{documento}', [CentralDocumentosController::class, 'declaracao'])
             ->whereNumber('documento')->name('declaracao');
         Route::get('/declaracoes/{documento}/previa.pdf', [CentralDocumentosController::class, 'pdf'])
