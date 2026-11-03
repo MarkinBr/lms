@@ -13,7 +13,8 @@ use MercadoPago\MercadoPagoConfig;
 
 class MercadoPagoService
 {
-    public function __construct() {
+    public function __construct()
+    {
         $token = config('services.mercadopago.token');
 
         if (empty($token)) {
@@ -31,7 +32,7 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (!$m) {
+            if (! $m) {
                 throw new Exception('Mensalidade não encontrada.');
             }
 
@@ -45,7 +46,6 @@ class MercadoPagoService
                     'transacao_id' => $m->transacao_id,
                     'tentativa' => $this->tentativaAtual($m),
                 ]);
-
 
                 return [
                     'success' => true,
@@ -113,7 +113,6 @@ class MercadoPagoService
                     'tentativa' => $this->tentativaAtual($m),
                 ]);
 
-
                 return [
                     'success' => true,
                     'already_existed' => false,
@@ -141,7 +140,7 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (!$m) {
+            if (! $m) {
                 throw new Exception('Mensalidade não encontrada.');
             }
 
@@ -230,7 +229,6 @@ class MercadoPagoService
                     'tentativa' => $this->tentativaAtual($m),
                 ]);
 
-
                 return [
                     'success' => true,
                     'already_existed' => false,
@@ -262,7 +260,6 @@ class MercadoPagoService
                 'erro' => $e->getMessage(),
             ]);
 
-
             return null;
         }
     }
@@ -272,7 +269,7 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (!$m || empty($m->transacao_id)) {
+            if (! $m || empty($m->transacao_id)) {
                 throw new Exception('Mensalidade não possui transação associada.');
             }
 
@@ -290,7 +287,6 @@ class MercadoPagoService
                 'mensalidade_id' => $m->id,
                 'transacao_id' => $m->transacao_id,
             ]);
-
 
             return true;
         });
@@ -310,7 +306,6 @@ class MercadoPagoService
             return false;
         }
 
-
         return true;
     }
 
@@ -323,7 +318,6 @@ class MercadoPagoService
         if (empty($m->transacao_id) && empty($m->pix_copia_cola)) {
             return false;
         }
-
 
         return method_exists($m, 'pixExpirado') ? (bool) $m->pixExpirado() : false;
     }
@@ -338,12 +332,11 @@ class MercadoPagoService
             return false;
         }
 
-        if (!in_array((string) $m->metodo_pagamento, ['boleto', 'bolbradesco'], true)) {
+        if (! in_array((string) $m->metodo_pagamento, ['boleto', 'bolbradesco'], true)) {
             return false;
         }
 
-
-        return !$this->boletoExpirado($m);
+        return ! $this->boletoExpirado($m);
     }
 
     private function precisaNovaTentativaBoleto(Mensalidade $m): bool
@@ -356,7 +349,6 @@ class MercadoPagoService
             return false;
         }
 
-
         return $this->boletoExpirado($m);
     }
 
@@ -364,10 +356,9 @@ class MercadoPagoService
     {
         $vencimento = $m->data_vencimento;
 
-        if (!$vencimento) {
+        if (! $vencimento) {
             return false;
         }
-
 
         return $vencimento->copy()->endOfDay()->lt(now(config('app.timezone', 'America/Sao_Paulo')));
     }
@@ -391,10 +382,9 @@ class MercadoPagoService
     {
         $pagador = $m->matricula?->user ?? $m->matricula?->aluno;
 
-        if (!$pagador) {
+        if (! $pagador) {
             throw new Exception('Aluno não encontrado na matrícula.');
         }
-
 
         return $pagador;
     }
@@ -406,7 +396,6 @@ class MercadoPagoService
         if ($nome === '') {
             throw new Exception('Nome do aluno está vazio. Atualize o cadastro.');
         }
-
 
         return $nome;
     }
@@ -434,16 +423,14 @@ class MercadoPagoService
             }
         }
 
-
         return $cpfLimpo;
     }
 
     private function validarEmail(?string $email, string $nomeAluno): string
     {
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception("O aluno {$nomeAluno} não possui e-mail válido cadastrado.");
         }
-
 
         return (string) $email;
     }
@@ -455,7 +442,6 @@ class MercadoPagoService
         if (strlen($cepLimpo) !== 8) {
             throw new Exception("O aluno {$nomeAluno} não possui CEP válido cadastrado.");
         }
-
 
         return $cepLimpo;
     }
@@ -481,7 +467,6 @@ class MercadoPagoService
             $valor = str_replace(['.', ','], ['', '.'], $valor);
         }
 
-
         return round((float) $valor, 2);
     }
 
@@ -497,7 +482,6 @@ class MercadoPagoService
 
             return $mensagem;
         }
-
 
         return $e->getMessage();
     }
