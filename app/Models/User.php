@@ -204,6 +204,11 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
         return $this->hasMany(Matricula::class, 'user_id');
     }
 
+    public function requerimentos()
+    {
+        return $this->hasMany(Requerimento::class, 'aluno_id');
+    }
+
     // Cursos do Aluno (Relacionamento através das matrículas)
     public function cursos()
     {
