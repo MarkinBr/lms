@@ -31,7 +31,7 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (! $m) {
+            if (!$m) {
                 throw new Exception('Mensalidade não encontrada.');
             }
 
@@ -81,13 +81,13 @@ class MercadoPagoService
                 ],
             ];
 
-            $opts = new RequestOptions();
+            $opts = new RequestOptions;
             $opts->setCustomHeaders([
                 'X-Idempotency-Key: '.$this->gerarIdempotencyKey('pix', $m),
             ]);
 
             try {
-                $payment = (new PaymentClient())->create($request, $opts);
+                $payment = (new PaymentClient)->create($request, $opts);
 
                 if (empty($payment->id) || ($payment->status ?? null) === 'rejected') {
                     throw new Exception('Pagamento PIX rejeitado pelo Mercado Pago.');
@@ -141,7 +141,7 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (! $m) {
+            if (!$m) {
                 throw new Exception('Mensalidade não encontrada.');
             }
 
@@ -198,13 +198,13 @@ class MercadoPagoService
                 ],
             ];
 
-            $opts = new RequestOptions();
+            $opts = new RequestOptions;
             $opts->setCustomHeaders([
                 'X-Idempotency-Key: '.$this->gerarIdempotencyKey('bol', $m),
             ]);
 
             try {
-                $payment = (new PaymentClient())->create($request, $opts);
+                $payment = (new PaymentClient)->create($request, $opts);
 
                 if (empty($payment->id)) {
                     throw new Exception('Mercado Pago não retornou ID do boleto.');
@@ -253,7 +253,7 @@ class MercadoPagoService
     public function consultarPagamento(string|int $id): ?array
     {
         try {
-            $payment = (new PaymentClient())->get($id);
+            $payment = (new PaymentClient)->get($id);
 
             return json_decode(json_encode($payment), true);
         } catch (\Throwable $e) {
@@ -272,11 +272,11 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (! $m || empty($m->transacao_id)) {
+            if (!$m || empty($m->transacao_id)) {
                 throw new Exception('Mensalidade não possui transação associada.');
             }
 
-            (new PaymentClient())->cancel($m->transacao_id);
+            (new PaymentClient)->cancel($m->transacao_id);
 
             if (method_exists($m, 'cancelar')) {
                 $m->cancelar('Pagamento cancelado manualmente via Mercado Pago');
@@ -338,12 +338,12 @@ class MercadoPagoService
             return false;
         }
 
-        if (! in_array((string) $m->metodo_pagamento, ['boleto', 'bolbradesco'], true)) {
+        if (!in_array((string) $m->metodo_pagamento, ['boleto', 'bolbradesco'], true)) {
             return false;
         }
 
 
-        return ! $this->boletoExpirado($m);
+        return !$this->boletoExpirado($m);
     }
 
     private function precisaNovaTentativaBoleto(Mensalidade $m): bool
@@ -364,7 +364,7 @@ class MercadoPagoService
     {
         $vencimento = $m->data_vencimento;
 
-        if (! $vencimento) {
+        if (!$vencimento) {
             return false;
         }
 
@@ -391,7 +391,7 @@ class MercadoPagoService
     {
         $pagador = $m->matricula?->user ?? $m->matricula?->aluno;
 
-        if (! $pagador) {
+        if (!$pagador) {
             throw new Exception('Aluno não encontrado na matrícula.');
         }
 
@@ -440,7 +440,7 @@ class MercadoPagoService
 
     private function validarEmail(?string $email, string $nomeAluno): string
     {
-        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception("O aluno {$nomeAluno} não possui e-mail válido cadastrado.");
         }
 
