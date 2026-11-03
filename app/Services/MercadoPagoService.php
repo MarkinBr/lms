@@ -97,16 +97,15 @@ class MercadoPagoService
                     ?? $payment->point_of_interaction->transaction_data->expiration_date
                     ?? null;
 
-                $m->registrarTransacao(
-                    transacaoId: (string) $payment->id,
-                    metodo: 'pix',
-                    extras: [
-                        'pix_copia_cola' => $payment->point_of_interaction->transaction_data->qr_code ?? null,
-                        'pix_qr_base64' => $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null,
-                        'link_pagamento' => $payment->point_of_interaction->transaction_data->ticket_url ?? null,
-                        'pix_expira_em' => $expiraEm,
-                    ]
-                );
+                $m->registrarTransacao((string) $payment->id, [
+                    'metodo_pagamento' => 'pix',
+                    'pix_copia_cola' => $payment->point_of_interaction->transaction_data->qr_code ?? null,
+                    'pix_qr_base64' => $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null,
+                    'link_pagamento' => $payment->point_of_interaction->transaction_data->ticket_url ?? null,
+                    'pix_expira_em' => $expiraEm,
+                    'link_boleto' => null,
+                    'linha_digitavel' => null,
+                ]);
 
                 Log::info('MercadoPagoService: PIX gerado', [
                     'mensalidade_id' => $m->id,
@@ -214,15 +213,15 @@ class MercadoPagoService
                     ?? $payment->point_of_interaction->transaction_data->ticket_url
                     ?? null;
 
-                $m->registrarTransacao(
-                    transacaoId: (string) $payment->id,
-                    metodo: 'boleto',
-                    extras: [
-                        'link_boleto' => $linkBoleto,
-                        'linha_digitavel' => $payment->barcode->content ?? null,
-                        'link_pagamento' => $linkBoleto,
-                    ]
-                );
+                $m->registrarTransacao((string) $payment->id, [
+                    'metodo_pagamento' => 'boleto',
+                    'link_boleto' => $linkBoleto,
+                    'linha_digitavel' => $payment->barcode->content ?? null,
+                    'link_pagamento' => $linkBoleto,
+                    'pix_copia_cola' => null,
+                    'pix_qr_base64' => null,
+                    'pix_expira_em' => null,
+                ]);
 
                 Log::info('MercadoPagoService: boleto gerado', [
                     'mensalidade_id' => $m->id,
