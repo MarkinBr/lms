@@ -310,6 +310,7 @@ class CentralDocumentosController extends Controller
                 throw ValidationException::withMessages(['confirmar_envio' => 'O documento não está disponível para envio.']);
             }
             $registro->load('matricula.user', 'matricula.curso', 'matricula.turma');
+            $anterior = $registro->status;
             $registro->update([
                 'status' => 'em_aprovacao',
                 'enviado_em' => now(),
@@ -318,7 +319,7 @@ class CentralDocumentosController extends Controller
                 'dados_congelados' => $this->dadosAtuais($registro),
             ]);
             $this->auditar($request->user()->id, 'declaracao', (string) $registro->id,
-                'enviar_aprovacao', 'rascunho', 'em_aprovacao', 'Dados acadêmicos congelados na revisão.');
+                'enviar_aprovacao', $anterior, 'em_aprovacao', 'Dados acadêmicos congelados na revisão.');
         });
 
         return back()->with('status', 'Enviado para conferência de outro responsável. Não houve emissão oficial.');
