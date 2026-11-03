@@ -122,6 +122,13 @@ class CentralDocumentosController extends Controller
         return view('secretaria.central.documentos.documentacao', compact('documentos', 'situacao'));
     }
 
+    public function conferirDocumento(ApplicationDocument $documento): View
+    {
+        $documento->load('application:id,nome_completo,email');
+
+        return view('secretaria.central.documentos.conferir', compact('documento'));
+    }
+
     public function documentoArquivo(ApplicationDocument $documento): BinaryFileResponse
     {
         $disco = (string) config('filesystems.applications_disk');
