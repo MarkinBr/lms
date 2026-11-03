@@ -26,7 +26,12 @@
             <h3>Ensino e aprendizagem</h3><p>Módulos, disciplinas, sala de aula, quiz, provas, simulados, notas e frequências presencial e EAD.</p>
             <span class="sc-module-footer"><strong>Abrir gestão pedagógica</strong>@include('secretaria.central.icone', ['nome' => 'seta'])</span>
         </a>
-        @foreach ([['documento', 'Documentos e solicitações', 'Documentação, declarações e atendimento ao aluno.'], ['carteira', 'Financeiro', 'Mensalidades e acompanhamento dos pagamentos.'], ['agenda', 'Comunicação e agenda', 'Avisos, notícias e encontros da comunidade.']] as [$icone, $titulo, $descricao])
+        <a class="sc-module sc-module-active" href="{{ route('secretaria.documentos.painel') }}">
+            <span class="sc-icon-box">@include('secretaria.central.icone', ['nome' => 'documento'])</span>
+            <h3>Documentos e solicitações</h3><p>Atendimento, conferência documental, quatro modelos de declaração, assinaturas e aprovações internas.</p>
+            <span class="sc-module-footer"><strong>Abrir gestão de documentos</strong>@include('secretaria.central.icone', ['nome' => 'seta'])</span>
+        </a>
+        @foreach ([['carteira', 'Financeiro', 'Mensalidades e acompanhamento dos pagamentos.'], ['agenda', 'Comunicação e agenda', 'Avisos, notícias e encontros da comunidade.']] as [$icone, $titulo, $descricao])
             <article class="sc-module sc-module-planned">
                 <span class="sc-icon-box">@include('secretaria.central.icone', ['nome' => $icone])</span>
                 <h3>{{ $titulo }}</h3><p>{{ $descricao }}</p><span class="sc-tag">Próximas etapas da central</span>
