@@ -25,8 +25,7 @@ class CentralFinanceiroController extends Controller
         $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 100);
         $situacao = (string) $request->query('situacao', '');
         $mensalidades = Mensalidade::query()->with(['matricula.user:id,name,email', 'matricula.curso:id,titulo'])
-            ->when($busca !== '', fn ($q) => $q->whereHas('matricula.user', fn ($u) =>
-                $u->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($busca).'%'])))
+            ->when($busca !== '', fn ($q) => $q->whereHas('matricula.user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($busca).'%'])))
             ->when(in_array($situacao, ['Pago', 'Pendente', 'Atrasado'], true), fn ($q) => $q->where('status', $situacao))
             ->orderByDesc('data_vencimento')->paginate(18)->withQueryString();
 
