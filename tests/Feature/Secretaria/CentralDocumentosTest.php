@@ -146,6 +146,50 @@ class CentralDocumentosTest extends TestCase
         $this->assertDatabaseCount('declaracoes', 0);
     }
 
+    public function test_devolucao_permite_correcao_somente_pelo_preparador_e_reenvio(): void
+    {
+        $matricula = $this->matricula();
+        $autor = $this->equipe();
+        $revisor = $this->equipe();
+
+        $documento = SecretariaDocumento::query()->create([
+            'matricula_id' => $matricula->id,
+            'preparado_por' => $autor->id,
+            'tipo' => 'declaracao_matricula',
+            'modelo' => 'mosaico',
+            'finalidade' => 'Comprovação de estudos',
+            'status' => 'rascunho',
+        ]);
+        $this->actingAs($autor)->post(route('secretaria.documentos.declaracao.enviar', $documento), [
+            'confirmar_envio' => 1,
+        ])->assertRedirect();
+
+        $this->actingAs($revisor)->post(route('secretaria.documentos.declaracao.revisar', $documento), [
+            'decisao' => 'devolver',
+            'motivo' => 'Corrigir a finalidade informada no documento.',
+            'conferiu_previa' => 1,
+        ])->assertRedirect(route('secretaria.documentos.aprovacoes'));
+        $this->assertSame('devolvido', $documento->fresh()->status);
+
+        $this->put(route('secretaria.documentos.declaracao.atualizar', $documento), [
+            'modelo' => 'minimalista', 'finalidade' => 'Comprovação atualizada',
+        ])->assertForbidden();
+
+        $this->actingAs($autor)->put(route('secretaria.documentos.declaracao.atualizar', $documento), [
+            'modelo' => 'minimalista', 'finalidade' => 'Comprovação atualizada',
+        ])->assertRedirect();
+        $this->assertSame('minimalista', $documento->fresh()->modelo);
+
+        $this->post(route('secretaria.documentos.declaracao.enviar', $documento), [
+            'confirmar_envio' => 1,
+        ])->assertRedirect();
+        $this->assertSame('em_aprovacao', $documento->fresh()->status);
+        $this->assertDatabaseHas('secretaria_documento_movimentacoes', [
+            'entidade' => 'declaracao', 'entidade_id' => (string) $documento->id,
+            'acao' => 'enviar_aprovacao', 'estado_anterior' => 'devolvido',
+        ]);
+    }
+
     public function test_assinatura_de_outro_usuario_nao_pode_ser_aplicada(): void
     {
         $matricula = $this->matricula();
