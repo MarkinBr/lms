@@ -26,6 +26,7 @@ class CentralDocumentosTest extends TestCase
     {
         $curso = Curso::query()->create(['titulo' => 'Seminário Médio em Teologia', 'ativo' => true]);
         $aluno = $this->equipe('aluno');
+
         return Matricula::query()->create([
             'user_id' => $aluno->id,
             'curso_id' => $curso->id,
