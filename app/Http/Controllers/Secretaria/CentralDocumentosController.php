@@ -223,6 +223,7 @@ class CentralDocumentosController extends Controller
             ]);
             $this->auditar($request->user()->id, 'declaracao', (string) $registro->id,
                 'criar', null, 'rascunho', 'Documento preparado sem emissão.');
+
             return $registro;
         });
 
@@ -347,6 +348,7 @@ class CentralDocumentosController extends Controller
         abort_unless(is_string($caminho) && str_starts_with($caminho, 'secretaria/assinaturas/'), 404);
         $disco = Storage::disk('local');
         abort_unless($disco->exists($caminho), 404);
+
         return response()->file($disco->path($caminho), [
             'Content-Type' => $assinatura->mime,
             'Content-Disposition' => 'inline; filename="assinatura.png"',
@@ -384,6 +386,7 @@ class CentralDocumentosController extends Controller
     private function dadosAtuais(SecretariaDocumento $documento): array
     {
         $matricula = $documento->matricula;
+
         return [
             'estudante' => $matricula->user?->name ?? 'Não informado',
             'numero_matricula' => $matricula->numero_matricula ?? 'Não informado',
