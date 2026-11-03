@@ -59,8 +59,9 @@ class EnviarFinanceiroAgendado implements ShouldQueue
                 'pix' => (string) $m->link_pagamento,
                 default => null,
             };
-            if (in_array($envio->modelo, ['pix', 'boleto'], true) && blank($link)) {
-                throw new \RuntimeException('Cobrança sem URL do gateway. Não é seguro enviar instruções inventadas.');
+            if (($envio->modelo === 'boleto' && blank($link)) ||
+                ($envio->modelo === 'pix' && blank($link) && blank($m->pix_copia_cola))) {
+                throw new \RuntimeException('Cobrança sem link ou código do gateway. Não é seguro enviar instruções inventadas.');
             }
             $titulo = match ($envio->modelo) {
                 'recibo' => 'Seu pagamento foi confirmado',
@@ -89,6 +90,7 @@ class EnviarFinanceiroAgendado implements ShouldQueue
                     'vencimento' => $m->data_vencimento?->format('d/m/Y') ?? '',
                     'valor' => $valor,
                     'link' => $link,
+                    'pix_copia_cola' => $envio->modelo === 'pix' ? (string) $m->pix_copia_cola : null,
                     'cta' => $envio->modelo === 'recibo' ? 'Conferir meu recibo' : 'Consultar pagamento',
                 ];
                 Mail::send('emails.financeiro.aviso', $dados, function ($email) use ($envio, $titulo, $m) {
