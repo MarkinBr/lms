@@ -62,8 +62,7 @@ class CentralFinanceiroController extends Controller
     {
         $request->validate(['conferi_cobranca' => ['accepted']]);
         if (! config('financeiro.habilitar_emissao_mercadopago_secretaria', false)) {
-            throw ValidationException::withMessages(['conferi_cobranca' =>
-                'Emissão real desativada nesta instalação. Ative após homologação e conferência das credenciais no servidor.']);
+            throw ValidationException::withMessages(['conferi_cobranca' => 'Emissão real desativada nesta instalação. Ative após homologação e conferência das credenciais no servidor.']);
         }
         if (! config('services.mercadopago.token')) {
             throw ValidationException::withMessages(['conferi_cobranca' => 'Mercado Pago não está configurado.']);
@@ -76,8 +75,7 @@ class CentralFinanceiroController extends Controller
         // de uma transação pendente precisa ser conferida antes da troca.
         if ($mensalidade->transacao_id && $mensalidade->metodo_pagamento &&
             ! in_array($mensalidade->metodo_pagamento, [$metodo, $metodo === 'boleto' ? 'bolbradesco' : 'pix'], true)) {
-            throw ValidationException::withMessages(['conferi_cobranca' =>
-                'Já existe uma cobrança em outro meio. Confira a transação anterior antes de mudar.']);
+            throw ValidationException::withMessages(['conferi_cobranca' => 'Já existe uma cobrança em outro meio. Confira a transação anterior antes de mudar.']);
         }
 
         try {
@@ -93,8 +91,7 @@ class CentralFinanceiroController extends Controller
                 'tipo' => $metodo,
                 'classe' => get_class($erro),
             ]);
-            throw ValidationException::withMessages(['conferi_cobranca' =>
-                'Não foi possível emitir a cobrança. Verifique os dados do aluno e a configuração do gateway.']);
+            throw ValidationException::withMessages(['conferi_cobranca' => 'Não foi possível emitir a cobrança. Verifique os dados do aluno e a configuração do gateway.']);
         }
 
         return redirect()->route('secretaria.financeiro.painel', ['busca' => $mensalidade->matricula?->user?->name])
@@ -125,8 +122,7 @@ class CentralFinanceiroController extends Controller
             ->whereBetween('data_pagamento', [$inicio->toDateString(), $fim->toDateString()]);
         $count = (clone $query)->count();
         if ($count > 1200) {
-            throw ValidationException::withMessages(['fim' =>
-                'O relatório contém muitos pagamentos. Escolha um período menor para impressão.']);
+            throw ValidationException::withMessages(['fim' => 'O relatório contém muitos pagamentos. Escolha um período menor para impressão.']);
         }
         $mensalidades = $query->with(['matricula.user:id,name', 'matricula.curso:id,titulo'])
             ->orderBy('data_pagamento')->get();
@@ -161,8 +157,7 @@ class CentralFinanceiroController extends Controller
         if (in_array($dados['modelo'], ['pix', 'boleto'], true)) {
             $campo = $dados['modelo'] === 'pix' ? 'pix_copia_cola' : 'link_boleto';
             if (! filled($mensalidade->{$campo})) {
-                throw ValidationException::withMessages(['modelo' =>
-                    'Primeiro emita a cobrança real pelo Mercado Pago e confirme o código/URL gerados.']);
+                throw ValidationException::withMessages(['modelo' => 'Primeiro emita a cobrança real pelo Mercado Pago e confirme o código/URL gerados.']);
             }
         }
         $usuario = $mensalidade->matricula?->user;
@@ -175,8 +170,7 @@ class CentralFinanceiroController extends Controller
             throw ValidationException::withMessages(['canal' => 'O aluno não possui telefone válido para o WhatsApp.']);
         }
         if (! config('financeiro.habilitar_envios_automaticos_secretaria', false)) {
-            throw ValidationException::withMessages(['canal' =>
-                'Mensagens automáticas estão desativadas; habilite apenas após homologar consentimento e provedor.']);
+            throw ValidationException::withMessages(['canal' => 'Mensagens automáticas estão desativadas; habilite apenas após homologar consentimento e provedor.']);
         }
 
         $envio = DB::transaction(fn () => FinanceiroEnvio::query()->create([
