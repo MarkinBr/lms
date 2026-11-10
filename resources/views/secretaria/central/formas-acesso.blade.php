@@ -56,7 +56,7 @@
         <div class="sc-panel-body sc-stack">
             <p><strong>Recuperar acesso:</strong> prepara um link individual de redefinição pelo canal autorizado.</p>
             <p><strong>Gerar senha temporária:</strong> emite um código de 8 dígitos, válido por 30 minutos e exibido uma única vez, para o aluno definir uma nova senha.</p>
-            <p>As duas operações exigem confirmação da identidade, motivo do atendimento e senha da Secretaria. Nenhum código é gerado apenas por abrir esta consulta.</p>
+            <p>As duas operações exigem confirmação da identidade, motivo do atendimento e senha administrativa. Nenhum código é gerado apenas por abrir esta consulta.</p>
             <a class="sc-button sc-primary" href="{{ route('secretaria.acessos.show', $aluno) }}#acesso">Recuperar acesso ou gerar código @include('secretaria.central.icone', ['nome' => 'seta'])</a>
         </div>
     </section>
