@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Secretaria\CentralAcessosController;
+use App\Http\Controllers\Secretaria\CentralMatriculasController;
 use App\Http\Middleware\AtendimentoSecretaria;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,24 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
         Route::post('/{aluno}/email', [CentralAcessosController::class, 'email'])->middleware('throttle:5,1')->name('email');
         Route::get('/{aluno}/entrega/{entrega}', [CentralAcessosController::class, 'entrega'])->name('entrega');
         Route::post('/{aluno}/entrega/{entrega}', [CentralAcessosController::class, 'enviar'])->middleware('throttle:10,1')->name('entrega.enviar');
+    });
+    Route::prefix('matriculas')->name('secretaria.matriculas.')->group(function () {
+        Route::get('/painel', [CentralMatriculasController::class, 'painel'])->name('painel');
+        Route::get('/movimentacoes', [CentralMatriculasController::class, 'movimentacoes'])->name('movimentacoes');
+        Route::get('/', [CentralMatriculasController::class, 'index'])->name('index');
+        Route::get('/turmas', [CentralMatriculasController::class, 'turmas'])->name('turmas');
+        Route::get('/turmas/{turma}', [CentralMatriculasController::class, 'turma'])
+            ->whereNumber('turma')->name('turma');
+        Route::get('/{matricula}', [CentralMatriculasController::class, 'show'])
+            ->whereNumber('matricula')->name('show');
+        Route::post('/{matricula}/corrigir-numero', [CentralMatriculasController::class, 'corrigirNumero'])
+            ->middleware('throttle:10,1')->whereNumber('matricula')->name('corrigir-numero');
+        Route::post('/{matricula}/vincular-turma', [CentralMatriculasController::class, 'vincularTurma'])
+            ->middleware('throttle:10,1')->whereNumber('matricula')->name('vincular-turma');
+        Route::post('/{matricula}/transferir-turma', [CentralMatriculasController::class, 'transferirTurma'])
+            ->middleware('throttle:10,1')->whereNumber('matricula')->name('transferir-turma');
+        Route::post('/{matricula}/situacao', [CentralMatriculasController::class, 'alterarSituacao'])
+            ->middleware('throttle:10,1')->whereNumber('matricula')->name('situacao');
     });
 });
 Route::match(['GET', 'POST'], '/acesso/confirmar-email/{aluno}', [CentralAcessosController::class, 'confirmarEmail'])
