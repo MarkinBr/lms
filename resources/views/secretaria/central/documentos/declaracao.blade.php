@@ -13,9 +13,10 @@
 <section class="sc-panel"><div class="sc-panel-heading"><h2>Visualizar documento A4 — {{ \App\Models\SecretariaDocumento::MODELOS[$documento->modelo]??$documento->modelo }}</h2>
 <p>O mesmo modelo será apresentado ao revisor, preservando os dados congelados após envio.</p></div>
 <div class="sc-panel-body">
-<iframe class="sc-doc-preview" title="Prévia PDF da declaração para conferência" src="{{ route('secretaria.documentos.declaracao.pdf',$documento) }}"></iframe>
+@php($urlPrevia = route('secretaria.documentos.declaracao.pdf', ['documento' => $documento, 'envio' => $envio]))
+<iframe class="sc-doc-preview" title="Prévia PDF da declaração para conferência" src="{{ $urlPrevia }}"></iframe>
 <div class="sc-doc-actions" style="margin-top:13px">
-<a class="sc-button" href="{{ route('secretaria.documentos.declaracao.pdf',$documento) }}" target="_blank" rel="noopener noreferrer">Abrir PDF em outra guia</a>
+<a class="sc-button" href="{{ $urlPrevia }}" target="_blank" rel="noopener noreferrer">Abrir PDF em outra guia</a>
 </div></div></section>
 <aside class="sc-aside">
 <section class="sc-side-card sc-side-gold"><h2>Fluxo de revisão</h2>
@@ -45,6 +46,8 @@
 @elseif($documento->status==='em_aprovacao')
 @if($documento->preparado_por!==auth()->id())
 <form class="sc-doc-form" method="post" action="{{ route('secretaria.documentos.declaracao.revisar',$documento) }}">@csrf
+<input type="hidden" name="envio" value="{{ $envio }}">
+@error('envio')<p role="alert">{{ $message }}</p>@enderror
 <div><label for="rev-decisao">Decisão</label><select id="rev-decisao" name="decisao" required><option value="">Selecione</option><option value="aprovar">Aprovar internamente</option><option value="devolver">Devolver para correção</option></select></div>
 <div><label for="rev-motivo">Motivo (obrigatório ao devolver)</label><textarea id="rev-motivo" name="motivo" rows="3" maxlength="1000">{{ old('motivo') }}</textarea></div>
 <label class="sc-doc-check"><input type="checkbox" name="conferiu_previa" value="1" required> Conferi a prévia A4 e os dados identificados</label>

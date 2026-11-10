@@ -126,15 +126,16 @@ class CentralDocumentosTest extends TestCase
         $this->assertSame('MAT-2026-0117', $documento->fresh()->dados_congelados['numero_matricula']);
 
         $matricula->update(['numero_matricula' => 'MAT-ALTERADA']);
-        $this->get(route('secretaria.documentos.declaracao', $documento))
-            ->assertOk()->assertSee('MAT-2026-0117')->assertDontSee('MAT-ALTERADA');
+        $envio = $this->get(route('secretaria.documentos.declaracao', $documento))
+            ->assertOk()->assertSee('MAT-2026-0117')->assertDontSee('MAT-ALTERADA')->viewData('envio');
 
         $this->post(route('secretaria.documentos.declaracao.revisar', $documento), [
             'decisao' => 'aprovar', 'conferiu_previa' => 1,
+            'envio' => $envio,
         ])->assertSessionHasErrors('decisao');
 
         $this->actingAs($revisor)->post(route('secretaria.documentos.declaracao.revisar', $documento), [
-            'decisao' => 'aprovar', 'conferiu_previa' => 1,
+            'decisao' => 'aprovar', 'conferiu_previa' => 1, 'envio' => $envio,
         ])->assertRedirect(route('secretaria.documentos.aprovacoes'));
 
         $this->assertSame('aprovado_interno', $documento->fresh()->status);
@@ -148,6 +149,8 @@ class CentralDocumentosTest extends TestCase
 
     public function test_devolucao_permite_correcao_somente_pelo_preparador_e_reenvio(): void
     {
+        $this->freezeTime();
+
         $matricula = $this->matricula();
         $autor = $this->equipe();
         $revisor = $this->equipe();
@@ -164,8 +167,13 @@ class CentralDocumentosTest extends TestCase
             'confirmar_envio' => 1,
         ])->assertRedirect();
 
-        $this->actingAs($revisor)->post(route('secretaria.documentos.declaracao.revisar', $documento), [
+        $this->actingAs($revisor);
+        $envioAnterior = $this->get(route('secretaria.documentos.declaracao', $documento))
+            ->assertOk()->assertSee('name="envio"', false)->viewData('envio');
+
+        $this->post(route('secretaria.documentos.declaracao.revisar', $documento), [
             'decisao' => 'devolver',
+            'envio' => $envioAnterior,
             'motivo' => 'Corrigir a finalidade informada no documento.',
             'conferiu_previa' => 1,
         ])->assertRedirect(route('secretaria.documentos.aprovacoes'));
@@ -188,6 +196,22 @@ class CentralDocumentosTest extends TestCase
             'entidade' => 'declaracao', 'entidade_id' => (string) $documento->id,
             'acao' => 'enviar_aprovacao', 'estado_anterior' => 'devolvido',
         ]);
+
+        $this->actingAs($revisor)->get(route('secretaria.documentos.declaracao.pdf', [
+            'documento' => $documento, 'envio' => $envioAnterior,
+        ]))->assertStatus(409);
+
+        $this->post(route('secretaria.documentos.declaracao.revisar', $documento), [
+            'decisao' => 'aprovar', 'conferiu_previa' => 1, 'envio' => $envioAnterior,
+        ])->assertSessionHasErrors('envio');
+        $this->assertSame('em_aprovacao', $documento->fresh()->status);
+
+        $envioAtual = $this->get(route('secretaria.documentos.declaracao', $documento))->viewData('envio');
+        $this->assertNotSame($envioAnterior, $envioAtual);
+        $this->post(route('secretaria.documentos.declaracao.revisar', $documento), [
+            'decisao' => 'aprovar', 'conferiu_previa' => 1, 'envio' => $envioAtual,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('aprovado_interno', $documento->fresh()->status);
     }
 
     public function test_assinatura_de_outro_usuario_nao_pode_ser_aplicada(): void

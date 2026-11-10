@@ -10,6 +10,7 @@ use App\Models\SecretariaAssinatura;
 use App\Models\SecretariaDocumento;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -267,6 +268,8 @@ class CentralDocumentosController extends Controller
 
     public function declaracao(SecretariaDocumento $documento): View
     {
+        $documento = $this->documentoComEnvio($documento);
+        $envio = $documento->envio;
         $documento->load(['matricula.user', 'matricula.curso', 'matricula.turma', 'assinatura.responsavel', 'preparadoPor', 'revisadoPor']);
         $dados = $this->dadosDocumento($documento);
         $historico = DB::table('secretaria_documento_movimentacoes as m')
@@ -274,11 +277,16 @@ class CentralDocumentosController extends Controller
             ->where('m.entidade', 'declaracao')->where('m.entidade_id', (string) $documento->id)
             ->select('m.*', 'u.name as responsavel')->orderByDesc('m.id')->limit(30)->get();
 
-        return view('secretaria.central.documentos.declaracao', compact('documento', 'dados', 'historico'));
+        return view('secretaria.central.documentos.declaracao', compact('documento', 'dados', 'historico', 'envio'));
     }
 
-    public function pdf(SecretariaDocumento $documento): Response
+    public function pdf(Request $request, SecretariaDocumento $documento): Response
     {
+        $documento = $this->documentoComEnvio($documento);
+        if ($request->query->has('envio')) {
+            abort_unless($documento->envio !== null && $request->query('envio') === (string) $documento->envio,
+                409, 'A prévia mudou. Reabra a ficha para conferir o envio atual.');
+        }
         $documento->load(['matricula.user', 'matricula.curso', 'matricula.turma', 'assinatura.responsavel']);
         $dados = $this->dadosDocumento($documento);
         $logos = [];
@@ -330,6 +338,7 @@ class CentralDocumentosController extends Controller
         $dados = $request->validate([
             'decisao' => ['required', Rule::in(['aprovar', 'devolver'])],
             'conferiu_previa' => ['accepted'],
+            'envio' => ['required', 'integer', 'min:1'],
             'motivo' => ['required_if:decisao,devolver', 'nullable', 'string', 'min:10', 'max:1000'],
         ]);
         DB::transaction(function () use ($request, $documento, $dados) {
@@ -339,6 +348,10 @@ class CentralDocumentosController extends Controller
             }
             if ((int) $registro->preparado_por === (int) $request->user()->id) {
                 throw ValidationException::withMessages(['decisao' => 'A revisão deve ser realizada por outra pessoa da equipe.']);
+            }
+            $envio = $this->ultimoEnvio($registro)->value('id');
+            if ((string) $envio !== (string) $dados['envio']) {
+                throw ValidationException::withMessages(['envio' => 'A prévia mudou. Reabra a ficha e confira o envio atual.']);
             }
             $aprovado = $dados['decisao'] === 'aprovar';
             $estadoNovo = $aprovado ? 'aprovado_interno' : 'devolvido';
@@ -411,6 +424,20 @@ class CentralDocumentosController extends Controller
             ->orderByDesc('m.id')->paginate(25)->withQueryString();
 
         return view('secretaria.central.documentos.historico', compact('movimentacoes', 'entidade'));
+    }
+
+    private function ultimoEnvio(SecretariaDocumento $documento): Builder
+    {
+        return DB::table('secretaria_documento_movimentacoes')
+            ->where('entidade', 'declaracao')->where('entidade_id', (string) $documento->id)
+            ->where('acao', 'enviar_aprovacao')->latest('id')->limit(1);
+    }
+
+    private function documentoComEnvio(SecretariaDocumento $documento): SecretariaDocumento
+    {
+        return SecretariaDocumento::query()->select('secretaria_documentos.*')
+            ->addSelect(['envio' => $this->ultimoEnvio($documento)->select('id')])
+            ->findOrFail($documento->id);
     }
 
     private function dadosDocumento(SecretariaDocumento $documento): array
