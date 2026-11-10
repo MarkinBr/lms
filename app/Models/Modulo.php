@@ -16,7 +16,7 @@ class Modulo extends Model
     protected static function booted(): void
     {
         static::updating(function (Modulo $modulo): void {
-            if ($modulo->isDirty('curso_id') && ($modulo->disciplinas()->exists() || $modulo->aulas()->exists())) {
+            if ($modulo->isDirty('curso_id') && ($modulo->disciplinas()->exists() || $modulo->disciplinasVinculadas()->exists() || $modulo->aulas()->exists())) {
                 throw ValidationException::withMessages([
                     'curso_id' => 'Não é possível mover um módulo que possui disciplinas ou aulas.',
                 ]);
