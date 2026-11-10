@@ -57,7 +57,7 @@ class PeriodoLetivoSecretariaResource extends Resource
                             ->native(false),
                         Forms\Components\Toggle::make('ativo')
                             ->label('Ativo')
-                            ->helperText('Somente um período letivo pode ficar ativo por vez.'),
+                            ->helperText('É possível manter períodos letivos simultâneos para turmas plurianuais.'),
                     ])
                     ->columns(2),
             ]);

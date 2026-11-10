@@ -3,6 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TurmaResource\Pages;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\DisciplinasTurmaRelationManager;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\PeriodosTurmaRelationManager;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\ProfessoresTurmaRelationManager;
 use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Models\PeriodoLetivo;
@@ -31,7 +34,7 @@ class TurmaResource extends Resource
     {
         return $form->schema([
             Forms\Components\Section::make('Oferta acadêmica')
-                ->description('Uma turma representa a oferta de uma disciplina em um período letivo.')
+                ->description('Uma turma pode atravessar vários períodos, oferecer várias disciplinas e ter diversos professores. Configure os vínculos ao editar a turma.')
                 ->schema([
                     Forms\Components\Select::make('curso_id')
                         ->label('Curso')
@@ -48,7 +51,7 @@ class TurmaResource extends Resource
                         ->preload()
                         ->required(),
                     Forms\Components\Select::make('disciplina_id')
-                        ->label('Disciplina')
+                        ->label('Disciplina principal (legado, opcional)')
                         ->options(function (Forms\Get $get): array {
                             if (! $get('curso_id')) {
                                 return [];
@@ -63,10 +66,10 @@ class TurmaResource extends Resource
                                 ->all();
                         })
                         ->searchable()
-                        ->required()
+                        ->helperText('Adicione todas as disciplinas na aba Disciplinas após criar a turma.')
                         ->disabled(fn (Forms\Get $get): bool => ! $get('curso_id')),
                     Forms\Components\Select::make('professor_id')
-                        ->label('Professor')
+                        ->label('Professor de referência (legado, opcional)')
                         ->options(User::query()->where('nivel', 'professor')->where('ativo', true)->orderBy('name')->pluck('name', 'id'))
                         ->searchable()
                         ->preload(),
@@ -77,9 +80,8 @@ class TurmaResource extends Resource
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('codigo')
                         ->label('Código')
-                        ->required()
                         ->maxLength(80)
-                        ->helperText('O código deve ser único dentro do período letivo.'),
+                        ->helperText('Código automático se vazio; identifica a turma mesmo atravessando vários períodos.'),
                     Forms\Components\TextInput::make('ano_letivo')
                         ->label('Ano letivo')
                         ->numeric()
@@ -107,11 +109,16 @@ class TurmaResource extends Resource
                         ->required()
                         ->disabled()
                         ->dehydrated(),
-                    Forms\Components\Select::make('status')
-                        ->options(Turma::STATUS_LABELS)
-                        ->default(Turma::STATUS_PLANEJADA)
-                        ->required()
-                        ->native(false),
+                    Forms\Components\Select::make('situacao_academica')
+                        ->label('Situação acadêmica')
+                        ->options(Turma::SITUACOES_ACADEMICAS)->default('planejada')->required(),
+                    Forms\Components\Select::make('situacao_inscricoes')
+                        ->label('Situação das inscrições')
+                        ->options(Turma::SITUACOES_INSCRICOES)->default('nao_iniciadas')->required(),
+                    Forms\Components\Toggle::make('publicada')->label('Publicada no portal')->default(false),
+                    Forms\Components\DatePicker::make('inscricoes_inicio')->label('Início das inscrições'),
+                    Forms\Components\DatePicker::make('inscricoes_fim')
+                        ->label('Fim das inscrições')->afterOrEqual('inscricoes_inicio'),
                 ])
                 ->columns(2),
             Forms\Components\Section::make('Financeiro e calendário')
@@ -158,22 +165,35 @@ class TurmaResource extends Resource
                 Tables\Columns\TextColumn::make('modalidade')
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => Turma::MODALIDADE_LABELS[$state] ?? 'Não definida'),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->formatStateUsing(fn (?string $state): string => Turma::STATUS_LABELS[$state] ?? 'Não definido'),
+                Tables\Columns\TextColumn::make('situacao_academica')->label('Acadêmico')
+                    ->badge()->formatStateUsing(fn (?string $state): string => Turma::SITUACOES_ACADEMICAS[$state] ?? 'Não definido'),
+                Tables\Columns\TextColumn::make('situacao_inscricoes')->label('Inscrições')
+                    ->badge()->formatStateUsing(fn (?string $state): string => Turma::SITUACOES_INSCRICOES[$state] ?? 'Não definido'),
+                Tables\Columns\TextColumn::make('disciplinas_count')->counts('disciplinas')->label('Disciplinas'),
+                Tables\Columns\TextColumn::make('professorAtribuicoes_count')->counts('professorAtribuicoes')->label('Professores/escopos'),
                 Tables\Columns\TextColumn::make('capacidade')->label('Vagas')->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('curso_id')->relationship('curso', 'titulo')->searchable()->preload(),
                 Tables\Filters\SelectFilter::make('periodo_letivo_id')->label('Período')->relationship('periodoLetivo', 'nome')->searchable()->preload(),
                 Tables\Filters\SelectFilter::make('disciplina_id')->label('Disciplina')->relationship('disciplina', 'nome')->searchable()->preload(),
-                Tables\Filters\SelectFilter::make('status')->options(Turma::STATUS_LABELS),
+                Tables\Filters\SelectFilter::make('situacao_academica')->label('Acadêmico')->options(Turma::SITUACOES_ACADEMICAS),
+                Tables\Filters\SelectFilter::make('situacao_inscricoes')->label('Inscrições')->options(Turma::SITUACOES_INSCRICOES),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([])
             ->defaultSort('ano_letivo', 'desc');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            PeriodosTurmaRelationManager::class,
+            DisciplinasTurmaRelationManager::class,
+            ProfessoresTurmaRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

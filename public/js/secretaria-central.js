@@ -123,6 +123,22 @@
 		});
 	}
 
+	const disciplinaAula = document.getElementById("au-disc");
+	const moduloAula = document.getElementById("au-modulo");
+	if (disciplinaAula && moduloAula) {
+		const filtrarModulos = () => {
+			for (const option of moduloAula.options) {
+				if (!option.dataset.disciplina) continue;
+				const indisponivel = option.dataset.disciplina !== disciplinaAula.value;
+				option.hidden = indisponivel;
+				option.disabled = indisponivel;
+			}
+			if (moduloAula.selectedOptions[0]?.disabled) moduloAula.selectedIndex = 0;
+		};
+		disciplinaAula.addEventListener("change", filtrarModulos);
+		filtrarModulos();
+	}
+
 	const errors = document.querySelector("[data-error-summary]");
 	if (errors) errors.focus();
 })();

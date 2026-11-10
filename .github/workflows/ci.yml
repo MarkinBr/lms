@@ -80,6 +80,9 @@ jobs:
       - name: Testes da Central da Secretaria
         run: php artisan test --filter='GestaoCadastroAcessosTest|CredenciaisAcessoTest|EntregasAcessoTest|CentralAcessosHttpTest|CentralAcessosFormasTest|AtendimentoSeguroHttpTest|InscricaoCamposComplementaresTest|CentralMatriculasTest|CentralEnsinoTest|CentralDocumentosTest|CentralFinanceiroTest'
 
+      - name: Testes da estrutura acadêmica flexível
+        run: php artisan test --filter='EstruturaAcademica|PermissoesDocentes|CentralEnsinoMultiplosModulosTest|PeriodoLetivoTest|TurmaAcademicaTest|DisciplinaTest'
+
       - name: Instalar dependências JavaScript
         run: npm ci
 
@@ -128,11 +131,13 @@ jobs:
       - name: Instalar dependências
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Migrar banco efêmero
+      - name: Preparar aplicação para banco efêmero
         run: |
           cp .env.example .env
           php artisan key:generate --force
-          php artisan migrate --force
+
+      - name: Migrar e validar os vínculos acadêmicos legados
+        run: php tests/infra/academico_flexivel_postgres.php
 
       - name: Verificar cadastro e concorrência da Gestão de Acessos
         run: php tests/infra/secretaria_acessos_postgres.php

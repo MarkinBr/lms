@@ -5,6 +5,7 @@ namespace App\Filament\Professor\Resources\AulaResource\Pages;
 use App\Filament\Professor\Resources\AulaResource;
 use App\Filament\Professor\Resources\CursoResource;
 use App\Models\Disciplina;
+use App\Services\GestaoAcademica\PermissoesDocentes;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -39,18 +40,26 @@ class EditAula extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $disciplina = Disciplina::query()
-            ->whereKey($data['disciplina_id'] ?? null)
-            ->whereHas('modulo.curso', fn ($query) => $query->where('instrutor_id', auth()->id()))
-            ->first();
+        abort_unless(app(PermissoesDocentes::class)
+            ->podeEditarAula((int) auth()->id(), $this->record), 403);
 
-        if (! $disciplina) {
-            throw ValidationException::withMessages([
-                'disciplina_id' => 'Selecione uma disciplina atribuída aos seus cursos.',
-            ]);
+        $origem = $this->record->fresh();
+        abort_unless($origem, 403);
+        $disciplina = Disciplina::query()->find($data['disciplina_id'] ?? $origem->disciplina_id);
+        $moduloId = (int) ($data['modulo_id'] ?? $origem->modulo_id);
+
+        if (! $disciplina || ! app(PermissoesDocentes::class)
+            ->podeCriarAula((int) auth()->id(), $disciplina, $moduloId)) {
+            // Quem recebeu uma aula específica pode editar essa aula, mas não transferi-la.
+            if (! $disciplina || (int) $disciplina->id !== (int) $origem->disciplina_id
+                || $moduloId !== (int) $origem->modulo_id) {
+                throw ValidationException::withMessages([
+                    'disciplina_id' => 'Você não tem permissão para mover a aula de disciplina/módulo.',
+                ]);
+            }
         }
 
-        $data['modulo_id'] = $disciplina->modulo_id;
+        $data['modulo_id'] = $moduloId;
 
         // Calcular quantidade de questões
         if (isset($data['questoes'])) {

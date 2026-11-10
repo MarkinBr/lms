@@ -13,10 +13,18 @@
 <form class="sc-en-form" method="post" enctype="multipart/form-data" action="{{ $aula?->exists ? route('secretaria.ensino.aulas.atualizar',$aula) : route('secretaria.ensino.aulas.salvar') }}">
 @csrf @if($aula?->exists) @method('PUT') @endif
 <div class="sc-en-fields">
-<div class="wide"><label for="au-disc">Disciplina (curso e módulo)</label><select id="au-disc" name="disciplina_id" required>
+<div class="wide"><label for="au-disc">Disciplina</label><select id="au-disc" name="disciplina_id" required>
 <option value="">Selecione uma disciplina</option>
 @foreach($disciplinas as $disc)<option value="{{ $disc->id }}" @selected(old('disciplina_id',$aula?->disciplina_id)==$disc->id)>{{ $disc->curso?->titulo ?? 'Curso' }} → {{ $modulos->firstWhere('id',$disc->modulo_id)?->titulo ?? 'Sem módulo' }} → {{ $disc->nome }}</option>@endforeach
 </select><small>Disciplinas precisam estar vinculadas a um módulo válido.</small></div>
+<div class="wide"><label for="au-modulo">Módulo da aula</label><select id="au-modulo" name="modulo_id" required>
+<option value="">Selecione um módulo da disciplina</option>
+@foreach($disciplinas as $disc)
+@foreach($disc->modulos as $modulo)
+<option value="{{ $modulo->id }}" data-disciplina="{{ $disc->id }}" @selected(old('disciplina_id',$aula?->disciplina_id)==$disc->id && old('modulo_id',$aula?->modulo_id??$disc->modulo_id)==$modulo->id)>{{ $disc->nome }} → {{ $modulo->titulo }}</option>
+@endforeach
+@endforeach
+</select><small>O módulo deve estar vinculado à disciplina escolhida.</small></div>
 <div class="wide"><label for="au-titulo">Título da aula</label><input id="au-titulo" maxlength="255" name="titulo" required value="{{ old('titulo',$aula?->titulo) }}"></div>
 <div><label for="au-ordem">Ordem na disciplina</label><input id="au-ordem" type="number" name="ordem" min="1" max="9999" required value="{{ old('ordem',$aula?->ordem??1) }}"></div>
 <div><label for="au-duracao">Duração prevista (minutos)</label><input id="au-duracao" type="number" name="duracao" min="0" max="100000" value="{{ old('duracao',$aula?->duracao??0) }}"></div>

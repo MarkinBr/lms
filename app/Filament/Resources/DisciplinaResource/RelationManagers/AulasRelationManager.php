@@ -57,6 +57,14 @@ class AulasRelationManager extends RelationManager
                     ])
                     ->columns(2),
 
+                Forms\Components\Select::make('modulo_id')
+                    ->label('Módulo desta aula')
+                    ->options(fn () => $this->getOwnerRecord()->modulos()
+                        ->pluck('modulos.titulo', 'modulos.id'))
+                    ->default(fn () => $this->getOwnerRecord()->modulo_id)
+                    ->required()->searchable()
+                    ->helperText('Escolha um dos módulos vinculados à disciplina.'),
+
                 Forms\Components\Section::make('Conteúdo')
                     ->schema([
                         Forms\Components\TextInput::make('video_url')

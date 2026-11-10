@@ -24,7 +24,7 @@
             <h2>{{ $turma->codigo ?: 'Turma sem código' }}</h2>
             <p>{{ $turma->curso?->titulo ?? 'Curso não informado' }} · {{ $turma->periodoLetivo?->nome ?? $turma->ano_letivo ?? 'Período não informado' }}</p>
             <div class="sc-badges" style="margin-top:8px">
-                <span class="sc-ac-badge is-green">{{ \App\Models\Turma::STATUS_LABELS[$turma->status] ?? 'Sem situação' }}</span>
+                <span class="sc-ac-badge is-green">{{ \App\Models\Turma::SITUACOES_ACADEMICAS[$turma->situacao_academica] ?? 'Sem situação acadêmica' }}</span>
                 <span class="sc-ac-badge is-neutral">{{ \App\Models\Turma::MODALIDADE_LABELS[$turma->modalidade] ?? 'Modalidade não definida' }}</span>
             </div>
         </div>
@@ -68,9 +68,11 @@
                 <div class="sc-panel-heading"><h2>Configuração da turma</h2><p>Dados essenciais para a organização do ensino.</p></div>
                 <dl class="sc-data-grid" style="padding:22px">
                     <div><dt>Curso</dt><dd>{{ $turma->curso?->titulo ?? 'Não definido' }}</dd></div>
-                    <div><dt>Disciplina</dt><dd>{{ $turma->disciplina?->nome ?? 'Não definida' }}</dd></div>
-                    <div><dt>Professor(a)</dt><dd>{{ $turma->professor?->name ?? 'Não atribuído' }}</dd></div>
-                    <div><dt>Período letivo</dt><dd>{{ $turma->periodoLetivo?->nome ?? 'Não informado' }}</dd></div>
+                    <div><dt>Disciplina</dt><dd>{{ $turma->disciplinas->pluck('nome')->join(', ') ?: 'Não definidas' }}</dd></div>
+                    <div><dt>Professor(a)</dt><dd>{{ $turma->professorAtribuicoes->pluck('professor.name')->unique()->join(', ') ?: 'Não atribuídos' }}</dd></div>
+                    <div><dt>Período letivo</dt><dd>{{ $turma->periodos->pluck('nome')->join(', ') ?: 'Não informado' }}</dd></div>
+                    <div><dt>Situação das inscrições</dt><dd>{{ \App\Models\Turma::SITUACOES_INSCRICOES[$turma->situacao_inscricoes] ?? 'Não definida' }}</dd></div>
+                    <div><dt>Publicada no portal</dt><dd>{{ $turma->publicada ? 'Sim' : 'Não' }}</dd></div>
                     <div><dt>Dia de encontro</dt><dd>{{ match($turma->turno) {
                         '1_sabado'=>'1º sábado','2_sabado'=>'2º sábado','3_sabado'=>'3º sábado','4_sabado'=>'4º sábado',
                         default=>$turma->turno ?? 'Não definido',

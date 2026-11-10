@@ -71,10 +71,10 @@ class PainelAcademicoQuery
                 Aula::query()->whereNull('disciplina_id')
             ),
             'turmas_sem_periodo' => $this->pendencia(
-                Turma::query()->whereNull('periodo_letivo_id')
+                Turma::query()->whereNull('periodo_letivo_id')->whereDoesntHave('periodos')
             ),
             'turmas_sem_disciplina' => $this->pendencia(
-                Turma::query()->whereNull('disciplina_id')
+                Turma::query()->whereNull('disciplina_id')->whereDoesntHave('disciplinas')
             ),
         ];
     }

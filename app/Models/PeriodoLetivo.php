@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Validation\ValidationException;
 
@@ -34,23 +35,10 @@ class PeriodoLetivo extends Model
                 ]);
             }
 
-            if ($periodo->ativo) {
-                $query = static::query()->where('ativo', true);
-
-                if ($periodo->exists) {
-                    $query->whereKeyNot($periodo->getKey());
-                }
-
-                if ($query->exists()) {
-                    throw ValidationException::withMessages([
-                        'ativo' => 'Já existe um período letivo ativo.',
-                    ]);
-                }
-            }
         });
 
         static::deleting(function (PeriodoLetivo $periodo) {
-            if ($periodo->turmas()->exists()) {
+            if ($periodo->turmas()->exists() || $periodo->turmasVinculadas()->exists()) {
                 throw ValidationException::withMessages([
                     'id' => 'Não é possível excluir um período letivo com turmas vinculadas.',
                 ]);
@@ -61,6 +49,11 @@ class PeriodoLetivo extends Model
     public function turmas(): HasMany
     {
         return $this->hasMany(Turma::class);
+    }
+
+    public function turmasVinculadas(): BelongsToMany
+    {
+        return $this->belongsToMany(Turma::class, 'turma_periodos', 'periodo_letivo_id', 'turma_id')->withTimestamps();
     }
 
     public function scopeAtivos(Builder $query): Builder
@@ -75,6 +68,6 @@ class PeriodoLetivo extends Model
 
     public function podeSerExcluido(): bool
     {
-        return ! $this->turmas()->exists();
+        return ! $this->turmas()->exists() && ! $this->turmasVinculadas()->exists();
     }
 }

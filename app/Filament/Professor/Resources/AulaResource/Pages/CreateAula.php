@@ -4,6 +4,7 @@ namespace App\Filament\Professor\Resources\AulaResource\Pages;
 
 use App\Filament\Professor\Resources\AulaResource;
 use App\Models\Disciplina;
+use App\Services\GestaoAcademica\PermissoesDocentes;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
@@ -14,18 +15,17 @@ class CreateAula extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $disciplina = Disciplina::query()
-            ->whereKey($data['disciplina_id'] ?? null)
-            ->whereHas('modulo.curso', fn ($query) => $query->where('instrutor_id', auth()->id()))
-            ->first();
+        $disciplina = Disciplina::query()->find($data['disciplina_id'] ?? null);
+        $moduloId = (int) ($data['modulo_id'] ?? 0);
 
-        if (! $disciplina) {
+        if (! $disciplina || ! app(PermissoesDocentes::class)
+            ->podeCriarAula((int) auth()->id(), $disciplina, $moduloId)) {
             throw ValidationException::withMessages([
-                'disciplina_id' => 'Selecione uma disciplina atribuída aos seus cursos.',
+                'disciplina_id' => 'Você não possui permissão para criar aulas nessa disciplina/módulo.',
             ]);
         }
 
-        $data['modulo_id'] = $disciplina->modulo_id;
+        $data['modulo_id'] = $moduloId;
 
         // Calcular quantidade de questões
         if (isset($data['questoes'])) {

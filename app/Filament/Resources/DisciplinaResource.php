@@ -11,6 +11,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Resource administrativo de Disciplinas (Issue #57).
@@ -62,10 +64,29 @@ class DisciplinaResource extends Resource
                             ->required()
                             ->helperText('Somente módulos do curso selecionado.'),
 
+                        Forms\Components\Select::make('modulos')
+                            ->label('Módulos da disciplina (múltiplos)')
+                            ->multiple()
+                            ->relationship('modulos', 'titulo', modifyQueryUsing: fn (Builder $query, Forms\Get $get) => $query->where('curso_id', $get('curso_id') ?: 0))
+                            ->searchable()->preload()
+                            ->helperText('Mantenha o módulo principal. As aulas podem ser organizadas em qualquer módulo vinculado.')
+                            ->saveRelationshipsUsing(function (Disciplina $record, ?array $state): void {
+                                $ids = array_map('intval', $state ?? []);
+                                $validos = Modulo::query()->where('curso_id', $record->curso_id)
+                                    ->whereIn('id', $ids)->pluck('id')->all();
+                                if (count(array_unique($ids)) !== count($validos)) {
+                                    throw ValidationException::withMessages([
+                                        'modulos' => 'Todos os módulos devem pertencer ao curso da disciplina.',
+                                    ]);
+                                }
+                                $record->modulos()->sync(array_unique(array_merge($validos, [$record->modulo_id])));
+                            })
+                            ->columnSpanFull(),
+
                         Forms\Components\TextInput::make('codigo')
                             ->label('Código')
-                            ->required()
-                            ->maxLength(50),
+                            ->maxLength(50)
+                            ->helperText('Opcional: o sistema gera código único dentro do curso.'),
 
                         Forms\Components\TextInput::make('nome')
                             ->label('Nome')

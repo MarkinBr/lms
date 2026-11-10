@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Validation\ValidationException;
 
@@ -15,7 +16,7 @@ class Modulo extends Model
     protected static function booted(): void
     {
         static::updating(function (Modulo $modulo): void {
-            if ($modulo->isDirty('curso_id') && ($modulo->disciplinas()->exists() || $modulo->aulas()->exists())) {
+            if ($modulo->isDirty('curso_id') && ($modulo->disciplinas()->exists() || $modulo->disciplinasVinculadas()->exists() || $modulo->aulas()->exists())) {
                 throw ValidationException::withMessages([
                     'curso_id' => 'Não é possível mover um módulo que possui disciplinas ou aulas.',
                 ]);
@@ -59,8 +60,13 @@ class Modulo extends Model
         return $this->hasMany(Disciplina::class)->orderBy('ordem');
     }
 
+    public function disciplinasVinculadas(): BelongsToMany
+    {
+        return $this->belongsToMany(Disciplina::class, 'disciplina_modulo', 'modulo_id', 'disciplina_id')->withTimestamps();
+    }
+
     public function podeSerExcluido(): bool
     {
-        return ! $this->disciplinas()->exists() && ! $this->aulas()->exists();
+        return ! $this->disciplinas()->exists() && ! $this->disciplinasVinculadas()->exists() && ! $this->aulas()->exists();
     }
 }

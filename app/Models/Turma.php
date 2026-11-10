@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class Turma extends Model
@@ -34,6 +36,21 @@ class Turma extends Model
         self::STATUS_ABERTA => 'Aberta',
         self::STATUS_ENCERRADA => 'Encerrada',
         self::STATUS_CANCELADA => 'Cancelada',
+    ];
+
+    public const SITUACOES_ACADEMICAS = [
+        'planejada' => 'Planejada',
+        'em_andamento' => 'Em andamento',
+        'concluida' => 'Concluída',
+        'cancelada' => 'Cancelada',
+        'arquivada' => 'Arquivada',
+    ];
+
+    public const SITUACOES_INSCRICOES = [
+        'nao_iniciadas' => 'Não iniciadas',
+        'abertas' => 'Abertas',
+        'encerradas' => 'Encerradas',
+        'suspensas' => 'Suspensas',
     ];
 
     public const MODALIDADE_PRESENCIAL = 'presencial';
@@ -76,16 +93,70 @@ class Turma extends Model
         'data_inicio',
         'data_fim',
         'ativa',
+        'situacao_academica',
+        'situacao_inscricoes',
+        'publicada',
+        'inscricoes_inicio',
+        'inscricoes_fim',
     ];
 
     protected $casts = [
         'capacidade' => 'integer',
         'ativa' => 'boolean',
+        'publicada' => 'boolean',
+        'inscricoes_inicio' => 'date',
+        'inscricoes_fim' => 'date',
     ];
 
     protected static function booted(): void
     {
         static::saving(function (Turma $turma) {
+            if (! $turma->exists && blank($turma->codigo)
+                && filled($turma->curso_id) && filled($turma->periodo_letivo_id)) {
+                do {
+                    $turma->codigo = sprintf('T-%s-%03d-%s', $turma->ano_letivo ?: date('Y'),
+                        (int) $turma->curso_id, strtoupper(Str::random(6)));
+                } while (static::query()->where('periodo_letivo_id', $turma->periodo_letivo_id)
+                    ->where('codigo', $turma->codigo)->exists());
+            }
+            if (filled($turma->situacao_academica)) {
+                if (! array_key_exists($turma->situacao_academica, self::SITUACOES_ACADEMICAS)) {
+                    throw ValidationException::withMessages(['situacao_academica' => 'Situação acadêmica inválida.']);
+                }
+                if ($turma->isDirty('situacao_academica')) {
+                    // Mantém consumidores legados da coluna status compatíveis.
+                    $turma->status = match ($turma->situacao_academica) {
+                        'em_andamento' => self::STATUS_ABERTA,
+                        'concluida', 'arquivada' => self::STATUS_ENCERRADA,
+                        'cancelada' => self::STATUS_CANCELADA,
+                        default => self::STATUS_PLANEJADA,
+                    };
+                }
+            }
+            if ($turma->isDirty('status') && ! $turma->isDirty('situacao_academica')
+                && filled($turma->status)) {
+                $turma->situacao_academica = match ($turma->status) {
+                    self::STATUS_ABERTA => 'em_andamento',
+                    self::STATUS_ENCERRADA => 'concluida',
+                    self::STATUS_CANCELADA => 'cancelada',
+                    default => 'planejada',
+                };
+                // Compatibilidade: integrações antigas que abriam uma turma
+                // via status='aberta' continuam podendo receber matrículas.
+                if (! $turma->exists && ! $turma->isDirty('situacao_inscricoes')
+                    && $turma->status === self::STATUS_ABERTA) {
+                    $turma->situacao_inscricoes = 'abertas';
+                }
+            }
+
+            if (filled($turma->situacao_inscricoes)
+                && ! array_key_exists($turma->situacao_inscricoes, self::SITUACOES_INSCRICOES)) {
+                throw ValidationException::withMessages(['situacao_inscricoes' => 'Situação de inscrições inválida.']);
+            }
+            if ($turma->inscricoes_inicio && $turma->inscricoes_fim
+                && $turma->inscricoes_fim->lt($turma->inscricoes_inicio)) {
+                throw ValidationException::withMessages(['inscricoes_fim' => 'O encerramento das inscrições deve ser posterior ao início.']);
+            }
             if (filled($turma->status)) {
                 if (! in_array($turma->status, self::STATUS_PERMITIDOS, true)) {
                     throw ValidationException::withMessages([
@@ -119,6 +190,14 @@ class Turma extends Model
             if ($turma->capacidade !== null && $turma->capacidade !== '' && (int) $turma->capacidade < 1) {
                 throw ValidationException::withMessages([
                     'capacidade' => 'A capacidade deve ser um inteiro positivo.',
+                ]);
+            }
+
+            if ($turma->exists && $turma->isDirty('curso_id')
+                && ($turma->turmaDisciplinas()->exists() || $turma->matriculasTurmas()->exists()
+                    || $turma->matriculas()->exists())) {
+                throw ValidationException::withMessages([
+                    'curso_id' => 'Não altere o curso de uma turma que possui disciplinas ou matrículas vinculadas.',
                 ]);
             }
 
@@ -164,6 +243,52 @@ class Turma extends Model
                 }
             }
         });
+
+        static::saved(function (Turma $turma): void {
+            // Espelha referências antigas nos vínculos múltiplos sem remover histórico.
+            if ($turma->periodo_letivo_id) {
+                $turma->periodos()->syncWithoutDetaching([$turma->periodo_letivo_id]);
+            }
+            if ($turma->disciplina_id) {
+                $turma->disciplinas()->syncWithoutDetaching([$turma->disciplina_id]);
+            }
+            // Trocar o responsável legado revoga a concessão anterior, preservando
+            // o histórico e as designações independentes de outros professores.
+            if ($turma->isDirty('professor_id') && $turma->getRawOriginal('professor_id')) {
+                $turma->professorAtribuicoes()
+                    ->where('professor_id', $turma->getRawOriginal('professor_id'))
+                    ->where('escopo', 'turma')->update(['ativa' => false]);
+            }
+            // Uma edição sem troca de professor não pode ressuscitar acesso revogado.
+            if ($turma->isDirty('professor_id') && $turma->professor_id) {
+                $atribuicao = $turma->professorAtribuicoes()->firstOrCreate([
+                    'professor_id' => $turma->professor_id,
+                    'escopo' => 'turma',
+                ], [
+                    'permissoes' => ['visualizar', 'editar_conteudo', 'gerenciar_atividades', 'corrigir', 'lancar_notas'],
+                    'ativa' => true,
+                ]);
+                if (! $atribuicao->ativa) {
+                    $atribuicao->update(['ativa' => true]);
+                }
+            }
+        });
+    }
+
+    public function podeReceberMatriculasEm(?CarbonInterface $instante = null): bool
+    {
+        $instante ??= now();
+        $hoje = $instante->toDateString();
+
+        return $this->situacao_inscricoes === 'abertas'
+            && ! in_array($this->situacao_academica, ['concluida', 'cancelada', 'arquivada'], true)
+            && (! $this->inscricoes_inicio || $hoje >= $this->inscricoes_inicio->toDateString())
+            && (! $this->inscricoes_fim || $hoje <= $this->inscricoes_fim->toDateString());
+    }
+
+    public function inscricoesAbertasEm(?CarbonInterface $instante = null): bool
+    {
+        return (bool) $this->publicada && $this->podeReceberMatriculasEm($instante);
     }
 
     public function curso(): BelongsTo
@@ -184,6 +309,32 @@ class Turma extends Model
     public function professor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'professor_id');
+    }
+
+    public function periodos(): BelongsToMany
+    {
+        return $this->belongsToMany(PeriodoLetivo::class, 'turma_periodos', 'turma_id', 'periodo_letivo_id')->withTimestamps();
+    }
+
+    public function disciplinas(): BelongsToMany
+    {
+        return $this->belongsToMany(Disciplina::class, 'turma_disciplinas', 'turma_id', 'disciplina_id')
+            ->withPivot(['ordem', 'ativa', 'periodo_letivo_id'])->withTimestamps();
+    }
+
+    public function turmaDisciplinas(): HasMany
+    {
+        return $this->hasMany(TurmaDisciplina::class);
+    }
+
+    public function turmaPeriodos(): HasMany
+    {
+        return $this->hasMany(TurmaPeriodo::class);
+    }
+
+    public function professorAtribuicoes(): HasMany
+    {
+        return $this->hasMany(ProfessorAtribuicao::class);
     }
 
     public function matriculas(): HasMany

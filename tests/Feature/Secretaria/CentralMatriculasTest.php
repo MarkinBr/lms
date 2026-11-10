@@ -408,4 +408,53 @@ class CentralMatriculasTest extends TestCase
         $this->assertSame('ativo', $matricula->fresh()->status);
         $this->assertDatabaseCount('matricula_movimentacoes', 0);
     }
+
+    public function test_matricula_respeita_situacao_de_inscricoes_independente_do_andamento(): void
+    {
+        $curso = $this->curso();
+        $matricula = $this->matricula($curso);
+        $turma = $this->turma($curso, [
+            'situacao_academica' => 'em_andamento',
+            'situacao_inscricoes' => 'encerradas',
+        ]);
+        $this->actingAs($this->ator());
+
+        $url = route('secretaria.matriculas.vincular-turma', $matricula);
+        $this->post($url, $this->confirmacao(['turma_id' => $turma->id]))
+            ->assertSessionHasErrors('turma_id');
+
+        $turma->update([
+            'situacao_inscricoes' => 'abertas',
+            'inscricoes_inicio' => now()->subDay()->toDateString(),
+            'inscricoes_fim' => now()->addDay()->toDateString(),
+        ]);
+        $this->post($url, $this->confirmacao(['turma_id' => $turma->id]))
+            ->assertRedirect(route('secretaria.matriculas.show', $matricula));
+
+        $this->assertDatabaseHas('matricula_turma', [
+            'matricula_id' => $matricula->id, 'turma_id' => $turma->id,
+        ]);
+    }
+
+    public function test_nao_vincula_turma_com_disciplinas_sobrepostas_em_ofertas_multiplas(): void
+    {
+        $curso = $this->curso();
+        $modulo = Modulo::create(['curso_id' => $curso->id, 'titulo' => 'Módulo', 'ordem' => 1]);
+        $disciplina = Disciplina::create([
+            'curso_id' => $curso->id, 'modulo_id' => $modulo->id,
+            'nome' => 'Teologia', 'codigo' => 'TEO-02', 'carga_horaria' => 30, 'ordem' => 1,
+        ]);
+        $origem = $this->turma($curso);
+        $destino = $this->turma($curso);
+        $origem->disciplinas()->attach($disciplina->id);
+        $destino->disciplinas()->attach($disciplina->id);
+
+        $matricula = $this->matricula($curso);
+        $matricula->update(['turma_id' => $origem->id]);
+        $this->actingAs($this->ator());
+
+        $this->post(route('secretaria.matriculas.vincular-turma', $matricula),
+            $this->confirmacao(['turma_id' => $destino->id]))
+            ->assertSessionHasErrors('turma_id');
+    }
 }
