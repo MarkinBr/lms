@@ -24,7 +24,7 @@ class CentralFinanceiroController extends Controller
     {
         $busca = mb_substr(trim((string) $request->query('busca', '')), 0, 100);
         $situacao = (string) $request->query('situacao', '');
-        $mensalidades = Mensalidade::query()->with(['matricula.user:id,name,email', 'matricula.curso:id,titulo'])
+        $mensalidades = Mensalidade::query()->with(['matricula.user:id,name,email,whatsapp,acesso_versao,ativo,nivel,email_verified_at,email_confirmacao_pendente,receber_notificacoes_email', 'matricula.curso:id,titulo'])
             ->when($busca !== '', fn ($q) => $q->whereHas('matricula.user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($busca).'%'])))
             ->when(in_array($situacao, ['Pago', 'Pendente', 'Atrasado'], true), fn ($q) => $q->where('status', $situacao))
             ->orderByDesc('data_vencimento')->paginate(18)->withQueryString();
@@ -71,13 +71,6 @@ class CentralFinanceiroController extends Controller
         if (! $mensalidade->podeGerarPagamento() || (float) $mensalidade->valor <= 0) {
             throw ValidationException::withMessages(['conferi_cobranca' => 'Esta mensalidade não permite emissão.']);
         }
-        // Evita lançar cobranças em dois meios ao mesmo tempo; a liquidação
-        // de uma transação pendente precisa ser conferida antes da troca.
-        if ($mensalidade->transacao_id && $mensalidade->metodo_pagamento &&
-            ! in_array($mensalidade->metodo_pagamento, [$metodo, $metodo === 'boleto' ? 'bolbradesco' : 'pix'], true)) {
-            throw ValidationException::withMessages(['conferi_cobranca' => 'Já existe uma cobrança em outro meio. Confira a transação anterior antes de mudar.']);
-        }
-
         try {
             $gateway = app(MercadoPagoService::class);
             if ($metodo === 'pix') {
@@ -146,6 +139,8 @@ class CentralFinanceiroController extends Controller
             'modelo' => ['required', Rule::in(['lembrete', 'cobranca', 'pix', 'boleto', 'recibo'])],
             'agendado_para' => ['required', 'date', 'after_or_equal:now'],
             'confirmou_contato' => ['accepted'],
+            'contato_exibido' => ['required', 'array:email,whatsapp'],
+            'contato_exibido.*' => ['required', 'string', 'size:64'],
         ]);
         $mensalidade->load('matricula.user');
         if ($dados['modelo'] === 'recibo' && ! $mensalidade->estaPaga()) {
@@ -161,13 +156,17 @@ class CentralFinanceiroController extends Controller
             }
         }
         $usuario = $mensalidade->matricula?->user;
-        $destinatario = $dados['canal'] === 'email' ? (string) $usuario?->email :
-            (string) ($usuario?->telefone ?? '');
-        if ($dados['canal'] === 'email' && ! filter_var($destinatario, FILTER_VALIDATE_EMAIL)) {
-            throw ValidationException::withMessages(['canal' => 'O aluno não possui e-mail válido.']);
+        $destinatario = FinanceiroEnvio::destinoAutorizado($usuario, $dados['canal']);
+        $contatoAtual = FinanceiroEnvio::referenciaContato($usuario, $dados['canal']);
+        if ($destinatario === null) {
+            $mensagem = $dados['canal'] === 'whatsapp'
+                ? 'Confira o WhatsApp do próprio aluno. Informe o número com DDD e, para números internacionais, com código do país.'
+                : 'Confira o e-mail verificado e a preferência de notificações do aluno.';
+
+            throw ValidationException::withMessages(['canal' => $mensagem]);
         }
-        if ($dados['canal'] === 'whatsapp' && ! preg_match('/^\+?\d{10,13}$/', preg_replace('/[\s()-]/', '', $destinatario))) {
-            throw ValidationException::withMessages(['canal' => 'O aluno não possui telefone válido para o WhatsApp.']);
+        if (! hash_equals($contatoAtual, $dados['contato_exibido'][$dados['canal']] ?? '')) {
+            throw ValidationException::withMessages(['canal' => 'O contato mudou. Reabra o painel e confirme o destinatário.']);
         }
         if (! config('financeiro.habilitar_envios_automaticos_secretaria', false)) {
             throw ValidationException::withMessages(['canal' => 'Mensagens automáticas estão desativadas; habilite apenas após homologar consentimento e provedor.']);
@@ -175,6 +174,8 @@ class CentralFinanceiroController extends Controller
 
         $envio = DB::transaction(fn () => FinanceiroEnvio::query()->create([
             'mensalidade_id' => $mensalidade->id,
+            'aluno_id' => $usuario->id,
+            'acesso_versao' => $usuario->acesso_versao,
             'criado_por' => $request->user()->id,
             'canal' => $dados['canal'],
             'modelo' => $dados['modelo'],

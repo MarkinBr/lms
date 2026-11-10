@@ -52,6 +52,17 @@ class EnviarFinanceiroAgendado implements ShouldQueue
             }
 
             $user = $m->matricula?->user;
+            $autor = $envio->autor()->first();
+            $destino = FinanceiroEnvio::destinoAutorizado($user, $envio->canal);
+            if (! $autor || ! $autor->ativo || ! in_array($autor->nivel, ['admin', 'secretario'], true)
+                || $envio->aluno_id === null || $envio->aluno_id !== $user?->id
+                || $envio->acesso_versao === null || $envio->acesso_versao !== $user?->acesso_versao
+                || $destino === null || $destino !== $envio->destinatario) {
+                $envio->update(['status' => 'ignorado', 'erro' => 'O destinatário ou a autorização do envio mudou.']);
+
+                return;
+            }
+
             $nome = (string) ($user?->name ?? 'Estudante');
             $link = match ($envio->modelo) {
                 'recibo' => route('recibo.publico.form', $m->codigo_validacao),
@@ -74,7 +85,7 @@ class EnviarFinanceiroAgendado implements ShouldQueue
                 'recibo' => 'Registramos o recebimento da mensalidade indicada abaixo. Seu recibo pode ser conferido no endereço seguro.',
                 'lembrete' => 'Informamos o vencimento de sua mensalidade. Caso já tenha realizado o pagamento, desconsidere esta mensagem.',
                 'cobranca' => 'Identificamos uma mensalidade em aberto. Caso já tenha efetuado o pagamento, encaminhe a referência para conferência.',
-                'pix' => 'O PIX foi gerado pelo Mercado Pago. Utilize o link seguro para realizar o pagamento. A confirmação depende de retorno do provedor.',
+                'pix' => 'O PIX foi gerado pelo Mercado Pago. Utilize o link seguro ou o código copia e cola para realizar o pagamento. A confirmação depende de retorno do provedor.',
                 'boleto' => 'O boleto foi gerado pelo Mercado Pago. Utilize o link seguro e observe a data de vencimento e o prazo de compensação.',
             };
             $valor = (float) ($m->valor_pago ?? $m->valor);
@@ -109,8 +120,11 @@ class EnviarFinanceiroAgendado implements ShouldQueue
                 if ($link) {
                     $texto .= "\nAcesse: {$link}\n";
                 }
+                if ($envio->modelo === 'pix' && filled($m->pix_copia_cola)) {
+                    $texto .= "\nPIX copia e cola: {$m->pix_copia_cola}\n";
+                }
                 $texto .= "\nEm caso de dúvida, fale com a Secretaria pelos canais oficiais.";
-                if (! $whatsApp->enviarMensagem($envio->destinatario, $texto)) {
+                if (! $whatsApp->enviarMensagem($envio->destinatario, $texto, telefoneNormalizado: true)) {
                     throw new \RuntimeException('Provedor de WhatsApp não confirmou aceitação da mensagem.');
                 }
             }

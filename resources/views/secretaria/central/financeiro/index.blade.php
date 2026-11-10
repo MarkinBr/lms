@@ -68,6 +68,10 @@ Integração operacional desativada por segurança. O administrador deverá homo
 @if($m->pix_copia_cola)<option value="pix">PIX emitido</option>@endif
 @if($m->link_boleto)<option value="boleto">Boleto emitido</option>@endif
 @endif</select></div>
+@foreach (['email', 'whatsapp'] as $canal)
+<input type="hidden" name="contato_exibido[{{ $canal }}]" value="{{ \App\Models\FinanceiroEnvio::referenciaContato($m->matricula?->user, $canal) }}">
+@endforeach
+<p class="wide">E-mail: {{ \App\Models\FinanceiroEnvio::destinoAutorizado($m->matricula?->user, 'email') ?? 'indisponível' }} · WhatsApp: {{ \App\Models\FinanceiroEnvio::destinoAutorizado($m->matricula?->user, 'whatsapp') ?? 'indisponível' }}</p>
 <div class="wide"><label>Data e hora de envio</label><input type="datetime-local" name="agendado_para" required></div>
 <div class="wide"><label style="font-size:11px"><input type="checkbox" name="confirmou_contato" value="1" required> Confirmei a autorização de contato e os dados de destinatário.</label></div>
 <div class="wide"><button class="fin-button fin-primary" type="submit">Programar comunicação</button></div>
