@@ -25,6 +25,8 @@ jobs:
           php-version: '8.4'
           extensions: mbstring, dom, fileinfo
           coverage: none
+      - name: Preparar diretorios do Laravel
+        run: mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
       - name: Instalar Pint
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Aplicar Pint somente ao PHP alterado nesta entrega
