@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Curso;
+use App\Models\Modulo;
 use App\Models\NewsletterSubscriber;
 use App\Models\PaginaInicial;
 use App\Services\NotificarContatoRecebidoService;
+use Database\Seeders\MatrizCurricularTeologiaSeeder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class SiteController extends Controller
 {
@@ -29,7 +33,39 @@ class SiteController extends Controller
             return view('site.manutencao', compact('dados'));
         }
 
-        return view('site.index', compact('dados'));
+        // View-model somente-leitura da matriz oficial do Curso Médio em Teologia.
+        // Fonte: MatrizCurricularTeologiaSeeder (Issue #21). Não cria nada.
+        $matrizTeologia = $this->montarMatrizTeologia();
+
+        return view('site.index', compact('dados', 'matrizTeologia'));
+    }
+
+    /**
+     * Monta a matriz curricular do Curso Médio em Teologia para exibição pública.
+     *
+     * Retorna uma Collection de módulos ordenados por `ordem`, cada um com suas
+     * disciplinas também ordenadas — SEM criar nenhum registro no banco. Se o
+     * seeder oficial ainda não tiver sido executado (curso ausente), retorna
+     * `null` para que a view degrade de forma segura.
+     *
+     * @return Collection<int, Modulo>|null
+     */
+    private function montarMatrizTeologia(): ?Collection
+    {
+        $curso = Curso::query()
+            ->where('titulo', MatrizCurricularTeologiaSeeder::CURSO_TITULO)
+            ->with(['modulos' => function ($query) {
+                $query->orderBy('ordem')->with(['disciplinas' => function ($q) {
+                    $q->orderBy('ordem');
+                }]);
+            }])
+            ->first();
+
+        if (! $curso) {
+            return null;
+        }
+
+        return $curso->modulos;
     }
 
     private function criarPaginaPadrao()

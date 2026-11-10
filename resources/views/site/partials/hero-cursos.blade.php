@@ -31,15 +31,15 @@
             <ul class="ch-feats anim" style="--d:.36s">
               <li>
                 <span class="ch-feats__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7" r="3"/><path d="M22 19v-1a4 4 0 0 0-3-3.87M16 4.13a4 4 0 0 1 0 7.75"/></svg></span>
-                <span class="ch-feats__tx"><strong>Presencial</strong><span>Aprendizado com comunhão e prática</span></span>
+                <span class="ch-feats__tx"><strong>Modalidade híbrida</strong><span>Aprendizado online e encontros presenciais</span></span>
               </li>
               <li>
                 <span class="ch-feats__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
-                <span class="ch-feats__tx"><strong>Híbrida</strong><span>Flexibilidade com interação ao vivo</span></span>
+                <span class="ch-feats__tx"><strong>Conteúdo online</strong><span>Estude com flexibilidade e acompanhamento</span></span>
               </li>
               <li>
                 <span class="ch-feats__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg></span>
-                <span class="ch-feats__tx"><strong>EAD</strong><span>Estude onde estiver, no seu tempo</span></span>
+                <span class="ch-feats__tx"><strong>Encontros presenciais</strong><span>Comunhão, prática e interação ao vivo</span></span>
               </li>
             </ul>
           </article>
