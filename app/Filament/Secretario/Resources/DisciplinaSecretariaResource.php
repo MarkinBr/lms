@@ -93,6 +93,26 @@ class DisciplinaSecretariaResource extends Resource
                             ->helperText('Obrigatório. Só lista módulos do curso selecionado.')
                             ->disabled(fn (Get $get) => ! $get('curso_id'))
                             ->columnSpanFull(),
+                        Forms\Components\Select::make('modulos')
+                            ->label('Módulos da disciplina (múltiplos)')
+                            ->multiple()
+                            ->relationship('modulos', 'titulo', modifyQueryUsing:
+                                fn (\Illuminate\Database\Eloquent\Builder $query, Get $get) =>
+                                    $query->where('curso_id', $get('curso_id') ?: 0))
+                            ->searchable()->preload()
+                            ->helperText('Pode selecionar vários módulos do mesmo curso. O módulo principal será sempre preservado.')
+                            ->saveRelationshipsUsing(function (Disciplina $record, ?array $state): void {
+                                $ids = array_map('intval', $state ?? []);
+                                $validos = Modulo::query()->where('curso_id', $record->curso_id)
+                                    ->whereIn('id', $ids)->pluck('id')->all();
+                                if (count(array_unique($ids)) !== count($validos)) {
+                                    throw \Illuminate\Validation\ValidationException::withMessages([
+                                        'modulos' => 'Os módulos selecionados precisam pertencer ao curso.',
+                                    ]);
+                                }
+                                $record->modulos()->sync(array_unique(array_merge($validos, [$record->modulo_id])));
+                            })
+                            ->columnSpanFull(),
                         Forms\Components\TextInput::make('codigo')
                             ->required()
                             ->maxLength(255),
