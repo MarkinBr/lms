@@ -104,9 +104,8 @@ class TurmaSecretariaResource extends Resource
 
                         Forms\Components\TextInput::make('codigo')
                             ->label('Código')
-                            ->required()
                             ->maxLength(80)
-                            ->helperText('Código único dentro do período letivo.'),
+                            ->helperText('Se ficar vazio, será gerado automaticamente. Identificador da turma.'),
 
                         Forms\Components\TextInput::make('ano_letivo')
                             ->label('Ano Letivo')
