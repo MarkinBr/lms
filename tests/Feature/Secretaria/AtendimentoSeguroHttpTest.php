@@ -74,6 +74,30 @@ class AtendimentoSeguroHttpTest extends TestCase
         $this->post($url, ['token' => $token])->assertForbidden();
     }
 
+    public function test_confirmacao_enfileira_email_para_worker_database_com_redis_como_padrao(): void
+    {
+        Mail::fake();
+        config(['queue.default' => 'redis', 'queue.connections.database.queue' => 'acessos-teste']);
+        $ator = $this->ator();
+        $aluno = User::factory()->create(['nivel' => 'aluno', 'ativo' => true]);
+        $id = app(EntregasAcesso::class)->preparar(
+            $ator, $aluno, 'email', 'mensagem', 'Instruções fictícias', now()->addHour(),
+        );
+        $this->actingAs($ator)->get(route('secretaria.acessos.entrega', [$aluno, $id]))->assertOk();
+        $this->post(route('secretaria.acessos.entrega.enviar', [$aluno, $id]), [
+            'confirmar' => 1, 'destino_conferido' => 1,
+        ])->assertRedirect(route('secretaria.acessos.show', $aluno));
+
+        $this->assertDatabaseHas('jobs', ['queue' => 'acessos-teste']);
+        Mail::assertNothingSent();
+
+        $this->artisan('queue:work', ['connection' => 'database', '--once' => true, '--sleep' => 0])
+            ->assertSuccessful();
+        Mail::assertSent(AtendimentoAcessoMail::class, fn ($mail) => $mail->hasTo($aluno->email));
+        $this->assertDatabaseMissing('jobs', ['queue' => 'acessos-teste']);
+        $this->assertDatabaseHas('acesso_entregas', ['id' => $id, 'estado' => 'enviado', 'conteudo' => null]);
+    }
+
     public function test_fila_recusa_contato_alterado_ou_ator_revogado_e_limpeza_remove_expirados(): void
     {
         Mail::fake();

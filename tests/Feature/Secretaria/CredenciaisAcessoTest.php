@@ -428,6 +428,51 @@ class CredenciaisAcessoTest extends TestCase
         $this->assertSame('secretario', $this->aluno->fresh()->nivel);
     }
 
+    #[DataProvider('estadosSsoCpfLegado')]
+    public function test_sso_resolve_cpf_formatado_sem_duplicar_identidade(string $estado): void
+    {
+        $cpf = $this->aluno->cpf;
+        $this->aluno->forceFill([
+            'cpf' => '529.982.247-25',
+            'ativo' => $estado !== 'bloqueado',
+            'senha_definitiva_pendente' => $estado === 'pendente',
+        ])->save();
+
+        if ($estado === 'ambiguo') {
+            User::factory()->create(['cpf' => $cpf, 'nivel' => 'aluno', 'ativo' => true]);
+        }
+
+        $total = User::count();
+        config(['services.cetsadp.sso_secret' => 'segredo-sintetico-isolado']);
+        Http::fake(['*' => Http::response(['valid' => true, 'user' => [
+            'identifier' => $cpf, 'name' => $this->aluno->name, 'type' => 'aluno',
+        ]])]);
+
+        $resposta = $this->get('/sso/callback?token='.str_repeat('a', 64));
+
+        if ($estado === 'ativo') {
+            $resposta->assertRedirect(route('aluno.dashboard'));
+            $this->assertAuthenticatedAs($this->aluno);
+        } else {
+            $resposta->assertRedirect('/login');
+            $this->assertGuest();
+        }
+
+        $this->assertSame($total, User::count());
+        $this->assertSame('529.982.247-25', $this->aluno->fresh()->cpf);
+        $this->assertSame('aluno', $this->aluno->fresh()->nivel);
+    }
+
+    public static function estadosSsoCpfLegado(): array
+    {
+        return [
+            'ativo' => ['ativo'],
+            'bloqueado' => ['bloqueado'],
+            'pendente' => ['pendente'],
+            'ambiguo' => ['ambiguo'],
+        ];
+    }
+
     private function emitir(string $tipo = 'temporaria', string $canal = 'presencial'): array
     {
         return app(CredenciaisAluno::class)->emitir($this->ator, $this->aluno, $tipo, $canal, 'Identidade conferida no atendimento');

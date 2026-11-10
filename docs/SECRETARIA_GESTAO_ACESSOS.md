@@ -19,7 +19,7 @@ Bloquear impede o login. Desbloquear libera a conta, preservando eventuais pend�
 
 As migrações `2026_10_30_000010`, `000011` e `000012` são aditivas: campos complementares, auditoria, entregas cifradas, operações idempotentes e credenciais. O retorno de código não apaga automaticamente esses dados. Faça backup e valide a migração em cópia isolada antes da implantação.
 
-O worker precisa consumir a conexão **database** e a fila definida em `queue.connections.database.queue` (`DB_QUEUE`, normalmente `default`). No piloto Docker existente, a fila é `portal84-homologacao`. Um worker que consome somente Redis não processa estas entregas. O transporte de e-mail real deve estar configurado; `log`/`array` são recusados fora de testes. Preserve a `APP_KEY`, necessária para abrir conteúdo já cifrado.
+O worker precisa consumir a conexão **database** e a fila definida em `queue.connections.database.queue` (`DB_QUEUE`, normalmente `default`). No piloto Docker existente, a fila é `portal84-homologacao`. O `composer dev` inicia um listener `database` para essas entregas. Ao usar `start.bat` ou `iniciar_servicos.bat` com Redis, inicie também `php artisan queue:work database`. O transporte de e-mail real deve estar configurado; `log`/`array` são recusados fora de testes. Preserve a `APP_KEY`, necessária para abrir conteúdo já cifrado.
 
 O scheduler normal executa `acessos:limpar-entregas` a cada minuto para apagar o conteúdo reservado vencido. O histórico é preservado. Em homologação, execute somente esse comando diretamente: a agenda completa também contém rotinas financeiras reais.
 

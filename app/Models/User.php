@@ -8,6 +8,7 @@ use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -161,6 +162,11 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
     public function setMatriculaLoginAttribute(?string $valor): void
     {
         $this->attributes['matricula_login'] = $valor === null ? null : mb_strtolower(trim($valor));
+    }
+
+    public function scopeCpfCanonico(Builder $query, string $cpf): Builder
+    {
+        return $query->whereRaw("REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '') = ?", [$cpf]);
     }
 
     public function getFotoUrlAttribute(): ?string

@@ -218,12 +218,19 @@ class SsoController extends Controller
     private function findOrCreateUser(string $identifier, string $name, string $type): ?User
     {
         try {
-            // Tentar encontrar por CPF ou username
-            $user = User::where('cpf', $identifier)
-                ->orWhere('username', $identifier)
-                ->lockForUpdate()
-                ->first();
+            $consulta = User::query();
+            if ($type === 'aluno') {
+                $consulta->cpfCanonico($identifier);
+            } else {
+                $consulta->where('cpf', $identifier);
+            }
 
+            $contas = $consulta->orWhere('username', $identifier)->limit(2)->lockForUpdate()->get();
+            if ($contas->count() > 1) {
+                return null;
+            }
+
+            $user = $contas->first();
             if ($user) {
                 if (! $user->ativo || $user->nivel !== $type
                     || ($user->nivel === 'aluno' && ($user->senha_definitiva_pendente || $user->primeiro_acesso_pendente))) {

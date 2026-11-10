@@ -27,7 +27,7 @@ class IdentificadorAluno
                     $query->whereRaw('LOWER(TRIM(email)) = ?', [$identificador])->whereNotNull('email_verified_at');
                 });
             if ($cpf !== null) {
-                $query->orWhereRaw("REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '') = ?", [$cpf]);
+                $query->orWhere(fn (Builder $query) => $query->cpfCanonico($cpf));
             }
         })->limit(2)->get();
 

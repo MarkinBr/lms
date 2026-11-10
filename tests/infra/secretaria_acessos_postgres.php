@@ -15,8 +15,10 @@ use App\Services\Acessos\AtendimentoAluno;
 use App\Services\Acessos\CadastroAluno;
 use App\Services\Acessos\CredenciaisAluno;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -272,6 +274,14 @@ try {
     foreach (['users', 'acesso_auditorias', 'acesso_credenciais', 'matriculas', 'mensalidades', 'password_reset_tokens'] as $tabela) {
         verificar(Schema::hasTable($tabela), 'Aplique as migrations antes da integração: tabela '.$tabela.' ausente.');
     }
+    $kernelHttp = $app->make(HttpKernel::class);
+    foreach (['GET', 'POST'] as $metodo) {
+        $requisicao = Request::create('https://example.test/aluno/acesso-assistido/senha', $metodo);
+        $resposta = $kernelHttp->handle($requisicao);
+        $kernelHttp->terminate($requisicao, $resposta);
+        verificar($resposta->getStatusCode() === 403, $metodo.' sem sessão assistida deve retornar 403.');
+    }
+
     $execucao = bin2hex(random_bytes(8));
     $atores = [];
     foreach ([0, 1] as $indice) {
