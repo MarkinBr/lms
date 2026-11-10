@@ -5,12 +5,11 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test:e2e": "playwright test",
-        "test:e2e:ui": "playwright test --ui",
-        "test:e2e:report": "playwright show-report tests/e2e/.report"
+        "check:js": "node --check public/js/site/app.js",
+        "test:e2e": "playwright test"
     },
     "devDependencies": {
-        "@playwright/test": "^1.47.0",
+        "@playwright/test": "^1.62.1",
         "@prisma/client": "^7.9.1",
         "@tailwindcss/vite": "^4.0.0",
         "autoprefixer": "^10.4.24",

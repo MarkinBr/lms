@@ -9,6 +9,7 @@ use App\Models\PeriodoLetivo;
 use App\Models\Turma;
 use Database\Seeders\MatrizCurricularTeologiaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class MatrizCurricularTeologiaSeederTest extends TestCase
@@ -161,14 +162,16 @@ class MatrizCurricularTeologiaSeederTest extends TestCase
         $this->assertSame(40, Disciplina::query()->where('curso_id', $cursoExistente->id)->count());
     }
 
-    public function test_disciplina_sem_modulo_continua_sendo_permitida(): void
+    public function test_nova_disciplina_sem_modulo_e_rejeitada(): void
     {
         $curso = Curso::query()->create([
             'titulo' => 'Curso Legado',
             'ativo' => true,
         ]);
 
-        $disciplina = Disciplina::query()->create([
+        $this->expectException(ValidationException::class);
+
+        Disciplina::query()->create([
             'curso_id' => $curso->id,
             'codigo' => 'LEG-01',
             'nome' => 'Disciplina Legada Sem Módulo',
@@ -176,15 +179,9 @@ class MatrizCurricularTeologiaSeederTest extends TestCase
             'ordem' => 1,
             'ativa' => true,
         ]);
-
-        $this->assertNull($disciplina->modulo_id);
-        $this->assertDatabaseHas('disciplinas', [
-            'id' => $disciplina->id,
-            'modulo_id' => null,
-        ]);
     }
 
-    public function test_ao_apagar_o_modulo_a_disciplina_permanece_com_referencia_nula(): void
+    public function test_modulo_com_disciplinas_nao_pode_ser_apagado(): void
     {
         $curso = $this->seedMatriz();
 
@@ -193,20 +190,9 @@ class MatrizCurricularTeologiaSeederTest extends TestCase
             ->where('ordem', 1)
             ->firstOrFail();
 
-        $disciplinasDoModulo = Disciplina::query()
-            ->where('modulo_id', $modulo->id)
-            ->pluck('id')
-            ->all();
-
-        $this->assertNotEmpty($disciplinasDoModulo);
+        $this->assertTrue(Disciplina::query()->where('modulo_id', $modulo->id)->exists());
+        $this->expectException(ValidationException::class);
 
         $modulo->delete();
-
-        foreach ($disciplinasDoModulo as $disciplinaId) {
-            $this->assertDatabaseHas('disciplinas', [
-                'id' => $disciplinaId,
-                'modulo_id' => null,
-            ]);
-        }
     }
 }

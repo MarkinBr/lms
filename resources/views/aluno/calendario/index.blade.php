@@ -168,6 +168,10 @@
                 </div>
                 <div class="space-y-3">
                     @forelse($aulasAoVivo->take(4) as $aula)
+                        @php
+                            $ehOnline = $aula->modalidade === \App\Models\AulaAoVivo::MODALIDADE_ONLINE;
+                            $ehPresencial = $aula->modalidade === \App\Models\AulaAoVivo::MODALIDADE_PRESENCIAL;
+                        @endphp
                         <article class="rounded-2xl bg-blue-50/70 border border-blue-100 p-4">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
@@ -176,9 +180,18 @@
                                 </div>
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black bg-white text-blue-700 border border-blue-100">{{ optional($aula->data_hora)->format('d/m') }}</span>
                             </div>
-                            <p class="text-sm text-slate-600 mt-3">{{ optional($aula->data_hora)->format('d/m/Y \à\s H:i') }}</p>
+                            <p class="text-sm text-slate-600 mt-3">{{ optional($aula->data_hora)->format('d/m/Y \à\s H:i') }}@if($aula->duracao) &middot; {{ $aula->duracao }} min @endif</p>
                             <p class="text-xs text-slate-500 mt-1">{{ $aula->curso->titulo ?? 'Curso' }} @if($aula->turma) • {{ $aula->turma->nome }} @endif</p>
-                            @if($aula->link_transmissao)
+                            @if($aula->modalidade)
+                                <span class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-[11px] font-black {{ $ehOnline ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                    {{ $ehOnline ? 'Online' : 'Presencial' }}
+                                </span>
+                            @endif
+                            @if($ehPresencial && $aula->local)
+                                <p class="text-sm text-slate-700 font-semibold mt-3">
+                                    <i class="fa-solid fa-location-dot mr-1.5 text-blue-600"></i>{{ $aula->local }}
+                                </p>
+                            @elseif($ehOnline && $aula->link_transmissao)
                                 <a href="{{ $aula->link_transmissao }}" target="_blank" class="mt-3 inline-flex items-center text-sm font-bold text-blue-700 hover:text-blue-900">
                                     Entrar na sala <i class="fa-solid fa-arrow-up-right-from-square ml-2 text-xs"></i>
                                 </a>
@@ -249,6 +262,10 @@
                     <p id="calendar-modal-context" class="text-slate-700 font-semibold">-</p>
                 </div>
             </div>
+            <div id="calendar-modal-local-wrap" class="hidden rounded-2xl bg-slate-50 p-4">
+                <p class="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Local</p>
+                <p id="calendar-modal-local" class="text-slate-700 font-semibold"></p>
+            </div>
             <div class="rounded-2xl bg-slate-50 p-4">
                 <p class="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Descrição</p>
                 <p id="calendar-modal-description" class="text-slate-700 leading-relaxed">Sem descrição.</p>
@@ -273,6 +290,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const closeButton = document.getElementById('calendar-modal-close');
     const overlay = modal.querySelector('.absolute.inset-0');
     const linkEl = document.getElementById('calendar-modal-link');
+    const localWrap = document.getElementById('calendar-modal-local-wrap');
+    const localEl = document.getElementById('calendar-modal-local');
     const eventos = @json($eventos);
 
     const typeMap = {
@@ -286,6 +305,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.body.classList.remove('overflow-hidden');
         linkEl.classList.add('hidden');
         linkEl.setAttribute('href', '#');
+        localWrap.classList.add('hidden');
+        localEl.textContent = '';
     };
 
     closeButton.addEventListener('click', closeModal);
@@ -320,9 +341,19 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('calendar-modal-context').textContent = context;
             document.getElementById('calendar-modal-description').textContent = event.extendedProps.description || 'Sem descrição informada.';
 
+            linkEl.classList.add('hidden');
+            linkEl.setAttribute('href', '#');
+            localWrap.classList.add('hidden');
+            localEl.textContent = '';
+
             if (event.url) {
                 linkEl.setAttribute('href', event.url);
                 linkEl.classList.remove('hidden');
+            }
+
+            if (event.extendedProps.local) {
+                localEl.textContent = event.extendedProps.local;
+                localWrap.classList.remove('hidden');
             }
 
             modal.classList.remove('hidden');

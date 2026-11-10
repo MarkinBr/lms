@@ -102,6 +102,20 @@ class Turma extends Model
                 ]);
             }
 
+            if (blank($turma->modalidade) && ! $turma->exists) {
+                $turma->modalidade = self::MODALIDADE_HIBRIDA;
+            }
+
+            if (
+                filled($turma->modalidade)
+                && $turma->modalidade !== self::MODALIDADE_HIBRIDA
+                && (! $turma->exists || $turma->isDirty('modalidade'))
+            ) {
+                throw ValidationException::withMessages([
+                    'modalidade' => 'Todas as turmas do CETSADP devem usar a modalidade híbrida.',
+                ]);
+            }
+
             if ($turma->capacidade !== null && $turma->capacidade !== '' && (int) $turma->capacidade < 1) {
                 throw ValidationException::withMessages([
                     'capacidade' => 'A capacidade deve ser um inteiro positivo.',

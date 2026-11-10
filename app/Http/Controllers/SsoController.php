@@ -2,23 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * CETSADP v9.3.5 — SSO Controller
  * Etapa 4.3: Validação CPF + Segurança reforçada
- * 
+ *
  * MELHORIAS v9.3.5:
  * - Validação de CPF via algoritmo local
  * - Sanitização reforçada do identifier
  * - Logging estruturado para auditoria
  * - Tratamento de erros HTTP mais granular
  * - Logout SSO bidirecional (LMS → Live)
- * 
+ *
  * Fluxo:
  * 1. Usuário no Live clica "Acessar LMS"
  * 2. Backend Live gera token SSO (POST /api/sso/generate)
@@ -40,9 +41,9 @@ class SsoController extends Controller
     {
         $token = $request->query('token');
 
-        if (!$token || strlen($token) < 32) {
+        if (! $token || strlen($token) < 32) {
             return redirect('/login')->withErrors([
-                'sso' => 'Token SSO não fornecido ou inválido.'
+                'sso' => 'Token SSO não fornecido ou inválido.',
             ]);
         }
 
@@ -54,8 +55,9 @@ class SsoController extends Controller
             // v9.3.5: Verificar se o secret está configurado antes de chamar a API
             if (empty($ssoSecret) || str_contains($ssoSecret, 'TROQUE')) {
                 Log::error('SSO: CETSADP_SSO_SECRET não configurada no LMS');
+
                 return redirect('/login')->withErrors([
-                    'sso' => 'Configuração SSO incompleta. Contacte o administrador.'
+                    'sso' => 'Configuração SSO incompleta. Contacte o administrador.',
                 ]);
             }
 
@@ -64,13 +66,14 @@ class SsoController extends Controller
                 'secret' => $ssoSecret,
             ]);
 
-            if (!$response->successful() || !$response->json('valid')) {
+            if (! $response->successful() || ! $response->json('valid')) {
                 Log::warning('SSO: Token inválido ou expirado', [
                     'status' => $response->status(),
                     'ip' => $request->ip(),
                 ]);
+
                 return redirect('/login')->withErrors([
-                    'sso' => 'Token SSO inválido ou expirado. Tente novamente.'
+                    'sso' => 'Token SSO inválido ou expirado. Tente novamente.',
                 ]);
             }
 
@@ -80,30 +83,34 @@ class SsoController extends Controller
             $userType = $ssoUser['type'] ?? 'aluno';
 
             // Validar tipo de usuário (whitelist)
-            if (!in_array($userType, self::VALID_USER_TYPES)) {
+            if (! in_array($userType, self::VALID_USER_TYPES, true)) {
                 Log::warning('SSO: Tipo de usuário inválido', [
                     'type' => $userType,
                     'ip' => $request->ip(),
                 ]);
-                $userType = 'aluno'; // Fallback seguro
+
+                return redirect('/login')->withErrors([
+                    'sso' => 'Não foi possível autorizar este perfil no LMS.',
+                ]);
             }
 
-            if (!$identifier) {
+            if (! $identifier) {
                 return redirect('/login')->withErrors([
-                    'sso' => 'Dados do usuário não encontrados.'
+                    'sso' => 'Dados do usuário não encontrados.',
                 ]);
             }
 
             // v9.3.5 (N01): Validação de CPF para alunos
             if ($userType === 'aluno') {
                 $cpfLimpo = preg_replace('/\D/', '', $identifier);
-                if (!$this->validarCpf($cpfLimpo)) {
+                if (! $this->validarCpf($cpfLimpo)) {
                     Log::warning('SSO: CPF inválido no callback', [
-                        'identifier' => substr($identifier, 0, 3) . '***',
+                        'identifier' => substr($identifier, 0, 3).'***',
                         'ip' => $request->ip(),
                     ]);
+
                     return redirect('/login')->withErrors([
-                        'sso' => 'CPF inválido. Verifique seus dados no sistema Live.'
+                        'sso' => 'CPF inválido. Verifique seus dados no sistema Live.',
                     ]);
                 }
                 $identifier = $cpfLimpo; // Usar CPF normalizado
@@ -115,14 +122,15 @@ class SsoController extends Controller
             // Encontrar ou criar usuário no LMS
             $user = $this->findOrCreateUser($identifier, $userName, $userType);
 
-            if (!$user) {
+            if (! $user) {
                 return redirect('/login')->withErrors([
-                    'sso' => 'Não foi possível criar a conta no LMS.'
+                    'sso' => 'Não foi possível criar a conta no LMS.',
                 ]);
             }
 
             // Fazer login automático
             Auth::login($user, true); // remember = true
+            $request->session()->regenerate();
 
             // Atualizar campo last_sso_at
             $user->update([
@@ -135,7 +143,7 @@ class SsoController extends Controller
 
             Log::info('SSO: Login bem-sucedido', [
                 'user_id' => $user->id,
-                'identifier' => substr($identifier, 0, 3) . '***',
+                'identifier' => substr($identifier, 0, 3).'***',
                 'type' => $userType,
                 'ip' => $request->ip(),
             ]);
@@ -144,16 +152,17 @@ class SsoController extends Controller
             return match ($userType) {
                 'admin' => redirect('/admin'),
                 'professor' => redirect('/professor'),
-                default => redirect('/aluno'),
+                default => redirect()->route('aluno.dashboard'),
             };
 
         } catch (\Exception $e) {
             Log::error('SSO: Erro na validação', [
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
                 'ip' => $request->ip(),
             ]);
+
             return redirect('/login')->withErrors([
-                'sso' => 'Erro ao processar login SSO. Tente novamente.'
+                'sso' => 'Erro ao processar login SSO. Tente novamente.',
             ]);
         }
     }
@@ -205,6 +214,14 @@ class SsoController extends Controller
                 ->first();
 
             if ($user) {
+                if (! $user->ativo) {
+                    Log::warning('SSO: tentativa de acesso por conta inativa', [
+                        'user_id' => $user->id,
+                    ]);
+
+                    return null;
+                }
+
                 // Atualizar nome se necessário
                 $updateData = [];
                 if ($user->name !== $name) {
@@ -214,20 +231,17 @@ class SsoController extends Controller
                 if ($user->nivel !== $type) {
                     $updateData['nivel'] = $type;
                 }
-                // Garantir ativo
-                if (!$user->ativo) {
-                    $updateData['ativo'] = true;
-                }
-                if (!empty($updateData)) {
+                if (! empty($updateData)) {
                     $user->update($updateData);
                 }
+
                 return $user;
             }
 
             // Criar novo usuário
             $userData = [
                 'name' => $name,
-                'password' => bcrypt(\Illuminate\Support\Str::random(32)),
+                'password' => bcrypt(Str::random(32)),
                 'ativo' => true,
                 'sso_provider' => 'live',
                 'last_sso_at' => now(),
@@ -236,15 +250,15 @@ class SsoController extends Controller
             // Configurar campos baseado no tipo
             if ($type === 'aluno') {
                 $userData['cpf'] = $identifier;
-                $userData['email'] = $identifier . '@aluno.cetsadp.local';
+                $userData['email'] = $identifier.'@aluno.cetsadp.local';
                 $userData['nivel'] = 'aluno';
             } elseif ($type === 'professor') {
                 $userData['username'] = $identifier;
-                $userData['email'] = $identifier . '@professor.cetsadp.local';
+                $userData['email'] = $identifier.'@professor.cetsadp.local';
                 $userData['nivel'] = 'professor';
             } else {
                 $userData['username'] = $identifier;
-                $userData['email'] = $identifier . '@admin.cetsadp.local';
+                $userData['email'] = $identifier.'@admin.cetsadp.local';
                 $userData['nivel'] = 'admin';
                 $userData['super_admin'] = true;
             }
@@ -253,9 +267,10 @@ class SsoController extends Controller
 
         } catch (\Exception $e) {
             Log::error('SSO: Erro ao criar/encontrar usuário', [
-                'identifier' => substr($identifier, 0, 3) . '***',
-                'error' => $e->getMessage(),
+                'identifier' => substr($identifier, 0, 3).'***',
+                'exception' => $e::class,
             ]);
+
             return null;
         }
     }
@@ -268,7 +283,7 @@ class SsoController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return redirect('/login');
         }
 
@@ -281,7 +296,7 @@ class SsoController extends Controller
                 $ssoSecret = config('services.cetsadp.sso_secret', '');
 
                 // v9.3.5: NÃO enviar secret do frontend — apenas via server-to-server
-                if (!empty($ssoSecret) && !str_contains($ssoSecret, 'TROQUE') && !str_contains($ssoSecret, 'GERE-COM')) {
+                if (! empty($ssoSecret) && ! str_contains($ssoSecret, 'TROQUE') && ! str_contains($ssoSecret, 'GERE-COM')) {
                     Http::timeout(5)->post("{$liveApiUrl}/api/sso/logout", [
                         'secret' => $ssoSecret,
                         'identifier' => $identifier,
@@ -289,14 +304,14 @@ class SsoController extends Controller
                     ]);
 
                     Log::info('SSO: Logout bidirecional enviado ao Live', [
-                        'identifier' => substr($identifier, 0, 3) . '***',
+                        'identifier' => substr($identifier, 0, 3).'***',
                         'ip' => $request->ip(),
                     ]);
                 }
             } catch (\Exception $e) {
                 // Não bloquear o logout local se a notificação falhar
                 Log::warning('SSO: Falha na notificação de logout bidirecional', [
-                    'error' => $e->getMessage(),
+                    'exception' => $e::class,
                     'ip' => $request->ip(),
                 ]);
             }
@@ -308,7 +323,7 @@ class SsoController extends Controller
         $request->session()->regenerateToken();
 
         Log::info('SSO: Logout bidirecional concluído', [
-            'identifier' => $identifier ? substr($identifier, 0, 3) . '***' : 'unknown',
+            'identifier' => $identifier ? substr($identifier, 0, 3).'***' : 'unknown',
             'ip' => $request->ip(),
         ]);
 
@@ -335,8 +350,8 @@ class SsoController extends Controller
         } catch (\Exception $e) {
             // Não bloquear o login se a sincronização falhar
             Log::warning('SSO: Falha ao sincronizar mapeamento', [
-                'identifier' => substr($identifier, 0, 3) . '***',
-                'error' => $e->getMessage(),
+                'identifier' => substr($identifier, 0, 3).'***',
+                'exception' => $e::class,
             ]);
         }
     }

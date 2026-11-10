@@ -2,18 +2,19 @@
 
 namespace App\Filament\Professor\Resources\CursoResource\RelationManagers;
 
-use App\Filament\Professor\Resources\AulaResource;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
+use Illuminate\Support\Str;
 
 class ModulosRelationManager extends RelationManager
 {
     protected static string $relationship = 'modulos';
-    protected static ?string $title = 'Módulos e Aulas';
+
+    protected static ?string $title = 'Módulos e estrutura curricular';
+
     protected static ?string $modelLabel = 'Módulo';
 
     public function form(Form $form): Form
@@ -67,15 +68,15 @@ class ModulosRelationManager extends RelationManager
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->description(fn ($record) => \Illuminate\Support\Str::limit($record->descricao, 80)),
+                    ->description(fn ($record) => Str::limit($record->descricao, 80)),
 
-                Tables\Columns\TextColumn::make('aulas_count')
-                    ->counts('aulas')
-                    ->label('Aulas')
+                Tables\Columns\TextColumn::make('disciplinas_count')
+                    ->counts('disciplinas')
+                    ->label('Disciplinas')
                     ->alignCenter()
                     ->badge()
                     ->color('success')
-                    ->suffix(' aulas'),
+                    ->suffix(' disciplinas'),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
@@ -91,63 +92,6 @@ class ModulosRelationManager extends RelationManager
                     ->modalHeading('Criar Novo Módulo'),
             ])
             ->actions([
-                // Botão principal: Gerenciar Aulas deste módulo
-                Tables\Actions\Action::make('gerenciar_aulas')
-                    ->label('Gerenciar Aulas')
-                    ->icon('heroicon-o-play-circle')
-                    ->color('success')
-                    ->url(fn ($record) => AulaResource::getUrl('index', ['modulo_id' => $record->id])),
-
-                Tables\Actions\Action::make('adicionar_aula_rapida')
-                    ->label('+ Aula Rápida')
-                    ->icon('heroicon-o-plus')
-                    ->color('info')
-                    ->form([
-                        Forms\Components\TextInput::make('titulo')
-                            ->label('Título da Aula')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('Ex: Aula 01 - Introdução'),
-
-                        Forms\Components\Select::make('tipo_conteudo')
-                            ->label('Tipo de Conteúdo')
-                            ->options([
-                                'video' => '🎬 Vídeo Aula',
-                                'texto' => '📝 Texto/Artigo',
-                                'misto' => '📦 Misto (Vídeo + Texto)',
-                                'quiz' => '❓ Quiz/Avaliação',
-                            ])
-                            ->default('misto')
-                            ->required(),
-
-                        Forms\Components\TextInput::make('video_url')
-                            ->label('URL do Vídeo (opcional)')
-                            ->url()
-                            ->placeholder('https://www.youtube.com/watch?v=...'),
-
-                        Forms\Components\TextInput::make('duracao')
-                            ->label('Duração')
-                            ->placeholder('Ex: 15:30'),
-                    ])
-                    ->action(function (array $data, $record) {
-                        $ordem = $record->aulas()->count() + 1;
-                        $record->aulas()->create([
-                            'titulo' => $data['titulo'],
-                            'tipo_conteudo' => $data['tipo_conteudo'],
-                            'video_url' => $data['video_url'] ?? null,
-                            'duracao' => $data['duracao'] ?? null,
-                            'ordem' => $ordem,
-                            'liberada' => true,
-                            'tipo_liberacao' => 'imediata',
-                        ]);
-
-                        Notification::make()
-                            ->title('Aula criada com sucesso!')
-                            ->body("A aula '{$data['titulo']}' foi adicionada ao módulo.")
-                            ->success()
-                            ->send();
-                    }),
-
                 Tables\Actions\EditAction::make()
                     ->label('Editar')
                     ->modalHeading('Editar Módulo'),
@@ -155,13 +99,10 @@ class ModulosRelationManager extends RelationManager
                 Tables\Actions\DeleteAction::make()
                     ->label('Excluir')
                     ->modalHeading('Excluir Módulo')
-                    ->modalDescription('Isso excluirá o módulo e TODAS as suas aulas. Esta ação não pode ser desfeita.'),
+                    ->modalDescription('Só é possível excluir módulos sem disciplinas e sem aulas.')
+                    ->visible(fn ($record): bool => $record->podeSerExcluido()),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->emptyStateHeading('Nenhum módulo criado')
             ->emptyStateDescription('Adicione o primeiro módulo ao seu curso')
             ->emptyStateIcon('heroicon-o-folder-open');

@@ -4,6 +4,7 @@ namespace Tests\Feature\Secretaria;
 
 use App\Models\Curso;
 use App\Models\Disciplina;
+use App\Models\Modulo;
 use App\Models\PeriodoLetivo;
 use App\Models\Turma;
 use App\Models\User;
@@ -44,10 +45,20 @@ class TurmaAcademicaTest extends TestCase
         ]);
     }
 
+    private function modulo(Curso $curso): Modulo
+    {
+        return Modulo::query()->create([
+            'curso_id' => $curso->id,
+            'titulo' => 'Módulo curricular '.uniqid(),
+            'ordem' => 1,
+        ]);
+    }
+
     private function disciplina(Curso $curso, string $codigo = 'TEO01'): Disciplina
     {
         return Disciplina::query()->create([
             'curso_id' => $curso->id,
+            'modulo_id' => $this->modulo($curso)->id,
             'codigo' => $codigo,
             'nome' => 'Disciplina '.$codigo,
             'carga_horaria' => 40,
@@ -82,7 +93,7 @@ class TurmaAcademicaTest extends TestCase
             'professor_id' => $professor->id,
             'codigo' => 'TURMA-001',
             'capacidade' => 30,
-            'modalidade' => Turma::MODALIDADE_PRESENCIAL,
+            'modalidade' => Turma::MODALIDADE_HIBRIDA,
         ]);
 
         $this->assertDatabaseHas('turmas', [
@@ -90,6 +101,17 @@ class TurmaAcademicaTest extends TestCase
             'periodo_letivo_id' => $periodo->id,
             'disciplina_id' => $disciplina->id,
             'professor_id' => $professor->id,
+        ]);
+    }
+
+    public function test_nova_turma_nao_aceita_modalidade_diferente_de_hibrida(): void
+    {
+        $curso = $this->curso();
+
+        $this->expectException(ValidationException::class);
+
+        $this->turma($curso, [
+            'modalidade' => Turma::MODALIDADE_PRESENCIAL,
         ]);
     }
 

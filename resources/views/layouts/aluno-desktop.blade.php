@@ -122,9 +122,9 @@
                         <i class="fa-solid fa-certificate {{ request()->routeIs('aluno.certificados*') ? 'text-yellow-400' : 'text-blue-300 group-hover:text-white' }} transition-colors"></i>
                         <span class="text-sm font-bold flex-1">Certificados</span>
                     </a>
-                    <a href="{{ route('aluno.documentos') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all group {{ request()->routeIs('aluno.documentos*') ? 'bg-white/10 text-white shadow-lg shadow-black/10' : 'text-blue-100 hover:bg-white/5 hover:text-white' }}">
+                    <a href="{{ route('aluno.documentos-inscricao') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all group {{ request()->routeIs('aluno.documentos*') ? 'bg-white/10 text-white shadow-lg shadow-black/10' : 'text-blue-100 hover:bg-white/5 hover:text-white' }}">
                         <i class="fa-solid fa-folder-open {{ request()->routeIs('aluno.documentos*') ? 'text-yellow-400' : 'text-blue-300 group-hover:text-white' }} transition-colors"></i>
-                        <span class="text-sm font-bold flex-1">Documentos</span>
+                        <span class="text-sm font-bold flex-1">Documentos da inscrição</span>
                     </a>
                 </div>
             </nav>

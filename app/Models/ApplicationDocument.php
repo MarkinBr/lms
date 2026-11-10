@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 /**
  * ApplicationDocument - Documento de Inscrição
- * 
+ *
  * Representa um documento enviado pelo candidato durante a inscrição
- * 
+ *
  * @property string $id
  * @property string $application_id
  * @property string $tipo (foto_3x4, rg, cpf, comprovante_residencia, historico_escolar, certificado_conclusao, outro)
@@ -21,14 +22,13 @@ use Illuminate\Support\Str;
  * @property string $mime_type
  * @property int $tamanho
  * @property string $caminho_arquivo
- * @property string|null $url_publica
  * @property bool $validado
  * @property string|null $observacoes_validacao
  * @property string|null $validado_por_id
- * @property \Carbon\Carbon|null $validado_em
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
- * @property \Carbon\Carbon|null $deleted_at
+ * @property Carbon|null $validado_em
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property Carbon|null $deleted_at
  */
 class ApplicationDocument extends Model
 {
@@ -53,11 +53,24 @@ class ApplicationDocument extends Model
         'mime_type',
         'tamanho',
         'caminho_arquivo',
-        'url_publica',
         'validado',
         'observacoes_validacao',
         'validado_por_id',
         'validado_em',
+    ];
+
+    /**
+     * Atributos que NUNCA podem ser serializados (Issue #50).
+     *
+     * `caminho_arquivo` revelaria a estrutura interna do storage e
+     * permitiria tentativas de acesso direto. A coluna legada `url_publica`
+     * é removida do schema pela migration da Issue #50 e fica escondida aqui
+     * por defesa em profundidade enquanto a migration não roda em todos os
+     * ambientes.
+     */
+    protected $hidden = [
+        'caminho_arquivo',
+        'url_publica',
     ];
 
     /**
@@ -135,12 +148,12 @@ class ApplicationDocument extends Model
     {
         $bytes = $this->tamanho;
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 
     /**
@@ -157,7 +170,7 @@ class ApplicationDocument extends Model
             'certificado_conclusao' => 'Certificado de Conclusão',
             'outro' => 'Outro',
         ];
-        
+
         return $labels[$this->tipo] ?? $this->tipo;
     }
 
@@ -167,33 +180,5 @@ class ApplicationDocument extends Model
     public function isValidado(): bool
     {
         return $this->validado === true;
-    }
-
-    /**
-     * Get full storage path
-     */
-    public function getCaminhoCompletoAttribute(): string
-    {
-        return storage_path('app/' . $this->caminho_arquivo);
-    }
-
-    /**
-     * Get temporary URL (for S3/R2)
-     */
-    public function getUrlTemporariaAttribute(): ?string
-    {
-        if ($this->url_publica) {
-            return $this->url_publica;
-        }
-        
-        // Se estiver usando S3/R2, gerar URL temporária
-        try {
-            return \Storage::disk('s3')->temporaryUrl(
-                $this->caminho_arquivo,
-                now()->addMinutes(15)
-            );
-        } catch (\Exception $e) {
-            return null;
-        }
     }
 }

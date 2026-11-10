@@ -8,6 +8,7 @@ use App\Filament\Secretario\Resources\TurmaSecretariaResource;
 use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Models\Matricula;
+use App\Models\Modulo;
 use App\Models\PeriodoLetivo;
 use App\Models\Turma;
 use App\Models\User;
@@ -50,8 +51,14 @@ class AcademicoPolicyTest extends TestCase
 
     private function disciplina(Curso $curso): Disciplina
     {
+        $modulo = Modulo::query()->firstOrCreate(
+            ['curso_id' => $curso->id, 'ordem' => 1],
+            ['titulo' => 'Módulo acadêmico'],
+        );
+
         return Disciplina::query()->create([
             'curso_id' => $curso->id,
+            'modulo_id' => $modulo->id,
             'codigo' => 'TEO01',
             'nome' => 'Introdução à Teologia',
             'carga_horaria' => 40,

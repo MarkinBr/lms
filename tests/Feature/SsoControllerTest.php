@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
 
 /**
  * CETSADP v9.3.5 — Testes de Feature: SSO Controller
- * 
+ *
  * Testa o fluxo completo de SSO: callback, criação de usuário,
  * validação de token e redirecionamentos.
  */
@@ -64,7 +64,7 @@ class SsoControllerTest extends TestCase
         Http::fake([
             '*/api/sso/validate' => Http::response([
                 'valid' => false,
-                'error' => 'Token expirado'
+                'error' => 'Token expirado',
             ], 401),
         ]);
 
@@ -97,8 +97,8 @@ class SsoControllerTest extends TestCase
         $fakeToken = str_repeat('c', 96);
         $response = $this->get("/sso/callback?token={$fakeToken}");
 
-        // Deve redirecionar para /aluno
-        $response->assertRedirect('/aluno');
+        // Aluno entra no portal canônico, não no painel Filament legado.
+        $response->assertRedirect(route('aluno.dashboard'));
 
         // Usuário deve existir no banco
         $this->assertDatabaseHas('users', [
@@ -169,7 +169,7 @@ class SsoControllerTest extends TestCase
     /**
      * SSO callback com tipo de usuário desconhecido deve usar fallback 'aluno'.
      */
-    public function test_callback_tipo_desconhecido_fallback_aluno(): void
+    public function test_callback_tipo_desconhecido_e_rejeitado(): void
     {
         config(['services.cetsadp.sso_secret' => 'secret-valido-para-teste']);
 
@@ -188,7 +188,9 @@ class SsoControllerTest extends TestCase
         $fakeToken = str_repeat('f', 96);
         $response = $this->get("/sso/callback?token={$fakeToken}");
 
-        $response->assertRedirect('/aluno'); // Fallback para aluno
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('sso');
+        $this->assertGuest();
     }
 
     /**
@@ -223,12 +225,44 @@ class SsoControllerTest extends TestCase
         $fakeToken = str_repeat('g', 96);
         $response = $this->get("/sso/callback?token={$fakeToken}");
 
-        $response->assertRedirect('/aluno');
+        $response->assertRedirect(route('aluno.dashboard'));
 
         // Nome deve ter sido atualizado
         $this->assertDatabaseHas('users', [
             'cpf' => '52998224725',
             'name' => 'Nome Atualizado',
         ]);
+    }
+
+    public function test_callback_nao_reativa_aluno_inativo(): void
+    {
+        config(['services.cetsadp.sso_secret' => 'secret-valido-para-teste']);
+
+        $aluno = User::create([
+            'name' => 'Aluno Inativo',
+            'cpf' => '52998224725',
+            'email' => 'inativo.sso@example.test',
+            'password' => bcrypt('senha'),
+            'nivel' => 'aluno',
+            'ativo' => false,
+        ]);
+
+        Http::fake([
+            '*/api/sso/validate' => Http::response([
+                'valid' => true,
+                'user' => [
+                    'identifier' => '52998224725',
+                    'name' => 'Aluno Inativo',
+                    'type' => 'aluno',
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->get('/sso/callback?token='.str_repeat('h', 96));
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('sso');
+        $this->assertGuest();
+        $this->assertFalse((bool) $aluno->fresh()->ativo);
     }
 }

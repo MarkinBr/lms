@@ -1,0 +1,233 @@
+/*
+ * Issue #61 — Tema acadêmico das páginas de Resources (painel /admin)
+ *
+ * Adapta visualmente o conteúdo renderizado pelo Filament (formulários,
+ * tabelas, abas, Relation Managers, modais e notificações) ao shell
+ * institucional da Gestão Acadêmica. Todo o escopo fica limitado aos
+ * marcadores .ga-academic-resource-layout (conteúdo) e .ga-resource-body
+ * (overlays no <body>). Nenhum seletor afeta outros painéis, Resources,
+ * login ou a Central. Sem recursos remotos; usa os tokens já definidos
+ * por gestao-academica.css (.ga-canvas) e as fontes locais Manrope e
+ * Playfair Display.
+ */
+
+/* ---------- Conteúdo da página dentro do shell ---------- */
+
+.ga-academic-resource-layout .ga-resource-content {
+    padding: 2rem;
+}
+
+.ga-academic-resource-layout .fi-resource {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+}
+
+/* Cabeçalho da página e breadcrumbs */
+.ga-academic-resource-layout .fi-header {
+    margin-bottom: 1.25rem;
+}
+
+.ga-academic-resource-layout .fi-header-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ga-navy);
+}
+
+.ga-academic-resource-layout .fi-header-subheading {
+    color: var(--ga-muted);
+}
+
+.ga-academic-resource-layout .fi-breadcrumbs-item a {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ga-gold-link);
+}
+
+.ga-academic-resource-layout .fi-breadcrumbs-item span {
+    color: var(--ga-muted);
+}
+
+/* Seções e campos de formulário */
+.ga-academic-resource-layout .fi-section,
+.ga-academic-resource-layout .fi-fo-section {
+    border: 1px solid rgba(16, 41, 79, 0.085);
+    border-radius: 0.875rem;
+    background: var(--ga-surface);
+    box-shadow: 0 10px 28px rgba(6, 17, 38, 0.05);
+}
+
+.ga-academic-resource-layout .fi-section-header-heading,
+.ga-academic-resource-layout .fi-fo-section-header-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    color: var(--ga-navy);
+}
+
+.ga-academic-resource-layout .fi-fo-field-wrp-label span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ga-text);
+}
+
+.ga-academic-resource-layout .fi-fo-field-wrp-helper-text,
+.ga-academic-resource-layout .fi-fo-field-wrp-hint {
+    color: var(--ga-muted);
+}
+
+.ga-academic-resource-layout .fi-fo-field-wrp-error-message {
+    color: var(--ga-danger-text);
+}
+
+.ga-academic-resource-layout .fi-input-wrp {
+    border-radius: 0.55rem;
+    border-color: var(--ga-border);
+    background: var(--ga-surface);
+}
+
+.ga-academic-resource-layout .fi-input-wrp:focus-within {
+    border-color: var(--ga-gold);
+    box-shadow: 0 0 0 2px rgba(212, 163, 71, 0.28);
+}
+
+.ga-academic-resource-layout .fi-input-wrp.fi-disabled,
+.ga-academic-resource-layout .fi-input-wrp:has(:disabled) {
+    background: var(--ga-neutral-bg);
+    color: var(--ga-muted);
+}
+
+/* Botões do Filament dentro do shell */
+.ga-academic-resource-layout .fi-btn.fi-color-primary {
+    background: linear-gradient(135deg, #b98426, #d6aa52);
+    color: #081832;
+    box-shadow: 0 8px 20px rgba(185, 132, 38, 0.2);
+}
+
+.ga-academic-resource-layout .fi-btn.fi-color-primary:hover {
+    background: linear-gradient(135deg, #a8741e, #c99637);
+}
+
+.ga-academic-resource-layout .fi-btn.fi-color-danger {
+    background: var(--ga-danger-bg);
+    color: var(--ga-danger-text);
+    border-color: var(--ga-danger-border);
+}
+
+.ga-academic-resource-layout .fi-link,
+.ga-academic-resource-layout .fi-btn.fi-color-gray {
+    color: var(--ga-text);
+}
+
+/* Tabelas, filtros e paginação */
+.ga-academic-resource-layout .fi-ta {
+    border: 1px solid rgba(16, 41, 79, 0.085);
+    border-radius: 0.875rem;
+    background: var(--ga-surface);
+    box-shadow: 0 10px 28px rgba(6, 17, 38, 0.05);
+    overflow: hidden;
+}
+
+.ga-academic-resource-layout .fi-ta-header {
+    border-bottom-color: var(--ga-border);
+}
+
+.ga-academic-resource-layout .fi-ta-header-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--ga-navy);
+}
+
+/* Rolagem horizontal garantida sem quebrar a página */
+.ga-academic-resource-layout .fi-ta-content {
+    overflow-x: auto;
+}
+
+.ga-academic-resource-layout .fi-ta-table th {
+    background: var(--ga-neutral-bg);
+    color: var(--ga-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.ga-academic-resource-layout .fi-ta-table tr:hover td {
+    background: rgba(212, 163, 71, 0.04);
+}
+
+.ga-academic-resource-layout .fi-badge {
+    border-radius: 9999px;
+    font-weight: 700;
+}
+
+.ga-academic-resource-layout .fi-ta-empty-state-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--ga-navy);
+}
+
+.ga-academic-resource-layout .fi-ta-empty-state-description {
+    color: var(--ga-muted);
+}
+
+/* Abas (filtros e Relation Managers) */
+.ga-academic-resource-layout .fi-tabs-item.fi-active,
+.ga-academic-resource-layout .fi-tabs-item[aria-selected="true"] {
+    color: var(--ga-gold-link);
+}
+
+.ga-academic-resource-layout .fi-tabs-item.fi-active::after,
+.ga-academic-resource-layout .fi-tabs-item[aria-selected="true"]::after {
+    background: var(--ga-gold);
+}
+
+/* Foco visível herdado dos controles do Filament */
+.ga-academic-resource-layout :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ga-gold);
+    outline-offset: 2px;
+}
+
+/* ---------- Overlays do Filament (renderizados no <body>) ---------- */
+
+.ga-resource-body .fi-modal-window {
+    border: 1px solid rgba(16, 41, 79, 0.12);
+    border-radius: 1rem;
+    box-shadow: 0 24px 60px rgba(5, 15, 36, 0.28);
+}
+
+.ga-resource-body .fi-modal-header .fi-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--ga-navy);
+}
+
+.ga-resource-body .fi-notification {
+    border-radius: 0.75rem;
+}
+
+.ga-resource-body :is(a, button, input, select, textarea):focus-visible {
+    outline: 2px solid var(--ga-gold);
+    outline-offset: 2px;
+}
+
+/* ---------- Modo escuro ---------- */
+
+.dark .ga-academic-resource-layout .fi-header-heading,
+.dark .ga-academic-resource-layout .fi-section-header-heading,
+.dark .ga-academic-resource-layout .fi-fo-section-header-heading,
+.dark .ga-academic-resource-layout .fi-ta-header-heading,
+.dark .ga-academic-resource-layout .fi-ta-empty-state-heading {
+    color: var(--ga-text);
+}
+
+.dark .ga-academic-resource-layout .fi-breadcrumbs-item a {
+    color: var(--ga-gold);
+}
+
+/* ---------- Movimento reduzido ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .ga-academic-resource-layout .fi-btn,
+    .ga-academic-resource-layout .fi-input-wrp {
+        transition: none;
+    }
+}

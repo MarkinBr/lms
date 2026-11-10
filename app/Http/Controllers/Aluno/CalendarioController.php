@@ -48,24 +48,14 @@ class CalendarioController extends Controller
         $cursoIds = $matriculas->pluck('curso_id')->filter()->unique()->values();
         $turmaIds = $matriculas->pluck('turma_id')->filter()->unique()->values();
 
-        $aulasAoVivo = collect();
-
-        if ($cursoIds->isNotEmpty() || $turmaIds->isNotEmpty()) {
-            $aulasAoVivo = AulaAoVivo::with(['curso', 'turma'])
-                ->where(function ($query) use ($cursoIds, $turmaIds) {
-                    if ($cursoIds->isNotEmpty()) {
-                        $query->whereIn('curso_id', $cursoIds->all());
-                    }
-
-                    if ($turmaIds->isNotEmpty()) {
-                        $metodo = $cursoIds->isNotEmpty() ? 'orWhereIn' : 'whereIn';
-                        $query->{$metodo}('turma_id', $turmaIds->all());
-                    }
-                })
-                ->where('data_hora', '>=', now()->startOfDay())
-                ->orderBy('data_hora')
-                ->get();
-        }
+        // Issue #25: encontros (AulaAoVivo) são restritos à(s) turma(s) em que
+        // o aluno possui MatriculaTurma ativa (nunca por curso "solto"), para
+        // não expor encontros de outra turma do mesmo curso. Consulta
+        // AulaAoVivo diretamente — sem duplicar em EventoCalendario.
+        $aulasAoVivo = AulaAoVivo::with(['curso', 'turma'])
+            ->paraAluno($aluno)
+            ->proximas()
+            ->get();
 
         $avisos = Aviso::query()
             ->where('ativo', true)
@@ -118,18 +108,27 @@ class CalendarioController extends Controller
         foreach ($aulasAoVivo as $aula) {
             $inicio = Carbon::parse($aula->data_hora);
             $fim = Carbon::parse($aula->data_hora)->addMinutes($aula->duracao ?: 60);
+            $ehOnline = $aula->modalidade === AulaAoVivo::MODALIDADE_ONLINE;
 
             $eventos->push([
-                'id' => 'aula-' . $aula->id,
+                'id' => 'aula-'.$aula->id,
                 'title' => $aula->titulo,
                 'start' => $inicio->toIso8601String(),
                 'end' => $fim->toIso8601String(),
                 'type' => 'aula_vivo',
-                'url' => $aula->link_transmissao,
+                // Nunca expõe link de encontro que não pertença à matrícula do
+                // aluno: a coleção já vem filtrada por paraAluno(); aqui só
+                // decidimos exibir link (online) ou local (presencial).
+                'url' => $ehOnline ? $aula->link_transmissao : null,
                 'color' => '#2563eb',
                 'description' => $aula->descricao,
                 'turma' => $aula->turma->nome ?? null,
                 'curso' => $aula->curso->titulo ?? null,
+                'modalidade' => $aula->modalidade,
+                'local' => $ehOnline ? null : $aula->local,
+                'duracao' => $aula->duracao,
+                'status' => $aula->status,
+                'observacoes' => $aula->observacoes,
             ]);
         }
 
@@ -138,7 +137,7 @@ class CalendarioController extends Controller
             $fim = $evento->data_fim ? Carbon::parse($evento->data_fim) : null;
 
             $eventos->push([
-                'id' => 'secretaria-' . $evento->id,
+                'id' => 'secretaria-'.$evento->id,
                 'title' => $evento->titulo,
                 'start' => $inicio->toIso8601String(),
                 'end' => $fim?->toIso8601String(),
@@ -148,16 +147,21 @@ class CalendarioController extends Controller
                 'description' => $evento->descricao,
                 'turma' => $evento->turma->nome ?? null,
                 'curso' => $evento->curso->titulo ?? null,
+                'modalidade' => null,
+                'local' => null,
+                'duracao' => null,
+                'status' => null,
+                'observacoes' => null,
             ]);
         }
 
         foreach ($avisos as $aviso) {
-            if (!$aviso->data_evento) {
+            if (! $aviso->data_evento) {
                 continue;
             }
 
             $eventos->push([
-                'id' => 'aviso-' . $aviso->id,
+                'id' => 'aviso-'.$aviso->id,
                 'title' => $aviso->titulo,
                 'start' => Carbon::parse($aviso->data_evento)->format('Y-m-d'),
                 'end' => null,
@@ -168,6 +172,11 @@ class CalendarioController extends Controller
                 'description' => $aviso->mensagem,
                 'turma' => null,
                 'curso' => null,
+                'modalidade' => null,
+                'local' => null,
+                'duracao' => null,
+                'status' => null,
+                'observacoes' => null,
             ]);
         }
 

@@ -53,7 +53,7 @@ npm run test:e2e
 Isso executa `php artisan serve --host=127.0.0.1 --port=8000` apenas
 durante os testes e o encerra ao final. Se a porta 8000 já estiver
 ocupada por um servidor seu, o Playwright **reutiliza** o processo
-existente (`reuseExistingServer: true`) — nada é matado.
+existente nas execuções locais.
 
 Se você prefere gerenciar o servidor manualmente:
 
@@ -61,7 +61,7 @@ Se você prefere gerenciar o servidor manualmente:
 # terminal 1
 php artisan serve
 # terminal 2
-E2E_REUSE_SERVER=1 npm run test:e2e
+E2E_BASE_URL=http://127.0.0.1:8000 npm run test:e2e
 ```
 
 Para apontar para outro host/porta (por exemplo `php artisan serve`
@@ -74,19 +74,20 @@ E2E_BASE_URL=http://127.0.0.1:8080 npm run test:e2e
 Modo interativo, útil ao investigar uma quebra:
 
 ```bash
-npm run test:e2e:ui
+npm run test:e2e -- --ui
 ```
 
-Após uma execução, o relatório HTML fica disponível em:
+Para gerar e abrir um relatório HTML local:
 
 ```bash
-npm run test:e2e:report
+PLAYWRIGHT_HTML_OUTPUT_DIR=tests/e2e/.report npm run test:e2e -- --reporter=html
+npx playwright show-report tests/e2e/.report
 ```
 
 ## Estrutura dos arquivos
 
 ```
-playwright.config.ts                     # configuração da suíte
+playwright.config.js                     # configuração da suíte
 tests/e2e/
 ├── fixtures/
 │   └── cursos.ts                        # catálogo mocado
@@ -111,9 +112,4 @@ tests/e2e/
 - Nenhum dado pessoal real: fixtures usam `Fulano de Tal`,
   `fulano@example.test`, `000.000.000-00`, etc.
 
-## O que NÃO é coberto aqui
-
-Os fluxos de login do aluno e da secretaria, contato e newsletter estão
-listados no `AGENTS.md` como candidatos a E2E, mas ficam fora do escopo
-da Issue #27. Serão adicionados em issues próprias, reaproveitando a
-mesma configuração e helpers.
+A suíte também executa os cenários de `site-public.spec.js`, incluindo contato e newsletter.

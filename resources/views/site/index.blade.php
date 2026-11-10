@@ -72,48 +72,6 @@
   {{-- Contato (data-page="contato") --}}
   @include('site.pages.contato')
 
-{{-- ============================================================
-     PAINÉIS INTERNOS (SECRETARIA / ALUNO) — protótipo de interface
-============================================================ --}}
-  {{-- Login da secretaria (data-page="login-secretaria") --}}
-  @include('site.app.login-secretaria')
-
-  {{-- Login do aluno (data-page="login-aluno") --}}
-  @include('site.app.login-aluno')
-
-  {{-- Dashboard da secretaria (data-page="dash-secretaria") --}}
-  @include('site.app.dash-secretaria')
-
-  {{-- Dashboard do aluno (data-page="dash-aluno") --}}
-  @include('site.app.dash-aluno')
-
-  {{-- Secretaria: Alunos (data-page="sec-alunos") --}}
-  @include('site.app.sec-alunos')
-
-  {{-- Secretaria: Acadêmico (data-page="sec-academico") --}}
-  @include('site.app.sec-academico')
-
-  {{-- Secretaria: Financeiro (data-page="sec-financeiro") --}}
-  @include('site.app.sec-financeiro')
-
-  {{-- Secretaria: Secretaria (data-page="sec-secretaria") --}}
-  @include('site.app.sec-secretaria')
-
-  {{-- Secretaria: Relatórios (data-page="sec-relatorios") --}}
-  @include('site.app.sec-relatorios')
-
-  {{-- Secretaria: Documentos (data-page="sec-documentos") --}}
-  @include('site.app.sec-documentos')
-
-  {{-- Secretaria: Certificados (data-page="sec-certificados") --}}
-  @include('site.app.sec-certificados')
-
-  {{-- Secretaria: Mensagens (data-page="sec-mensagens") --}}
-  @include('site.app.sec-mensagens')
-
-  {{-- Secretaria: Configurações (data-page="sec-config") --}}
-  @include('site.app.sec-config')
-
 </main>
 
 <div id="footer-root"></div>
