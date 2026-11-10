@@ -248,6 +248,18 @@ class Turma extends Model
         });
     }
 
+    public function inscricoesAbertasEm(?\Carbon\CarbonInterface $instante = null): bool
+    {
+        $instante ??= now();
+        $hoje = $instante->toDateString();
+
+        return $this->publicada
+            && $this->situacao_inscricoes === 'abertas'
+            && ! in_array($this->situacao_academica, ['concluida', 'cancelada', 'arquivada'], true)
+            && (! $this->inscricoes_inicio || $hoje >= $this->inscricoes_inicio->toDateString())
+            && (! $this->inscricoes_fim || $hoje <= $this->inscricoes_fim->toDateString());
+    }
+
     public function curso(): BelongsTo
     {
         return $this->belongsTo(Curso::class);
