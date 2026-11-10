@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Validation\ValidationException;
 
@@ -50,7 +51,7 @@ class PeriodoLetivo extends Model
         return $this->hasMany(Turma::class);
     }
 
-    public function turmasVinculadas(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function turmasVinculadas(): BelongsToMany
     {
         return $this->belongsToMany(Turma::class, 'turma_periodos', 'periodo_letivo_id', 'turma_id')->withTimestamps();
     }

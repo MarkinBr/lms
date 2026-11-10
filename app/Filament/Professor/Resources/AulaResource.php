@@ -19,6 +19,7 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -87,7 +88,7 @@ class AulaResource extends Resource
 
                                         Forms\Components\Select::make('modulo_id')
                                             ->label('Módulo específico da aula')
-                                            ->options(fn (Forms\Get $get) => $get('disciplina_id')
+                                            ->options(fn (Get $get) => $get('disciplina_id')
                                                 ? Disciplina::query()->find($get('disciplina_id'))?->modulos()
                                                     ->pluck('modulos.titulo', 'modulos.id') ?? []
                                                 : [])
@@ -872,13 +873,13 @@ class AulaResource extends Resource
             && app(PermissoesDocentes::class)->podeCriarEmAlgumLugar((int) auth()->id());
     }
 
-    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    public static function canEdit(Model $record): bool
     {
         return auth()->check() && $record instanceof Aula
             && app(PermissoesDocentes::class)->podeEditarAula((int) auth()->id(), $record);
     }
 
-    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    public static function canDelete(Model $record): bool
     {
         return static::canEdit($record);
     }

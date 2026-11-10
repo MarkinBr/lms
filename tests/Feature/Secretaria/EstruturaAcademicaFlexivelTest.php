@@ -13,6 +13,7 @@ use App\Models\Turma;
 use App\Models\TurmaDisciplina;
 use App\Models\User;
 use App\Services\GestaoAcademica\PermissoesDocentes;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -53,6 +54,7 @@ class EstruturaAcademicaFlexivelTest extends TestCase
         $modulo = Modulo::query()->create([
             'curso_id' => $curso->id, 'titulo' => 'Base '.$codigo, 'ordem' => 1,
         ]);
+
         return Disciplina::query()->create([
             'curso_id' => $curso->id, 'modulo_id' => $modulo->id,
             'codigo' => $codigo, 'nome' => $codigo, 'carga_horaria' => 40,
@@ -171,6 +173,7 @@ class EstruturaAcademicaFlexivelTest extends TestCase
         $this->assertTrue($turma->publicada);
         $this->assertSame(Turma::STATUS_ABERTA, $turma->status); // compatibilidade legado
     }
+
     public function test_codigos_sao_gerados_sem_alterar_codigos_preexistentes(): void
     {
         $curso = $this->curso();
@@ -201,12 +204,12 @@ class EstruturaAcademicaFlexivelTest extends TestCase
             'inscricoes_fim' => '2026-07-01',
         ]);
 
-        $this->assertFalse($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-05-31')));
-        $this->assertTrue($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-06-15')));
-        $this->assertFalse($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-07-02')));
+        $this->assertFalse($turma->inscricoesAbertasEm(CarbonImmutable::parse('2026-05-31')));
+        $this->assertTrue($turma->inscricoesAbertasEm(CarbonImmutable::parse('2026-06-15')));
+        $this->assertFalse($turma->inscricoesAbertasEm(CarbonImmutable::parse('2026-07-02')));
         $this->assertSame('em_andamento', $turma->situacao_academica);
 
         $turma->update(['publicada' => false]);
-        $this->assertFalse($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-06-15')));
+        $this->assertFalse($turma->inscricoesAbertasEm(CarbonImmutable::parse('2026-06-15')));
     }
 }

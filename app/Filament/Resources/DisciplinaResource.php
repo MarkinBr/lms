@@ -11,6 +11,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Resource administrativo de Disciplinas (Issue #57).
@@ -65,9 +67,7 @@ class DisciplinaResource extends Resource
                         Forms\Components\Select::make('modulos')
                             ->label('Módulos da disciplina (múltiplos)')
                             ->multiple()
-                            ->relationship('modulos', 'titulo', modifyQueryUsing:
-                                fn (\Illuminate\Database\Eloquent\Builder $query, Forms\Get $get) =>
-                                    $query->where('curso_id', $get('curso_id') ?: 0))
+                            ->relationship('modulos', 'titulo', modifyQueryUsing: fn (Builder $query, Forms\Get $get) => $query->where('curso_id', $get('curso_id') ?: 0))
                             ->searchable()->preload()
                             ->helperText('Mantenha o módulo principal. As aulas podem ser organizadas em qualquer módulo vinculado.')
                             ->saveRelationshipsUsing(function (Disciplina $record, ?array $state): void {
@@ -75,7 +75,7 @@ class DisciplinaResource extends Resource
                                 $validos = Modulo::query()->where('curso_id', $record->curso_id)
                                     ->whereIn('id', $ids)->pluck('id')->all();
                                 if (count(array_unique($ids)) !== count($validos)) {
-                                    throw \Illuminate\Validation\ValidationException::withMessages([
+                                    throw ValidationException::withMessages([
                                         'modulos' => 'Todos os módulos devem pertencer ao curso da disciplina.',
                                     ]);
                                 }

@@ -3,8 +3,8 @@
 namespace App\Filament\Secretario\Resources;
 
 use App\Filament\Secretario\Resources\TurmaSecretariaResource\Pages;
-use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\MatriculasTurmaRelationManager;
 use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\MatriculasTurmaRelationManager;
 use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Models\PeriodoLetivo;

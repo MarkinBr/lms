@@ -3,6 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TurmaResource\Pages;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\DisciplinasTurmaRelationManager;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\PeriodosTurmaRelationManager;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\ProfessoresTurmaRelationManager;
 use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Models\PeriodoLetivo;
@@ -187,9 +190,9 @@ class TurmaResource extends Resource
     public static function getRelations(): array
     {
         return [
-            \App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\PeriodosTurmaRelationManager::class,
-            \App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\DisciplinasTurmaRelationManager::class,
-            \App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\ProfessoresTurmaRelationManager::class,
+            PeriodosTurmaRelationManager::class,
+            DisciplinasTurmaRelationManager::class,
+            ProfessoresTurmaRelationManager::class,
         ];
     }
 

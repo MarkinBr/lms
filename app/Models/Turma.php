@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class Turma extends Model
@@ -113,7 +115,7 @@ class Turma extends Model
                 && filled($turma->curso_id) && filled($turma->periodo_letivo_id)) {
                 do {
                     $turma->codigo = sprintf('T-%s-%03d-%s', $turma->ano_letivo ?: date('Y'),
-                        (int) $turma->curso_id, strtoupper(\Illuminate\Support\Str::random(6)));
+                        (int) $turma->curso_id, strtoupper(Str::random(6)));
                 } while (static::query()->where('periodo_letivo_id', $turma->periodo_letivo_id)
                     ->where('codigo', $turma->codigo)->exists());
             }
@@ -262,7 +264,7 @@ class Turma extends Model
         });
     }
 
-    public function podeReceberMatriculasEm(?\Carbon\CarbonInterface $instante = null): bool
+    public function podeReceberMatriculasEm(?CarbonInterface $instante = null): bool
     {
         $instante ??= now();
         $hoje = $instante->toDateString();
@@ -273,7 +275,7 @@ class Turma extends Model
             && (! $this->inscricoes_fim || $hoje <= $this->inscricoes_fim->toDateString());
     }
 
-    public function inscricoesAbertasEm(?\Carbon\CarbonInterface $instante = null): bool
+    public function inscricoesAbertasEm(?CarbonInterface $instante = null): bool
     {
         return (bool) $this->publicada && $this->podeReceberMatriculasEm($instante);
     }
