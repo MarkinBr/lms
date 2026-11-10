@@ -122,7 +122,9 @@ class Turma extends Model
                         default => self::STATUS_PLANEJADA,
                     };
                 }
-            } elseif ($turma->isDirty('status') && filled($turma->status)) {
+            }
+            if ($turma->isDirty('status') && ! $turma->isDirty('situacao_academica')
+                && filled($turma->status)) {
                 $turma->situacao_academica = match ($turma->status) {
                     self::STATUS_ABERTA => 'em_andamento',
                     self::STATUS_ENCERRADA => 'concluida',
@@ -172,6 +174,14 @@ class Turma extends Model
             if ($turma->capacidade !== null && $turma->capacidade !== '' && (int) $turma->capacidade < 1) {
                 throw ValidationException::withMessages([
                     'capacidade' => 'A capacidade deve ser um inteiro positivo.',
+                ]);
+            }
+
+            if ($turma->exists && $turma->isDirty('curso_id')
+                && ($turma->turmaDisciplinas()->exists() || $turma->matriculasTurmas()->exists()
+                    || $turma->matriculas()->exists())) {
+                throw ValidationException::withMessages([
+                    'curso_id' => 'Não altere o curso de uma turma que possui disciplinas ou matrículas vinculadas.',
                 ]);
             }
 
