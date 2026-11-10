@@ -201,12 +201,12 @@ class EstruturaAcademicaFlexivelTest extends TestCase
             'inscricoes_fim' => '2026-07-01',
         ]);
 
-        $this->assertFalse($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-05-31')));
-        $this->assertTrue($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-06-15')));
-        $this->assertFalse($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-07-02')));
+        $this->assertFalse($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-05-31')));
+        $this->assertTrue($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-06-15')));
+        $this->assertFalse($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-07-02')));
         $this->assertSame('em_andamento', $turma->situacao_academica);
 
         $turma->update(['publicada' => false]);
-        $this->assertFalse($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-06-15')));
+        $this->assertFalse($turma->inscricoesAbertasEm(\Carbon\CarbonImmutable::parse('2026-06-15')));
     }
 }
