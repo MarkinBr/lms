@@ -19,6 +19,14 @@ class AcessoAssistidoIdiomaTest extends TestCase
             ->assertDontSee('Forbidden');
     }
 
+    public function test_credencial_com_identificador_invalido_exibe_erro_em_portugues(): void
+    {
+        $this->withSession(['acesso_assistido' => ['credencial_id' => 'invalido']])
+            ->get(route('aluno.assistido.senha'))
+            ->assertForbidden()
+            ->assertSee('Acesso não permitido');
+    }
+
     public function test_erros_comuns_tambem_estao_em_portugues(): void
     {
         config(['app.locale' => 'en']);

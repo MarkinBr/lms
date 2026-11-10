@@ -103,7 +103,13 @@ class CredenciaisAluno
 
     public function validarSessao(array $sessao): bool
     {
-        $registro = DB::table('acesso_credenciais')->find($sessao['credencial_id'] ?? '');
+        $credencialId = $sessao['credencial_id'] ?? null;
+
+        if (! is_string($credencialId) || ! Str::isUuid($credencialId)) {
+            return false;
+        }
+
+        $registro = DB::table('acesso_credenciais')->find($credencialId);
         $aluno = User::find($sessao['aluno_id'] ?? 0);
 
         return $aluno && $registro && $registro->consumida_em !== null
