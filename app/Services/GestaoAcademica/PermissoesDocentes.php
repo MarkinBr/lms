@@ -147,7 +147,7 @@ class PermissoesDocentes
                     $query->orWhere(fn (Builder $q) => $q->where('disciplina_id', $a->disciplina_id)
                         ->where('modulo_id', $a->modulo_id));
                 } elseif ($a->escopo === 'aula') {
-                    $query->orWhereKey($a->aula_id);
+                    $query->orWhere('aulas.id', $a->aula_id);
                 }
             }
         });
