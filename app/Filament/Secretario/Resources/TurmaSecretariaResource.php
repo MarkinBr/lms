@@ -4,6 +4,7 @@ namespace App\Filament\Secretario\Resources;
 
 use App\Filament\Secretario\Resources\TurmaSecretariaResource\Pages;
 use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers\MatriculasTurmaRelationManager;
+use App\Filament\Secretario\Resources\TurmaSecretariaResource\RelationManagers;
 use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Models\PeriodoLetivo;
@@ -70,7 +71,7 @@ class TurmaSecretariaResource extends Resource
                             ->helperText('Turmas legadas sem período devem ser regularizadas ao editar.'),
 
                         Forms\Components\Select::make('disciplina_id')
-                            ->label('Disciplina')
+                            ->label('Disciplina principal (legado, opcional)')
                             ->options(function (Forms\Get $get) {
                                 if (! $get('curso_id')) {
                                     return [];
@@ -85,10 +86,10 @@ class TurmaSecretariaResource extends Resource
                             ->searchable()
                             ->preload()
                             ->disabled(fn (Forms\Get $get) => ! $get('curso_id'))
-                            ->required(),
+                            ->helperText('Vincule outras disciplinas na aba Disciplinas da turma.'),
 
                         Forms\Components\Select::make('professor_id')
-                            ->label('Professor')
+                            ->label('Professor de referência (legado, opcional)')
                             ->options(User::where('nivel', 'professor')->where('ativo', true)->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->preload()
@@ -143,11 +144,18 @@ class TurmaSecretariaResource extends Resource
                             ->dehydrated()
                             ->native(false),
 
-                        Forms\Components\Select::make('status')
-                            ->options(Turma::STATUS_LABELS)
-                            ->default(Turma::STATUS_PLANEJADA)
-                            ->required()
-                            ->native(false),
+                        Forms\Components\Select::make('situacao_academica')
+                            ->label('Situação acadêmica')
+                            ->options(Turma::SITUACOES_ACADEMICAS)->default('planejada')->required()->native(false),
+                        Forms\Components\Select::make('situacao_inscricoes')
+                            ->label('Situação das inscrições')
+                            ->options(Turma::SITUACOES_INSCRICOES)->default('nao_iniciadas')->required()->native(false),
+                        Forms\Components\Toggle::make('publicada')
+                            ->label('Publicada no portal')->default(false),
+                        Forms\Components\DatePicker::make('inscricoes_inicio')
+                            ->label('Início das inscrições')->native(false),
+                        Forms\Components\DatePicker::make('inscricoes_fim')
+                            ->label('Fim das inscrições')->native(false)->afterOrEqual('inscricoes_inicio'),
                     ])
                     ->columns(2),
 
@@ -204,7 +212,8 @@ class TurmaSecretariaResource extends Resource
                             ->label('Turma Ativa?')
                             ->default(true)
                             ->inline(false)
-                            ->helperText('Campo legado. O status também controla a situação da turma.'),
+                            ->helperText('Campo legado derivado da situação acadêmica; não use para inscrições.')
+                            ->disabled()->dehydrated(false),
                     ])
                     ->columns(2),
             ]);
@@ -275,15 +284,17 @@ class TurmaSecretariaResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->colors([
-                        'gray' => Turma::STATUS_PLANEJADA,
-                        'success' => Turma::STATUS_ABERTA,
-                        'info' => Turma::STATUS_ENCERRADA,
-                        'danger' => Turma::STATUS_CANCELADA,
-                    ])
-                    ->formatStateUsing(fn (?string $state): string => Turma::STATUS_LABELS[$state] ?? $state ?? '—'),
+                Tables\Columns\TextColumn::make('situacao_academica')
+                    ->label('Acadêmico')->badge()
+                    ->formatStateUsing(fn (?string $state): string => Turma::SITUACOES_ACADEMICAS[$state] ?? $state ?? '—'),
+
+                Tables\Columns\TextColumn::make('situacao_inscricoes')
+                    ->label('Inscrições')->badge()
+                    ->formatStateUsing(fn (?string $state): string => Turma::SITUACOES_INSCRICOES[$state] ?? $state ?? '—'),
+
+                Tables\Columns\TextColumn::make('disciplinas_count')->counts('disciplinas')->label('Disciplinas')->badge(),
+                Tables\Columns\TextColumn::make('professorAtribuicoes_count')->counts('professorAtribuicoes')->label('Atribuições')->badge(),
+                Tables\Columns\IconColumn::make('publicada')->label('Publicada')->boolean(),
 
                 Tables\Columns\TextColumn::make('matriculas_count')
                     ->counts('matriculas')
@@ -340,8 +351,11 @@ class TurmaSecretariaResource extends Resource
                     ->searchable()
                     ->preload(),
 
-                Tables\Filters\SelectFilter::make('status')
-                    ->options(Turma::STATUS_LABELS),
+                Tables\Filters\SelectFilter::make('situacao_academica')
+                    ->options(Turma::SITUACOES_ACADEMICAS),
+
+                Tables\Filters\SelectFilter::make('situacao_inscricoes')
+                    ->options(Turma::SITUACOES_INSCRICOES),
 
                 Tables\Filters\SelectFilter::make('modalidade')
                     ->options(Turma::MODALIDADE_LABELS),
@@ -375,6 +389,9 @@ class TurmaSecretariaResource extends Resource
     {
         return [
             MatriculasTurmaRelationManager::class,
+            RelationManagers\PeriodosTurmaRelationManager::class,
+            RelationManagers\DisciplinasTurmaRelationManager::class,
+            RelationManagers\ProfessoresTurmaRelationManager::class,
         ];
     }
 
