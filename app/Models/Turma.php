@@ -139,6 +139,12 @@ class Turma extends Model
                     self::STATUS_CANCELADA => 'cancelada',
                     default => 'planejada',
                 };
+                // Compatibilidade: integrações antigas que abriam uma turma
+                // via status='aberta' continuam podendo receber matrículas.
+                if (! $turma->exists && ! $turma->isDirty('situacao_inscricoes')
+                    && $turma->status === self::STATUS_ABERTA) {
+                    $turma->situacao_inscricoes = 'abertas';
+                }
             }
 
             if (filled($turma->situacao_inscricoes)
@@ -256,16 +262,20 @@ class Turma extends Model
         });
     }
 
-    public function inscricoesAbertasEm(?\Carbon\CarbonInterface $instante = null): bool
+    public function podeReceberMatriculasEm(?\Carbon\CarbonInterface $instante = null): bool
     {
         $instante ??= now();
         $hoje = $instante->toDateString();
 
-        return $this->publicada
-            && $this->situacao_inscricoes === 'abertas'
+        return $this->situacao_inscricoes === 'abertas'
             && ! in_array($this->situacao_academica, ['concluida', 'cancelada', 'arquivada'], true)
             && (! $this->inscricoes_inicio || $hoje >= $this->inscricoes_inicio->toDateString())
             && (! $this->inscricoes_fim || $hoje <= $this->inscricoes_fim->toDateString());
+    }
+
+    public function inscricoesAbertasEm(?\Carbon\CarbonInterface $instante = null): bool
+    {
+        return (bool) $this->publicada && $this->podeReceberMatriculasEm($instante);
     }
 
     public function curso(): BelongsTo
