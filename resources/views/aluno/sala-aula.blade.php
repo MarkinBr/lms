@@ -652,11 +652,27 @@
                                 {!! $aula->conteudo_texto !!}
                             </div>
 
-                            @if($aula->materiais_complementares)
+                            @php
+                                $materiais = json_decode($aula->materiais_complementares ?? '[]') ?: [];
+                                if ($aula->permite_download) {
+                                    foreach ($aula->anexos ?? [] as $indice => $anexo) {
+                                        if (!is_array($anexo) || !is_string($anexo['caminho'] ?? null)) {
+                                            continue;
+                                        }
+
+                                        $materiais[] = (object) [
+                                            'url' => route('aluno.aula.material', ['aula' => $aula->id, 'indice' => $indice]),
+                                            'titulo' => $anexo['nome'] ?? 'Material de apoio',
+                                            'tipo' => 'Anexo',
+                                        ];
+                                    }
+                                }
+                            @endphp
+                            @if($materiais)
                             <div class="mt-8">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">📚 Materiais Complementares</h4>
                                 <div class="space-y-3">
-                                    @foreach(json_decode($aula->materiais_complementares) as $material)
+                                    @foreach($materiais as $material)
                                     <a href="{{ $material->url }}" target="_blank" class="interactive-card flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400">
                                         <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg mr-4">
                                             <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

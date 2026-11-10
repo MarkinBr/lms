@@ -284,7 +284,7 @@ function primeiraMensagemPublica(valor){
   const form=document.getElementById('inscForm');
   if(!form)return;
   const sucesso=document.getElementById('inscSucesso');
-  const OPCIONAIS=['rg','estado_civil','nacionalidade','naturalidade_cidade','naturalidade_estado','complemento'];
+  const OPCIONAIS=['rg','estado_civil','nacionalidade','naturalidade_cidade','naturalidade_estado','complemento','instituicao_anterior','como_conheceu','indicacao_nome'];
   const OBRIGATORIOS=['nome_completo','cpf','data_nascimento','sexo','email','telefone','cep','logradouro','numero','bairro','cidade','estado','escolaridade'];
   function getVal(name){const el=form.querySelector(`[name="${name}"]`);return el?String(el.value||'').trim():'';}
   function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -292,6 +292,12 @@ function primeiraMensagemPublica(valor){
     const payload={};
     OBRIGATORIOS.forEach(k=>{payload[k]=getVal(k);});
     OPCIONAIS.forEach(k=>{const v=getVal(k);if(v!=='')payload[k]=v;});
+    const anoConclusao=getVal('ano_conclusao');
+    if(anoConclusao!=='')payload.ano_conclusao=Number(anoConclusao);
+    const formacaoTeologica=getVal('formacao_teologica');
+    if(formacaoTeologica!=='')payload.formacao_teologica=formacaoTeologica==='1';
+    const aceiteTermos=form.querySelector('[name="aceite_termos"]');
+    if(aceiteTermos&&aceiteTermos.checked)payload.aceite_termos=true;
     // telefone preenche também whatsapp
     if(payload.telefone)payload.whatsapp=payload.telefone;
     // monta a lista de inscrições (1 a 3 cursos)

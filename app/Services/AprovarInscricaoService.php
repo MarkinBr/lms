@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Application;
 use App\Models\Matricula;
 use App\Models\User;
+use App\Notifications\AtivarAcessoAluno;
+use App\Services\Acessos\CadastroAluno;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
@@ -295,26 +297,23 @@ class AprovarInscricaoService
             return [$existente, false];
         }
 
-        // Criar novo usuário aluno.
-        $novo = User::query()->create([
-            'name' => $inscricao->nome_completo,
+        // A inscrição é a origem apenas na criação; cadastro existente é preservado acima.
+        $origem = ['name' => 'nome_completo', 'data_nasc' => 'data_nascimento', 'genero' => 'sexo', 'endereco' => 'logradouro'];
+        $cadastro = [];
+        foreach (CadastroAluno::CAMPOS as $campo) {
+            $cadastro[$campo] = $inscricao->getAttribute($origem[$campo] ?? $campo);
+        }
+        $novo = new User;
+        $novo->forceFill(array_merge($cadastro, [
             'email' => $email,
             'cpf' => $cpf,
-            'telefone' => $inscricao->telefone,
-            'data_nasc' => $inscricao->data_nascimento,
-            'cep' => $inscricao->cep,
-            'endereco' => $inscricao->logradouro,
-            'numero' => $inscricao->numero,
-            'complemento' => $inscricao->complemento,
-            'bairro' => $inscricao->bairro,
-            'cidade' => $inscricao->cidade,
-            'estado' => $inscricao->estado,
             'nivel' => 'aluno',
             'ativo' => true,
             // Senha aleatória forte, gravada apenas como hash pelo cast 'hashed'.
             // Nunca retornada, exibida ou logada em texto puro.
             'password' => Str::random(48),
-        ]);
+            'primeiro_acesso_pendente' => true,
+        ]))->save();
 
         return [$novo, true];
     }
@@ -377,7 +376,17 @@ class AprovarInscricaoService
     protected function dispararLinkDefinicaoSenha(User $user): void
     {
         try {
-            $status = Password::broker()->sendResetLink(['email' => $user->email]);
+            $status = Password::broker()->sendResetLink([
+                'id' => $user->id,
+                'email' => $user->email,
+                'nivel' => 'aluno',
+                'ativo' => true,
+                'primeiro_acesso_pendente' => true,
+                'email_verified_at' => null,
+                'senha_definitiva_pendente' => false,
+            ], function (User $aluno, string $token): void {
+                $aluno->notify(new AtivarAcessoAluno($token));
+            });
 
             $this->registrarAuditoria('usuario.link_definicao_senha_enviado', [
                 'user_id' => $user->id,

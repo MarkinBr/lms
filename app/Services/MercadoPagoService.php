@@ -32,7 +32,7 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (!$m) {
+            if (! $m) {
                 throw new Exception('Mensalidade não encontrada.');
             }
 
@@ -40,8 +40,10 @@ class MercadoPagoService
                 throw new Exception('Esta mensalidade não permite nova cobrança.');
             }
 
-            if ($this->deveReutilizarPix($m)) {
-                Log::info('MercadoPagoService: reutilizando PIX ainda válido', [
+            $pagamento = $this->consultarCobrancaVinculada($m, ['pix']);
+
+            if (($pagamento['status'] ?? null) === 'pending' && (filled($m->pix_copia_cola) || filled($m->link_pagamento))) {
+                Log::info('MercadoPagoService: reutilizando PIX pendente', [
                     'mensalidade_id' => $m->id,
                     'transacao_id' => $m->transacao_id,
                     'tentativa' => $this->tentativaAtual($m),
@@ -56,7 +58,8 @@ class MercadoPagoService
                 ];
             }
 
-            if ($this->precisaNovaTentativaPix($m)) {
+            if ($pagamento !== null) {
+                $this->conferirEncerramentoSemPagamento($pagamento);
                 $m->incrementarTentativaPagamento();
                 $m->refresh();
             }
@@ -68,7 +71,7 @@ class MercadoPagoService
             $email = $this->validarEmail($pagador->email ?? null, $nomeCompleto);
 
             $request = [
-                'transaction_amount' => $this->normalizarValor($m->valor),
+                'transaction_amount' => (float) $m->valor,
                 'description' => sprintf('Mensalidade %s — %s', $m->data_vencimento->format('m/Y'), $nomeCompleto),
                 'payment_method_id' => 'pix',
                 'payer' => [
@@ -81,13 +84,13 @@ class MercadoPagoService
                 ],
             ];
 
-            $opts = new RequestOptions();
+            $opts = new RequestOptions;
             $opts->setCustomHeaders([
-                'X-Idempotency-Key: ' . $this->gerarIdempotencyKey('pix', $m),
+                'X-Idempotency-Key: '.$this->gerarIdempotencyKey('pix', $m),
             ]);
 
             try {
-                $payment = (new PaymentClient())->create($request, $opts);
+                $payment = app(PaymentClient::class)->create($request, $opts);
 
                 if (empty($payment->id) || ($payment->status ?? null) === 'rejected') {
                     throw new Exception('Pagamento PIX rejeitado pelo Mercado Pago.');
@@ -97,16 +100,15 @@ class MercadoPagoService
                     ?? $payment->point_of_interaction->transaction_data->expiration_date
                     ?? null;
 
-                $m->registrarTransacao(
-                    transacaoId: (string) $payment->id,
-                    metodo: 'pix',
-                    extras: [
-                        'pix_copia_cola' => $payment->point_of_interaction->transaction_data->qr_code ?? null,
-                        'pix_qr_base64' => $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null,
-                        'link_pagamento' => $payment->point_of_interaction->transaction_data->ticket_url ?? null,
-                        'pix_expira_em' => $expiraEm,
-                    ]
-                );
+                $m->registrarTransacao((string) $payment->id, [
+                    'metodo_pagamento' => 'pix',
+                    'pix_copia_cola' => $payment->point_of_interaction->transaction_data->qr_code ?? null,
+                    'pix_qr_base64' => $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null,
+                    'link_pagamento' => $payment->point_of_interaction->transaction_data->ticket_url ?? null,
+                    'pix_expira_em' => $expiraEm,
+                    'link_boleto' => null,
+                    'linha_digitavel' => null,
+                ]);
 
                 Log::info('MercadoPagoService: PIX gerado', [
                     'mensalidade_id' => $m->id,
@@ -128,7 +130,7 @@ class MercadoPagoService
                     'erro' => $this->mensagemApi($e),
                 ]);
 
-                throw new Exception('Erro Mercado Pago ao gerar PIX: ' . $this->mensagemApi($e));
+                throw new Exception('Erro Mercado Pago ao gerar PIX: '.$this->mensagemApi($e));
             }
         });
     }
@@ -141,7 +143,7 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (!$m) {
+            if (! $m) {
                 throw new Exception('Mensalidade não encontrada.');
             }
 
@@ -149,17 +151,19 @@ class MercadoPagoService
                 throw new Exception('Esta mensalidade não permite nova cobrança.');
             }
 
-            if ($this->deveReutilizarBoleto($m)) {
-                return [
-                    'success' => true,
-                    'already_existed' => true,
-                    'mensalidade_id' => $m->id,
-                    'transacao_id' => (string) ($m->transacao_id ?? ''),
-                    'link_boleto' => $m->link_boleto ?? null,
-                ];
-            }
+            $pagamento = $this->consultarCobrancaVinculada($m, ['boleto', 'bolbradesco']);
+            if ($pagamento !== null) {
+                if (($pagamento['status'] ?? null) === 'pending' && filled($m->link_boleto)) {
+                    return [
+                        'success' => true,
+                        'already_existed' => true,
+                        'mensalidade_id' => $m->id,
+                        'transacao_id' => (string) $m->transacao_id,
+                        'link_boleto' => $m->link_boleto,
+                    ];
+                }
 
-            if ($this->precisaNovaTentativaBoleto($m)) {
+                $this->conferirEncerramentoSemPagamento($pagamento);
                 $m->incrementarTentativaPagamento();
                 $m->refresh();
             }
@@ -176,7 +180,7 @@ class MercadoPagoService
             $this->validarEnderecoCompleto($pagador, $nomeCompleto);
 
             $request = [
-                'transaction_amount' => $this->normalizarValor($m->valor),
+                'transaction_amount' => (float) $m->valor,
                 'description' => sprintf('Mensalidade %s — %s', $m->data_vencimento->format('m/Y'), $nomeCompleto),
                 'payment_method_id' => 'bolbradesco',
                 'payer' => [
@@ -198,13 +202,13 @@ class MercadoPagoService
                 ],
             ];
 
-            $opts = new RequestOptions();
+            $opts = new RequestOptions;
             $opts->setCustomHeaders([
-                'X-Idempotency-Key: ' . $this->gerarIdempotencyKey('bol', $m),
+                'X-Idempotency-Key: '.$this->gerarIdempotencyKey('bol', $m),
             ]);
 
             try {
-                $payment = (new PaymentClient())->create($request, $opts);
+                $payment = app(PaymentClient::class)->create($request, $opts);
 
                 if (empty($payment->id)) {
                     throw new Exception('Mercado Pago não retornou ID do boleto.');
@@ -214,15 +218,15 @@ class MercadoPagoService
                     ?? $payment->point_of_interaction->transaction_data->ticket_url
                     ?? null;
 
-                $m->registrarTransacao(
-                    transacaoId: (string) $payment->id,
-                    metodo: 'boleto',
-                    extras: [
-                        'link_boleto' => $linkBoleto,
-                        'linha_digitavel' => $payment->barcode->content ?? null,
-                        'link_pagamento' => $linkBoleto,
-                    ]
-                );
+                $m->registrarTransacao((string) $payment->id, [
+                    'metodo_pagamento' => 'boleto',
+                    'link_boleto' => $linkBoleto,
+                    'linha_digitavel' => $payment->barcode->content ?? null,
+                    'link_pagamento' => $linkBoleto,
+                    'pix_copia_cola' => null,
+                    'pix_qr_base64' => null,
+                    'pix_expira_em' => null,
+                ]);
 
                 Log::info('MercadoPagoService: boleto gerado', [
                     'mensalidade_id' => $m->id,
@@ -244,7 +248,7 @@ class MercadoPagoService
                     'erro' => $this->mensagemApi($e),
                 ]);
 
-                throw new Exception('Erro Mercado Pago ao gerar boleto: ' . $this->mensagemApi($e));
+                throw new Exception('Erro Mercado Pago ao gerar boleto: '.$this->mensagemApi($e));
             }
         });
     }
@@ -252,7 +256,8 @@ class MercadoPagoService
     public function consultarPagamento(string|int $id): ?array
     {
         try {
-            $payment = (new PaymentClient())->get($id);
+            $payment = app(PaymentClient::class)->get($id);
+
             return json_decode(json_encode($payment), true);
         } catch (\Throwable $e) {
             Log::warning('MercadoPagoService: falha ao consultar pagamento', [
@@ -269,17 +274,17 @@ class MercadoPagoService
         return DB::transaction(function () use ($mensalidade) {
             $m = Mensalidade::query()->whereKey($mensalidade->id)->lockForUpdate()->first();
 
-            if (!$m || empty($m->transacao_id)) {
+            if (! $m || empty($m->transacao_id)) {
                 throw new Exception('Mensalidade não possui transação associada.');
             }
 
-            (new PaymentClient())->cancel($m->transacao_id);
+            (new PaymentClient)->cancel($m->transacao_id);
 
             if (method_exists($m, 'cancelar')) {
                 $m->cancelar('Pagamento cancelado manualmente via Mercado Pago');
             } else {
                 $m->status = 'Cancelado';
-                $m->observacao = trim(($m->observacao ?? '') . ' [Pagamento cancelado manualmente via Mercado Pago]');
+                $m->observacao = trim(($m->observacao ?? '').' [Pagamento cancelado manualmente via Mercado Pago]');
                 $m->save();
             }
 
@@ -292,75 +297,33 @@ class MercadoPagoService
         });
     }
 
-    private function deveReutilizarPix(Mensalidade $m): bool
+    private function conferirEncerramentoSemPagamento(array $pagamento): void
     {
-        if ($this->isStatusFinal($m->status ?? null)) {
-            return false;
+        if (! in_array($pagamento['status'] ?? null, ['cancelled', 'canceled', 'expired', 'rejected'], true)) {
+            throw new Exception('A cobrança anterior não tem encerramento sem pagamento confirmado pelo Mercado Pago.');
         }
-
-        if (empty($m->pix_copia_cola) || empty($m->transacao_id)) {
-            return false;
-        }
-
-        if (method_exists($m, 'pixExpirado') && $m->pixExpirado()) {
-            return false;
-        }
-
-        return true;
     }
 
-    private function precisaNovaTentativaPix(Mensalidade $m): bool
+    private function consultarCobrancaVinculada(Mensalidade $m, array $meios): ?array
     {
-        if ($this->isStatusFinal($m->status ?? null)) {
-            return false;
+        if (! $m->transacao_id) {
+            return null;
         }
 
-        if (empty($m->transacao_id) && empty($m->pix_copia_cola)) {
-            return false;
+        $meio = $m->metodo_pagamento;
+        $meioGenerico = in_array($meio, [null, '', 'mercadopago'], true);
+        if (! $meioGenerico && ! in_array($meio, $meios, true)) {
+            throw new Exception('Já existe uma cobrança em outro meio.');
         }
 
-        return method_exists($m, 'pixExpirado') ? (bool) $m->pixExpirado() : false;
-    }
-
-    private function deveReutilizarBoleto(Mensalidade $m): bool
-    {
-        if ($this->isStatusFinal($m->status ?? null)) {
-            return false;
+        $pagamento = $this->consultarPagamento($m->transacao_id);
+        if (! $pagamento
+            || (string) ($pagamento['id'] ?? '') !== (string) $m->transacao_id
+            || ! in_array($pagamento['payment_method_id'] ?? null, $meios, true)) {
+            throw new Exception('Não foi possível confirmar o meio da cobrança vinculada no Mercado Pago.');
         }
 
-        if (empty($m->transacao_id) || empty($m->link_boleto)) {
-            return false;
-        }
-
-        if (!in_array((string) $m->metodo_pagamento, ['boleto', 'bolbradesco'], true)) {
-            return false;
-        }
-
-        return !$this->boletoExpirado($m);
-    }
-
-    private function precisaNovaTentativaBoleto(Mensalidade $m): bool
-    {
-        if ($this->isStatusFinal($m->status ?? null)) {
-            return false;
-        }
-
-        if (empty($m->transacao_id) && empty($m->link_boleto)) {
-            return false;
-        }
-
-        return $this->boletoExpirado($m);
-    }
-
-    private function boletoExpirado(Mensalidade $m): bool
-    {
-        $vencimento = $m->data_vencimento;
-
-        if (!$vencimento) {
-            return false;
-        }
-
-        return $vencimento->copy()->endOfDay()->lt(now(config('app.timezone', 'America/Sao_Paulo')));
+        return $pagamento;
     }
 
     private function isStatusFinal(?string $status): bool
@@ -382,7 +345,7 @@ class MercadoPagoService
     {
         $pagador = $m->matricula?->user ?? $m->matricula?->aluno;
 
-        if (!$pagador) {
+        if (! $pagador) {
             throw new Exception('Aluno não encontrado na matrícula.');
         }
 
@@ -428,7 +391,7 @@ class MercadoPagoService
 
     private function validarEmail(?string $email, string $nomeAluno): string
     {
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception("O aluno {$nomeAluno} não possui e-mail válido cadastrado.");
         }
 
@@ -457,17 +420,8 @@ class MercadoPagoService
         }
 
         if ($faltando !== []) {
-            throw new Exception('Endereço incompleto para ' . $nomeAluno . '. Faltam: ' . implode(', ', $faltando) . '.');
+            throw new Exception('Endereço incompleto para '.$nomeAluno.'. Faltam: '.implode(', ', $faltando).'.');
         }
-    }
-
-    private function normalizarValor(mixed $valor): float
-    {
-        if (is_string($valor)) {
-            $valor = str_replace(['.', ','], ['', '.'], $valor);
-        }
-
-        return round((float) $valor, 2);
     }
 
     private function mensagemApi(MPApiException $e): string
@@ -477,8 +431,9 @@ class MercadoPagoService
         if (is_array($content)) {
             $mensagem = (string) ($content['message'] ?? 'erro desconhecido');
             if (isset($content['cause'][0])) {
-                $mensagem .= ' — ' . (string) ($content['cause'][0]['description'] ?? $content['cause'][0]['code'] ?? 'sem detalhe');
+                $mensagem .= ' — '.(string) ($content['cause'][0]['description'] ?? $content['cause'][0]['code'] ?? 'sem detalhe');
             }
+
             return $mensagem;
         }
 

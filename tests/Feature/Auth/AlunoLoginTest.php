@@ -41,6 +41,24 @@ class AlunoLoginTest extends TestCase
         $this->assertAuthenticatedAs($aluno);
     }
 
+    public function test_login_preserva_email_legado_sem_confirmacao_mas_recusa_primeiro_acesso_pendente(): void
+    {
+        $aluno = User::factory()->create([
+            'nivel' => 'aluno',
+            'ativo' => true,
+            'email_verified_at' => null,
+            'primeiro_acesso_pendente' => true,
+        ]);
+        $dados = ['email' => $aluno->email, 'password' => 'password'];
+
+        $this->post(route('aluno.login.submit'), $dados)->assertSessionHasErrors('email');
+        $this->assertGuest();
+
+        $aluno->forceFill(['primeiro_acesso_pendente' => false])->save();
+        $this->post(route('aluno.login.submit'), $dados)->assertRedirect(route('aluno.dashboard'));
+        $this->assertAuthenticatedAs($aluno);
+    }
+
     public function test_login_respeita_destino_protegido_solicitado_antes_da_autenticacao(): void
     {
         $aluno = $this->criarUsuario();

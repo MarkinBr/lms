@@ -4,19 +4,25 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\AtivarAcessoAluno;
+use App\Services\Acessos\AtendimentoAluno;
+use App\Services\Auth\IdentificadorAluno;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Throwable;
 
 class RedefinirSenhaController extends Controller
 {
     private const MENSAGEM_NEUTRA = 'Se este e-mail pertencer a um aluno ativo, enviaremos as instruções de acesso em instantes. Verifique também a caixa de spam.';
+
+    private const MENSAGEM_NEUTRA_PRIMEIRO = 'Se houver uma conta elegível para primeiro acesso com este e-mail, enviaremos um link de ativação. Verifique também o spam. Se não tiver acesso ao e-mail cadastrado, procure a Secretaria.';
 
     public function esqueci(Request $request): View
     {
@@ -38,21 +44,63 @@ class RedefinirSenhaController extends Controller
         $email = mb_strtolower(trim($dados['email']));
 
         try {
-            $aluno = User::query()
-                ->whereRaw('LOWER(email) = ?', [$email])
-                ->where('nivel', 'aluno')
-                ->where('ativo', true)
-                ->first();
+            $aluno = app(IdentificadorAluno::class)->porEmailConfirmado($email);
 
             if ($aluno) {
-                Password::broker()->sendResetLink(['email' => $aluno->email]);
+                Password::broker()->sendResetLink(['email' => $aluno->email, 'id' => $aluno->id, 'nivel' => 'aluno', 'ativo' => true]);
             }
-        } catch (Throwable) {
-            // A resposta permanece idêntica para não revelar a existência da conta
-            // nem detalhes do provedor de e-mail.
+        } catch (Throwable $exception) {
+            // A resposta permanece idêntica, sem revelar contas nem dados do transporte.
+            Log::warning('Falha ao solicitar recuperação de senha do aluno.', [
+                'exception' => $exception::class,
+            ]);
         }
 
         return back()->with('status', self::MENSAGEM_NEUTRA);
+    }
+
+    /**
+     * Primeiro acesso não reutiliza a recuperação de senha: contas ainda não
+     * confirmadas exigem o link assinado de ativação, com token individual.
+     */
+    public function solicitarPrimeiroAcesso(Request $request, IdentificadorAluno $identificadores): RedirectResponse
+    {
+        $email = $request->input('email');
+        if (is_string($email)) {
+            $request->merge(['email' => mb_strtolower(trim($email))]);
+        }
+
+        $dados = $request->validate([
+            'email' => ['required', 'string', 'email:filter', 'max:255'],
+        ]);
+
+        try {
+            $aluno = $identificadores->porEmailPrimeiroAcesso($dados['email']);
+
+            if ($aluno) {
+                Password::broker()->sendResetLink(
+                    [
+                        'id' => $aluno->id,
+                        'email' => $aluno->email,
+                        'nivel' => 'aluno',
+                        'ativo' => true,
+                        'primeiro_acesso_pendente' => true,
+                        'email_verified_at' => null,
+                        'senha_definitiva_pendente' => false,
+                    ],
+                    function (User $usuario, string $token): void {
+                        $usuario->notify(new AtivarAcessoAluno($token));
+                    },
+                );
+            }
+        } catch (Throwable $exception) {
+            // Resposta pública neutra; detalhes técnicos apenas no log interno.
+            Log::warning('Falha ao solicitar primeiro acesso do aluno.', [
+                'exception' => $exception::class,
+            ]);
+        }
+
+        return back()->with('status', self::MENSAGEM_NEUTRA_PRIMEIRO);
     }
 
     public function redefinir(Request $request, string $token): View
@@ -87,33 +135,45 @@ class RedefinirSenhaController extends Controller
         ]);
 
         $email = mb_strtolower(trim($dados['email']));
-        $aluno = User::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->where('nivel', 'aluno')
-            ->where('ativo', true)
-            ->first();
+        $aluno = app(IdentificadorAluno::class)->porEmailConfirmado($email);
 
         if (! $aluno) {
             return $this->falhaRedefinicao($request);
         }
 
-        $status = Password::broker()->reset(
-            [
-                'email' => $aluno->email,
-                'password' => $dados['password'],
-                'password_confirmation' => $dados['password_confirmation'],
-                'token' => $dados['token'],
-            ],
-            function (User $user, string $password): void {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                    'remember_token' => Str::random(60),
-                    'senha_alterada_em' => now(),
-                ])->save();
+        $status = DB::transaction(function () use ($aluno, $dados, $email) {
+            $atual = User::query()->lockForUpdate()->find($aluno->id);
+            $elegivel = app(IdentificadorAluno::class)->porEmailConfirmado($email);
+            if (! $atual || ! $elegivel || $elegivel->id !== $atual->id) {
+                return Password::INVALID_USER;
+            }
 
-                event(new PasswordReset($user));
-            },
-        );
+            return Password::broker()->reset(
+                [
+                    'email' => $atual->email,
+                    'id' => $atual->id,
+                    'nivel' => 'aluno',
+                    'ativo' => true,
+                    'password' => $dados['password'],
+                    'password_confirmation' => $dados['password_confirmation'],
+                    'token' => $dados['token'],
+                ],
+                function (User $user, string $password): void {
+                    AtendimentoAluno::revogar($user);
+                    $user->forceFill([
+                        'password' => Hash::make($password),
+                        'senha_definitiva_pendente' => false,
+                        'primeiro_acesso_pendente' => false,
+                        'senha_alterada_em' => now(),
+                        'email_confirmacao_pendente' => null,
+                        'email_confirmacao_token' => null,
+                        'email_confirmacao_expira_em' => null,
+                    ])->save();
+
+                    event(new PasswordReset($user));
+                },
+            );
+        });
 
         if ($status !== Password::PASSWORD_RESET) {
             return $this->falhaRedefinicao($request);

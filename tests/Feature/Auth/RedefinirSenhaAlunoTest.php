@@ -34,16 +34,18 @@ class RedefinirSenhaAlunoTest extends TestCase
             ->assertSee('name="password_confirmation"', false);
     }
 
-    public function test_somente_aluno_ativo_recebe_link_e_resposta_nao_enumera_contas(): void
+    public function test_somente_aluno_ativo_com_email_confirmado_recebe_link_e_resposta_nao_enumera_contas(): void
     {
         Notification::fake();
 
         $aluno = $this->criarUsuario();
         $admin = $this->criarUsuario(['email' => 'admin@example.test', 'nivel' => 'admin']);
         $inativo = $this->criarUsuario(['email' => 'inativo@example.test', 'ativo' => false]);
+        $naoConfirmado = $this->criarUsuario(['email' => 'nao-confirmado@example.test']);
+        $naoConfirmado->forceFill(['email_verified_at' => null])->save();
 
         $respostas = [];
-        foreach ([$aluno->email, 'naoexiste@example.test', $admin->email, $inativo->email] as $email) {
+        foreach ([$aluno->email, 'naoexiste@example.test', $admin->email, $inativo->email, $naoConfirmado->email] as $email) {
             $resposta = $this->from(route('password.request'))->post(route('password.email'), [
                 'email' => $email,
             ]);
@@ -57,6 +59,7 @@ class RedefinirSenhaAlunoTest extends TestCase
         Notification::assertSentTo($aluno, ResetPassword::class);
         Notification::assertNotSentTo($admin, ResetPassword::class);
         Notification::assertNotSentTo($inativo, ResetPassword::class);
+        Notification::assertNotSentTo($naoConfirmado, ResetPassword::class);
     }
 
     public function test_link_valido_define_senha_forte_sem_logar_automaticamente_e_so_funciona_uma_vez(): void
@@ -134,12 +137,15 @@ class RedefinirSenhaAlunoTest extends TestCase
 
     private function criarUsuario(array $atributos = []): User
     {
-        return User::query()->create(array_merge([
+        $usuario = User::query()->create(array_merge([
             'name' => 'Aluno de Teste',
             'email' => 'aluno@example.test',
             'password' => Hash::make('SenhaAntiga#2026'),
             'nivel' => 'aluno',
             'ativo' => true,
         ], $atributos));
+        $usuario->forceFill(['email_verified_at' => now()])->save();
+
+        return $usuario;
     }
 }
