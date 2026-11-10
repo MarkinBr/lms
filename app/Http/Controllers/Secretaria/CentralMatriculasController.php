@@ -180,7 +180,7 @@ class CentralMatriculasController extends Controller
         $situacao = (string) $request->query('situacao', '');
         $turmas = Turma::query()
             ->with(['curso:id,titulo', 'professor:id,name', 'periodoLetivo:id,nome', 'disciplina:id,nome'])
-            ->withCount(['matriculas as legadas_count', 'matriculasTurmas as vinculos_count'])
+            ->withCount(['matriculas as legadas_count', 'matriculasTurmas as vinculos_count', 'disciplinas', 'professorAtribuicoes'])
             ->when($busca !== '', function ($q) use ($busca) {
                 $term = '%'.mb_strtolower($busca).'%';
                 $q->where(function ($q) use ($term) {
@@ -211,7 +211,11 @@ class CentralMatriculasController extends Controller
 
     public function turma(Turma $turma): View
     {
-        $turma->load(['curso:id,titulo', 'professor:id,name', 'periodoLetivo:id,nome', 'disciplina:id,nome']);
+        $turma->load([
+            'curso:id,titulo', 'professor:id,name', 'periodoLetivo:id,nome',
+            'disciplina:id,nome', 'periodos:id,nome', 'disciplinas:id,nome',
+            'professorAtribuicoes.professor:id,name',
+        ]);
         $matriculas = Matricula::query()->with([
             'user:id,name',
             'turmasHistorico' => fn ($q) => $q->where('turmas.id', $turma->id),
