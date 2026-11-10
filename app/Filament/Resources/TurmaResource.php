@@ -77,9 +77,8 @@ class TurmaResource extends Resource
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('codigo')
                         ->label('Código')
-                        ->required()
                         ->maxLength(80)
-                        ->helperText('O código deve ser único dentro do período letivo.'),
+                        ->helperText('Código automático se vazio; identifica a turma mesmo atravessando vários períodos.'),
                     Forms\Components\TextInput::make('ano_letivo')
                         ->label('Ano letivo')
                         ->numeric()
