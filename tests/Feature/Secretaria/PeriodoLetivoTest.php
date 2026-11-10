@@ -65,16 +65,12 @@ class PeriodoLetivoTest extends TestCase
         ]);
     }
 
-    public function test_apenas_um_periodo_ativo(): void
+    public function test_varios_periodos_podem_permanecer_ativos(): void
     {
-        $this->periodo(['ativo' => true]);
+        $this->periodo(['nome' => '2026.1', 'ativo' => true]);
+        $this->periodo(['nome' => '2026.2', 'ativo' => true]);
 
-        $this->expectException(ValidationException::class);
-
-        $this->periodo([
-            'nome' => '2026.2',
-            'ativo' => true,
-        ]);
+        $this->assertSame(2, PeriodoLetivo::ativos()->count());
     }
 
     public function test_nao_exclui_periodo_com_turmas(): void
