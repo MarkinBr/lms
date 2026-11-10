@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\Secretaria\CentralAcessosController;
+use App\Http\Controllers\Secretaria\CentralDocumentosController;
 use App\Http\Controllers\Secretaria\CentralEnsinoController;
 use App\Http\Controllers\Secretaria\CentralMatriculasController;
 use App\Http\Controllers\Secretaria\EnsinoAvaliacoesController;
 use App\Http\Controllers\Secretaria\EnsinoConteudoController;
+use App\Http\Controllers\Secretaria\SecretariaAssinaturasController;
 use App\Http\Middleware\AtendimentoSecretaria;
 use Illuminate\Support\Facades\Route;
 
@@ -58,6 +60,44 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
             ->whereNumber('questao')->middleware('throttle:20,1')->name('questoes.atualizar');
         Route::post('/questoes/sugerir', [EnsinoAvaliacoesController::class, 'sugerirQuestao'])
             ->middleware('throttle:5,1')->name('questoes.sugerir');
+    });
+    Route::prefix('documentos')->name('secretaria.documentos.')->group(function () {
+        Route::get('/', [CentralDocumentosController::class, 'painel'])->name('painel');
+        Route::get('/solicitacoes', [CentralDocumentosController::class, 'solicitacoes'])->name('solicitacoes');
+        Route::get('/solicitacoes/{requerimento}', [CentralDocumentosController::class, 'solicitacao'])
+            ->whereNumber('requerimento')->name('solicitacao');
+        Route::post('/solicitacoes/{requerimento}/responder', [CentralDocumentosController::class, 'responderSolicitacao'])
+            ->whereNumber('requerimento')->middleware('throttle:15,1')->name('solicitacao.responder');
+        Route::get('/atendimento', [CentralDocumentosController::class, 'atendimento'])->name('atendimento');
+        Route::get('/documentacao', [CentralDocumentosController::class, 'documentacao'])->name('documentacao');
+        Route::get('/documentacao/{documento}/conferir', [CentralDocumentosController::class, 'conferirDocumento'])
+            ->name('documentacao.conferir');
+        Route::get('/documentacao/{documento}/arquivo', [CentralDocumentosController::class, 'documentoArquivo'])
+            ->name('documentacao.arquivo');
+        Route::post('/documentacao/{documento}/decidir', [CentralDocumentosController::class, 'decidirDocumento'])
+            ->middleware('throttle:12,1')->name('documentacao.decidir');
+        Route::get('/declaracoes', [CentralDocumentosController::class, 'declaracoes'])->name('declaracoes');
+        Route::post('/declaracoes', [CentralDocumentosController::class, 'preparar'])
+            ->middleware('throttle:12,1')->name('declaracoes.preparar');
+        Route::put('/declaracoes/{documento}', [CentralDocumentosController::class, 'atualizar'])
+            ->whereNumber('documento')->middleware('throttle:10,1')->name('declaracao.atualizar');
+        Route::get('/declaracoes/{documento}', [CentralDocumentosController::class, 'declaracao'])
+            ->whereNumber('documento')->name('declaracao');
+        Route::get('/declaracoes/{documento}/previa.pdf', [CentralDocumentosController::class, 'pdf'])
+            ->whereNumber('documento')->name('declaracao.pdf');
+        Route::post('/declaracoes/{documento}/enviar', [CentralDocumentosController::class, 'enviarAprovacao'])
+            ->whereNumber('documento')->middleware('throttle:10,1')->name('declaracao.enviar');
+        Route::post('/declaracoes/{documento}/revisar', [CentralDocumentosController::class, 'revisar'])
+            ->whereNumber('documento')->middleware('throttle:10,1')->name('declaracao.revisar');
+        Route::get('/aprovacoes', [CentralDocumentosController::class, 'aprovacoes'])->name('aprovacoes');
+        Route::get('/assinaturas', [CentralDocumentosController::class, 'assinaturas'])->name('assinaturas');
+        Route::post('/assinaturas', [SecretariaAssinaturasController::class, 'salvar'])
+            ->middleware('throttle:8,1')->name('assinaturas.salvar');
+        Route::get('/assinaturas/{assinatura}/imagem', [CentralDocumentosController::class, 'assinaturaImagem'])
+            ->whereNumber('assinatura')->name('assinaturas.imagem');
+        Route::post('/assinaturas/{assinatura}/desativar', [CentralDocumentosController::class, 'desativarAssinatura'])
+            ->whereNumber('assinatura')->middleware('throttle:10,1')->name('assinaturas.desativar');
+        Route::get('/historico', [CentralDocumentosController::class, 'historico'])->name('historico');
     });
     Route::prefix('matriculas')->name('secretaria.matriculas.')->group(function () {
         Route::get('/painel', [CentralMatriculasController::class, 'painel'])->name('painel');
