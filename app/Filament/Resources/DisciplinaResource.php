@@ -85,8 +85,8 @@ class DisciplinaResource extends Resource
 
                         Forms\Components\TextInput::make('codigo')
                             ->label('Código')
-                            ->required()
-                            ->maxLength(50),
+                            ->maxLength(50)
+                            ->helperText('Opcional: o sistema gera código único dentro do curso.'),
 
                         Forms\Components\TextInput::make('nome')
                             ->label('Nome')
