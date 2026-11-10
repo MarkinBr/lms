@@ -109,6 +109,14 @@ class Turma extends Model
     protected static function booted(): void
     {
         static::saving(function (Turma $turma) {
+            if (! $turma->exists && blank($turma->codigo)
+                && filled($turma->curso_id) && filled($turma->periodo_letivo_id)) {
+                do {
+                    $turma->codigo = sprintf('T-%s-%03d-%s', $turma->ano_letivo ?: date('Y'),
+                        (int) $turma->curso_id, strtoupper(\Illuminate\Support\Str::random(6)));
+                } while (static::query()->where('periodo_letivo_id', $turma->periodo_letivo_id)
+                    ->where('codigo', $turma->codigo)->exists());
+            }
             if (filled($turma->situacao_academica)) {
                 if (! array_key_exists($turma->situacao_academica, self::SITUACOES_ACADEMICAS)) {
                     throw ValidationException::withMessages(['situacao_academica' => 'Situação acadêmica inválida.']);
