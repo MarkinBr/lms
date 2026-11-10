@@ -35,29 +35,24 @@ class Aula extends Model
                 ]);
             }
 
-            if (! $disciplina->modulo_id) {
+            $moduloId = $aula->modulo_id ?: $disciplina->modulo_id;
+            if (! $moduloId) {
                 throw ValidationException::withMessages([
-                    'disciplina_id' => 'Vincule a disciplina a um módulo antes de cadastrar aulas.',
+                    'modulo_id' => 'Vincule a disciplina a um módulo antes de cadastrar aulas.',
                 ]);
             }
 
-            $modulo = $disciplina->modulo;
+            $modulo = Modulo::query()->find($moduloId);
+            $vinculado = (int) $disciplina->modulo_id === (int) $moduloId
+                || $disciplina->modulos()->whereKey($moduloId)->exists();
 
-            if (! $modulo || (int) $modulo->curso_id !== (int) $disciplina->curso_id) {
+            if (! $modulo || (int) $modulo->curso_id !== (int) $disciplina->curso_id || ! $vinculado) {
                 throw ValidationException::withMessages([
-                    'disciplina_id' => 'A disciplina possui um vínculo acadêmico inconsistente.',
+                    'modulo_id' => 'O módulo deve estar vinculado à disciplina e pertencer ao mesmo curso.',
                 ]);
             }
 
-            if ($aula->modulo_id && (int) $disciplina->modulo_id !== (int) $aula->modulo_id) {
-                throw ValidationException::withMessages([
-                    'disciplina_id' => 'A disciplina selecionada não pertence ao módulo da aula.',
-                ]);
-            }
-
-            // Mantém o vínculo legado preenchido para que o portal e relatórios
-            // antigos continuem encontrando a aula dentro do módulo.
-            $aula->modulo_id = $disciplina->modulo_id;
+            $aula->modulo_id = $moduloId;
         });
     }
 
