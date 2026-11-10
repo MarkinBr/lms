@@ -10,6 +10,8 @@ Route::middleware([AtendimentoSecretaria::class])->prefix('secretaria/central')-
         Route::get('/', [CentralAcessosController::class, 'index'])->name('index');
         Route::get('/novo', [CentralAcessosController::class, 'create'])->name('create');
         Route::post('/', [CentralAcessosController::class, 'store'])->middleware('throttle:15,1')->name('store');
+        Route::get('/{aluno}/formas-de-acesso', [CentralAcessosController::class, 'formasDeAcesso'])
+            ->middleware('throttle:30,1')->whereNumber('aluno')->name('formas');
         Route::get('/{aluno}/editar', [CentralAcessosController::class, 'edit'])->whereNumber('aluno')->name('edit');
         Route::get('/{aluno}/foto', [CentralAcessosController::class, 'verFoto'])->whereNumber('aluno')->name('foto.ver');
         Route::get('/{aluno}', [CentralAcessosController::class, 'show'])->whereNumber('aluno')->name('show');
