@@ -6,6 +6,7 @@ use App\Filament\Professor\Resources\AulaResource\Pages;
 use App\Models\Aula;
 use App\Models\Curso;
 use App\Models\Disciplina;
+use App\Services\GestaoAcademica\PermissoesDocentes;
 use App\Support\TranscricaoVideo;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
@@ -62,10 +63,15 @@ class AulaResource extends Resource
                                             ->options(function () {
                                                 $professorId = auth()->id();
 
+                                                $ids = app(PermissoesDocentes::class)->disciplinasParaCriacao((int) $professorId);
+
                                                 return Disciplina::query()
                                                     ->where('ativa', true)
                                                     ->whereNotNull('modulo_id')
-                                                    ->whereHas('modulo.curso', fn ($query) => $query->where('instrutor_id', $professorId))
+                                                    ->where(function (Builder $query) use ($professorId, $ids) {
+                                                        $query->whereHas('modulo.curso', fn ($curso) => $curso->where('instrutor_id', $professorId))
+                                                            ->orWhereIn('id', $ids);
+                                                    })
                                                     ->with('modulo.curso')
                                                     ->orderBy('ordem')
                                                     ->get()
@@ -78,6 +84,15 @@ class AulaResource extends Resource
                                             ->required()
                                             ->columnSpanFull()
                                             ->helperText('Selecione a disciplina; o módulo será definido automaticamente no servidor.'),
+
+                                        Forms\Components\Select::make('modulo_id')
+                                            ->label('Módulo específico da aula')
+                                            ->options(fn (Forms\Get $get) => $get('disciplina_id')
+                                                ? Disciplina::query()->find($get('disciplina_id'))?->modulos()
+                                                    ->pluck('modulos.titulo', 'modulos.id') ?? []
+                                                : [])
+                                            ->searchable()->required()
+                                            ->helperText('Permissões do professor são validadas no servidor para esse módulo.'),
 
                                         Forms\Components\TextInput::make('titulo')
                                             ->label('Título da Aula')
@@ -803,7 +818,9 @@ class AulaResource extends Resource
                     ->icon('heroicon-o-document-duplicate')
                     ->color('gray')
                     ->requiresConfirmation()
+                    ->visible(fn (Aula $record): bool => static::canEdit($record))
                     ->action(function (Aula $record) {
+                        abort_unless(static::canEdit($record), 403);
                         $nova = $record->replicate();
                         $nova->titulo = $record->titulo.' (Cópia)';
                         $nova->ordem = $record->ordem + 1;
@@ -822,7 +839,6 @@ class AulaResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->reorderable('ordem')
             ->defaultSort('ordem')
             ->emptyStateHeading('Nenhuma aula encontrada')
             ->emptyStateDescription('Crie aulas a partir das disciplinas atribuídas aos seus cursos.')
@@ -843,13 +859,28 @@ class AulaResource extends Resource
         ];
     }
 
-    // Filtra apenas aulas dos cursos do professor logado
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->whereHas('modulo.curso', function ($query) {
-                $query->where('instrutor_id', auth()->id());
-            });
+        return app(PermissoesDocentes::class)->filtrarAulasVisiveis(
+            parent::getEloquentQuery(), (int) auth()->id()
+        );
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->check()
+            && app(PermissoesDocentes::class)->podeCriarEmAlgumLugar((int) auth()->id());
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->check() && $record instanceof Aula
+            && app(PermissoesDocentes::class)->podeEditarAula((int) auth()->id(), $record);
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return static::canEdit($record);
     }
 
     public static function getNavigationBadge(): ?string
