@@ -131,6 +131,9 @@ jobs:
       - name: Testes da Gestão de Acessos e inscrição complementar
         run: php artisan test --filter='GestaoCadastroAcessosTest|CredenciaisAcessoTest|EntregasAcessoTest|CentralAcessosHttpTest|CentralMatriculasTest|CentralEnsinoTest|AtendimentoSeguroHttpTest|InscricaoCamposComplementaresTest'
 
+      - name: Testes da estrutura acadêmica flexível e permissões docentes
+        run: php artisan test --filter='EstruturaAcademicaFlexivelTest|PeriodoLetivoTest|TurmaAcademicaTest|HierarquiaAcademicaProfessorTest'
+
       - name: Testes da infraestrutura isolada
         run: python3 -m unittest discover -s tests/infra -p 'test_*.py'
 
