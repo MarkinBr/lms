@@ -75,6 +75,7 @@ class AtivarAcessoAlunoController extends Controller
             && $aluno->ativo
             && $aluno->nivel === 'aluno'
             && $aluno->primeiro_acesso_pendente
+            && ! $aluno->senha_definitiva_pendente
             && $aluno->email_verified_at === null
             && is_string($request->query('email'))
             && hash_equals((string) $aluno->email, $request->query('email'))
