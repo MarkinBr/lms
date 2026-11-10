@@ -10,23 +10,29 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class ModuloResource extends Resource
 {
     protected static ?string $model = Modulo::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
-    
+
     protected static ?string $navigationLabel = 'Módulos';
-    
+
     protected static ?string $modelLabel = 'Módulo';
-    
+
     protected static ?string $pluralModelLabel = 'Módulos';
-    
+
     protected static ?string $navigationGroup = 'Acadêmico';
-    
+
     protected static ?int $navigationSort = 2;
+
+    /**
+     * Issue #57 — a entrada visível no menu é a central Gestão Acadêmica;
+     * as rotas permanecem ativas para os atalhos e deep links.
+     */
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form
     {
@@ -86,7 +92,7 @@ class ModuloResource extends Resource
                     ->label('Título')
                     ->searchable()
                     ->sortable()
-                    ->description(fn ($record) => \Illuminate\Support\Str::limit($record->descricao, 50)),
+                    ->description(fn ($record) => Str::limit($record->descricao, 50)),
 
                 Tables\Columns\TextColumn::make('aulas_count')
                     ->counts('aulas')
@@ -110,20 +116,18 @@ class ModuloResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (Modulo $record): bool => $record->podeSerExcluido()),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('ordem');
     }
 
     public static function getRelations(): array
     {
         return [
-            RelationManagers\AulasRelationManager::class,
+            RelationManagers\DisciplinasRelationManager::class,
+            RelationManagers\AulasLegadasRelationManager::class,
         ];
     }
 

@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
 use App\Models\CourseModality;
+use App\Models\User;
+use App\Services\AprovarInscricaoException;
+use App\Services\AprovarInscricaoService;
+use App\Services\NotificarInscricaoRecebidaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +19,10 @@ use Illuminate\Validation\ValidationException;
 
 class ApplicationController extends Controller
 {
+    public function __construct(
+        private readonly NotificarInscricaoRecebidaService $notificarInscricao,
+    ) {}
+
     /**
      * Regras comuns dos dados pessoais/endereço do candidato.
      * O e-mail deixou de ser globalmente único e o CPF passou a ser
@@ -65,7 +73,7 @@ class ApplicationController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Application::with(['curso', 'documentos'])
+        $query = Application::with(['curso', 'documents'])
             ->orderBy('created_at', 'desc');
 
         // Filtros
@@ -190,13 +198,17 @@ class ApplicationController extends Controller
             }
         }
 
-        // TODO: Enviar e-mail de confirmação para o candidato
+        // Confirmação institucional por e-mail, somente após a inscrição e os
+        // documentos estarem persistidos. Falhas do provedor não desfazem o
+        // registro nem alteram a resposta HTTP 201.
+        $this->notificarInscricao->enviar(collect([$application]));
+
         // TODO: Enviar notificação WhatsApp para o candidato
         // TODO: Enviar notificação para Secretaria sobre nova inscrição
 
         return response()->json([
             'success' => true,
-            'message' => 'Inscrição realizada com sucesso! Você receberá um e-mail de confirmação.',
+            'message' => 'Inscrição realizada com sucesso! Guarde o protocolo abaixo.',
             'data' => [
                 'application' => $application->load(['curso', 'courseModality']),
                 'protocol' => $protocol,
@@ -234,12 +246,16 @@ class ApplicationController extends Controller
         );
 
         $cpf = preg_replace('/\D/', '', (string) $validated['cpf']);
-        $detalhes = [];
+        /**
+         * @var array<string, array<string, array<int, string>>> $errosPorIndice
+         */
+        $errosPorIndice = [];
 
         // Valida CPF por curso e modalidade pertencente ao curso, ANTES de gravar
         foreach ($validated['inscricoes'] as $indice => $inscricao) {
             $cursoId = (int) $inscricao['curso_id'];
             $modalidadeId = (int) $inscricao['course_modality_id'];
+            $chaveIndice = (string) $indice;
 
             $jaInscrito = Application::query()
                 ->where('cpf', $cpf)
@@ -247,28 +263,33 @@ class ApplicationController extends Controller
                 ->exists();
 
             if ($jaInscrito) {
-                $detalhes["inscricoes.{$indice}.curso_id"] = [
+                $errosPorIndice[$chaveIndice]['curso_id'] = [
                     'Você já possui uma inscrição para este curso.',
                 ];
+
                 continue;
             }
 
             $modalidade = CourseModality::query()->find($modalidadeId);
 
             if (! $modalidade || (int) $modalidade->curso_id !== $cursoId) {
-                $detalhes["inscricoes.{$indice}.course_modality_id"] = [
+                $errosPorIndice[$chaveIndice]['course_modality_id'] = [
                     'A modalidade selecionada não pertence ao curso informado.',
                 ];
             }
         }
 
-        if ($detalhes !== []) {
+        if ($errosPorIndice !== []) {
+            ksort($errosPorIndice, SORT_NUMERIC);
+
             return response()->json([
                 'success' => false,
                 'error' => [
                     'code' => 'VALIDATION_ERROR',
                     'message' => 'Dados inválidos',
-                    'details' => $detalhes,
+                    'details' => [
+                        'inscricoes' => (object) $errosPorIndice,
+                    ],
                 ],
             ], 422);
         }
@@ -309,7 +330,10 @@ class ApplicationController extends Controller
             return $criadas;
         });
 
-        // TODO: Enviar e-mail de confirmação com a lista de protocolos
+        // Uma confirmação consolidada com todos os protocolos, somente depois
+        // de a transação concluir e nunca dentro do laço.
+        $this->notificarInscricao->enviar(collect($inscricoesCriadas));
+
         // TODO: Enviar notificação para Secretaria sobre novas inscrições
 
         return response()->json([
@@ -423,42 +447,66 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Atualiza status da inscrição (Secretaria/Admin)
+     * Decide uma inscrição pelo mesmo fluxo usado no painel da Secretaria.
      */
-    public function updateStatus(Request $request, Application $application): JsonResponse
-    {
+    public function updateStatus(
+        Request $request,
+        Application $application,
+        AprovarInscricaoService $aprovarInscricao,
+    ): JsonResponse {
+        if (is_string($request->input('observacoes_secretaria'))) {
+            $request->merge([
+                'observacoes_secretaria' => trim($request->input('observacoes_secretaria')),
+            ]);
+        }
+
         $validated = $request->validate([
-            'status' => 'required|in:em_analise,aprovado,rejeitado,matriculado,cancelado',
-            'observacoes_secretaria' => 'nullable|string|max:1000',
+            'status' => ['required', Rule::in([
+                Application::STATUS_APROVADO,
+                Application::STATUS_REJEITADO,
+            ])],
+            'observacoes_secretaria' => [
+                Rule::requiredIf($request->input('status') === Application::STATUS_REJEITADO),
+                'nullable',
+                'string',
+                'min:3',
+                'max:1000',
+            ],
+        ], [
+            'status.in' => 'A decisão deve ser aprovado ou rejeitado.',
+            'observacoes_secretaria.required' => 'A justificativa da rejeição é obrigatória.',
+            'observacoes_secretaria.min' => 'A justificativa da rejeição deve ter ao menos 3 caracteres.',
         ]);
 
-        $oldStatus = $application->status;
-        $application->update([
-            'status' => $validated['status'],
-            'observacoes_secretaria' => $validated['observacoes_secretaria'] ?? null,
-            'analisado_em' => now(),
-            'analisado_por_id' => auth()->id(),
-        ]);
+        /** @var User $operador */
+        $operador = $request->user();
+        $observacoes = isset($validated['observacoes_secretaria'])
+            ? trim((string) $validated['observacoes_secretaria'])
+            : null;
 
-        // Log de auditoria
-        activity()
-            ->performedBy(auth()->user())
-            ->on($application)
-            ->withProperties([
-                'old_status' => $oldStatus,
-                'new_status' => $validated['status'],
-                'observacoes' => $validated['observacoes_secretaria'] ?? null,
-            ])
-            ->event('status_changed')
-            ->log('Status da inscrição alterado');
-
-        // TODO: Enviar e-mail para o candidato sobre aprovação/rejeição
-        // TODO: Enviar notificação WhatsApp
+        try {
+            if ($validated['status'] === Application::STATUS_APROVADO) {
+                $resultado = $aprovarInscricao->executar($application, $operador, $observacoes);
+                $application = $resultado->application;
+                $mensagem = 'Inscrição aprovada e matrícula gerada com sucesso.';
+            } else {
+                $application = $aprovarInscricao->rejeitar($application, $operador, (string) $observacoes);
+                $mensagem = 'Inscrição rejeitada com sucesso.';
+            }
+        } catch (AprovarInscricaoException $exception) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => $exception->codigoDominio,
+                    'message' => $exception->getMessage(),
+                ],
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => "Inscrição {$validated['status']} com sucesso.",
-            'data' => $application->load(['curso', 'documentos']),
+            'message' => $mensagem,
+            'data' => $application->load(['curso', 'courseModality', 'documents', 'matricula']),
         ]);
     }
 
@@ -520,19 +568,28 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Armazena documento no storage
+     * Armazena documento no disco PRIVADO configurado (Issue #50).
+     *
+     * - Não há fallback silencioso para "public".
+     * - O disco é resolvido por config('filesystems.applications_disk'),
+     *   declarado em config/filesystems.php.
+     * - Se a configuração estiver ausente ou apontar para "public", o upload
+     *   falha com 500 registrado, em vez de gravar PII em disco público.
      */
     private function storeDocument($file, string $applicationId, string $type): string
     {
+        $disk = (string) config('filesystems.applications_disk');
+
+        // Segurança em profundidade: nunca degrada para o disco público.
+        if ($disk === '' || $disk === 'public') {
+            report(new \RuntimeException('Disco de documentos de inscrição não configurado corretamente.'));
+            abort(500);
+        }
+
         $folder = "applications/{$applicationId}";
         $extension = $file->getClientOriginalExtension();
         $filename = "{$type}_".Str::uuid().".{$extension}";
 
-        // Usa S3/R2 em produção, local em desenvolvimento
-        $disk = config('filesystems.cloud_disk', 'public');
-
-        $path = $file->storeAs($folder, $filename, $disk);
-
-        return $path;
+        return $file->storeAs($folder, $filename, $disk);
     }
 }

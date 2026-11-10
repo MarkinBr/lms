@@ -2,16 +2,68 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class Aula extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::saving(function (Aula $aula): void {
+            if (! $aula->disciplina_id) {
+                if (! $aula->exists || $aula->isDirty('disciplina_id')) {
+                    throw ValidationException::withMessages([
+                        'disciplina_id' => 'Informe a disciplina da aula.',
+                    ]);
+                }
+
+                // Registros anteriores à Issue #57 continuam editáveis até a
+                // Secretaria concluir o vínculo manual com uma disciplina.
+                return;
+            }
+
+            $disciplina = Disciplina::query()->find($aula->disciplina_id);
+
+            if (! $disciplina) {
+                throw ValidationException::withMessages([
+                    'disciplina_id' => 'A disciplina selecionada não existe.',
+                ]);
+            }
+
+            if (! $disciplina->modulo_id) {
+                throw ValidationException::withMessages([
+                    'disciplina_id' => 'Vincule a disciplina a um módulo antes de cadastrar aulas.',
+                ]);
+            }
+
+            $modulo = $disciplina->modulo;
+
+            if (! $modulo || (int) $modulo->curso_id !== (int) $disciplina->curso_id) {
+                throw ValidationException::withMessages([
+                    'disciplina_id' => 'A disciplina possui um vínculo acadêmico inconsistente.',
+                ]);
+            }
+
+            if ($aula->modulo_id && (int) $disciplina->modulo_id !== (int) $aula->modulo_id) {
+                throw ValidationException::withMessages([
+                    'disciplina_id' => 'A disciplina selecionada não pertence ao módulo da aula.',
+                ]);
+            }
+
+            // Mantém o vínculo legado preenchido para que o portal e relatórios
+            // antigos continuem encontrando a aula dentro do módulo.
+            $aula->modulo_id = $disciplina->modulo_id;
+        });
+    }
+
     protected $fillable = [
         'modulo_id',
+        'disciplina_id',
         'titulo',
         'descricao',
         'conteudo_texto',
@@ -71,9 +123,21 @@ class Aula extends Model
     // RELACIONAMENTOS
     // ═══════════════════════════════════
 
-    public function modulo()
+    public function modulo(): BelongsTo
     {
         return $this->belongsTo(Modulo::class);
+    }
+
+    /**
+     * Disciplina curricular à qual a aula pertence.
+     *
+     * `modulo_id` permanece por compatibilidade com aulas legadas; aulas
+     * novas devem ser criadas pela disciplina e também recebem o módulo
+     * correspondente automaticamente.
+     */
+    public function disciplina(): BelongsTo
+    {
+        return $this->belongsTo(Disciplina::class);
     }
 
     public function comentarios()
@@ -120,44 +184,44 @@ class Aula extends Model
 
     public function temConteudoTexto()
     {
-        return !empty($this->conteudo_texto) && 
+        return ! empty($this->conteudo_texto) &&
                in_array($this->tipo_conteudo, ['texto', 'misto']);
     }
 
     public function temVideo()
     {
-        return !empty($this->video_url) && 
+        return ! empty($this->video_url) &&
                in_array($this->tipo_conteudo, ['video', 'misto']);
     }
 
     public function temAudio()
     {
-        return !empty($this->audio_url);
+        return ! empty($this->audio_url);
     }
 
     public function temPdf()
     {
-        return !empty($this->pdf_url);
+        return ! empty($this->pdf_url);
     }
 
     public function temQuestoes()
     {
-        return !empty($this->questoes) && count($this->questoes) > 0;
+        return ! empty($this->questoes) && count($this->questoes) > 0;
     }
 
     public function temBlocosConteudo()
     {
-        return !empty($this->blocos_conteudo) && count($this->blocos_conteudo) > 0;
+        return ! empty($this->blocos_conteudo) && count($this->blocos_conteudo) > 0;
     }
 
     public function temMateriais()
     {
-        return !empty($this->materiais) && count($this->materiais) > 0;
+        return ! empty($this->materiais) && count($this->materiais) > 0;
     }
 
     public function temAnexos()
     {
-        return !empty($this->anexos) && count($this->anexos) > 0;
+        return ! empty($this->anexos) && count($this->anexos) > 0;
     }
 
     // ═══════════════════════════════════
@@ -170,19 +234,23 @@ class Aula extends Model
     public function getVideoEmbedUrl(): ?string
     {
         $url = $this->video_url;
-        if (empty($url)) return null;
+        if (empty($url)) {
+            return null;
+        }
 
         // YouTube
         if (str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be')) {
-            preg_match('/(?:v=|\/)([\w-]{11})/', $url, $matches);
+            preg_match('/(?:v=|\\/)([\\w-]{11})/', $url, $matches);
             $videoId = $matches[1] ?? null;
+
             return $videoId ? "https://www.youtube.com/embed/{$videoId}" : $url;
         }
 
         // Vimeo
         if (str_contains($url, 'vimeo.com')) {
-            preg_match('/vimeo\.com\/(\d+)/', $url, $matches);
+            preg_match('/vimeo\\.com\\/(\\d+)/', $url, $matches);
             $videoId = $matches[1] ?? null;
+
             return $videoId ? "https://player.vimeo.com/video/{$videoId}" : $url;
         }
 
@@ -195,7 +263,8 @@ class Aula extends Model
     public function getBlocosOrdenados(): array
     {
         $blocos = $this->blocos_conteudo ?? [];
-        usort($blocos, fn($a, $b) => ($a['ordem'] ?? 0) <=> ($b['ordem'] ?? 0));
+        usort($blocos, fn ($a, $b) => ($a['ordem'] ?? 0) <=> ($b['ordem'] ?? 0));
+
         return $blocos;
     }
 
@@ -204,7 +273,9 @@ class Aula extends Model
      */
     public function calcularNotaQuiz(array $respostas): int
     {
-        if (!$this->temQuestoes()) return 0;
+        if (! $this->temQuestoes()) {
+            return 0;
+        }
 
         $totalPontos = 0;
         $pontosObtidos = 0;
@@ -216,7 +287,7 @@ class Aula extends Model
             if (isset($respostas[$index])) {
                 if ($questao['tipo'] === 'multipla_escolha') {
                     $corretas = collect($questao['alternativas'] ?? [])
-                        ->filter(fn($alt) => $alt['correta'] ?? false)
+                        ->filter(fn ($alt) => $alt['correta'] ?? false)
                         ->pluck('letra')
                         ->toArray();
                     if (in_array($respostas[$index], $corretas)) {

@@ -8,9 +8,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * CETSADP v9.3.5 — Middleware: Garante que o usuário é aluno
- * 
+ *
  * Verifica se o usuário autenticado possui o nível 'aluno'.
  * Utilizado nas rotas exclusivas do portal do aluno (aula-v2, etc.)
+ *
+ * Issue #49: usuário inativo deve ser negado nas rotas protegidas.
  */
 class EnsureUserIsAluno
 {
@@ -21,13 +23,18 @@ class EnsureUserIsAluno
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('aluno.login');
         }
 
         // Verificar se o nível do usuário é 'aluno'
         if ($user->nivel !== 'aluno') {
             abort(403, 'Acesso restrito a alunos.');
+        }
+
+        // Issue #49: usuário inativo não acessa rotas protegidas do portal
+        if (! (bool) $user->ativo) {
+            abort(403, 'Conta inativa.');
         }
 
         return $next($request);

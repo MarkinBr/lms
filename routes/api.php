@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\ApplicationController;
+use App\Http\Controllers\Api\V1\ApplicationDocumentDownloadController;
 use App\Http\Controllers\Api\V1\CourseCatalogController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
@@ -46,15 +47,27 @@ Route::prefix('v1')->group(function () {
     });
 
     // Rotas protegidas (Secretaria/Admin)
-    Route::middleware(['auth:sanctum', 'role:secretary,admin,super_admin'])->group(function () {
-        Route::apiResource('applications', ApplicationController::class)->except(['store']);
-
-        // Secretaria analisa inscrição (aprova/rejeita)
-        Route::patch('applications/{application}/status', [ApplicationController::class, 'updateStatus'])
-            ->name('applications.status');
-
-        // Lista todas as inscrições com filtros
+    Route::middleware(['auth:sanctum', 'role:secretario,admin'])->group(function () {
         Route::get('applications', [ApplicationController::class, 'index'])
             ->name('applications.index');
+
+        Route::get('applications/{application}', [ApplicationController::class, 'show'])
+            ->name('applications.show');
+
+        Route::delete('applications/{application}', [ApplicationController::class, 'destroy'])
+            ->name('applications.destroy');
+
+        // Secretaria analisa inscrição pelo fluxo canônico de aprovação/rejeição
+        Route::patch('applications/{application}/status', [ApplicationController::class, 'updateStatus'])
+            ->name('applications.status');
     });
+
+    // === Download protegido de documentos de inscrição (Issue #50) ===
+    // Sanctum + ApplicationDocumentPolicy (autodiscovery — não existe
+    // AuthServiceProvider). Fica fora do grupo role:secretario,admin porque o
+    // candidato-dono também baixa os próprios documentos.
+    Route::middleware('auth:sanctum')->get(
+        'applications/{application}/documents/{document}',
+        ApplicationDocumentDownloadController::class,
+    )->name('applications.documents.download');
 });

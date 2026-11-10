@@ -14,10 +14,10 @@
             <div class="field"><label>Nome completo <span class="req">*</span></label><input type="text" name="nome" placeholder="Seu nome" required></div>
             <div class="field"><label>E-mail <span class="req">*</span></label><input type="email" name="email" placeholder="seu@email.com" required></div>
             <div class="field"><label>Telefone / WhatsApp</label><input type="tel" name="telefone" placeholder="(21) 99999-9999"></div>
-            <div class="field"><label>Assunto <span class="req">*</span></label><select required><option value="">Selecione o assunto</option><option>Dúvidas sobre cursos</option><option>Matrículas e inscrições</option><option>Secretaria e documentos</option><option>Financeiro</option><option>Suporte ao portal</option><option>Parcerias e outros</option></select></div>
+            <div class="field"><label>Assunto <span class="req">*</span></label><select name="assunto" required><option value="">Selecione o assunto</option><option>Dúvidas sobre cursos</option><option>Matrículas e inscrições</option><option>Secretaria e documentos</option><option>Financeiro</option><option>Suporte ao portal</option><option>Parcerias e outros</option></select></div>
             <div class="field full"><label>Mensagem <span class="req">*</span></label><textarea name="mensagem" placeholder="Escreva sua mensagem..." required></textarea></div>
           </div>
-          <label class="terms"><input type="checkbox" required> Autorizo o CETSADP a utilizar meus dados para responder a este contato, conforme a política de privacidade. <span class="req">*</span></label>
+          <label class="terms"><input type="checkbox" name="consentimento" value="1" required> Autorizo o CETSADP a utilizar meus dados para responder a este contato, conforme a política de privacidade. <span class="req">*</span></label>
           <button type="submit" class="btn btn-navy btn-block btn-lg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> ENVIAR MENSAGEM</button>
           <div class="form-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Suas informações estão seguras e não serão compartilhadas.</div>
         </form>

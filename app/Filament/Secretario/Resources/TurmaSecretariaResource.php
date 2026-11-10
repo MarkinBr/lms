@@ -66,8 +66,8 @@ class TurmaSecretariaResource extends Resource
                             ->options(PeriodoLetivo::orderByDesc('data_inicio')->pluck('nome', 'id'))
                             ->searchable()
                             ->preload()
-                            ->nullable()
-                            ->helperText('Deixe vazio apenas para turmas legadas sem período migrado.'),
+                            ->required()
+                            ->helperText('Turmas legadas sem período devem ser regularizadas ao editar.'),
 
                         Forms\Components\Select::make('disciplina_id')
                             ->label('Disciplina')
@@ -85,7 +85,7 @@ class TurmaSecretariaResource extends Resource
                             ->searchable()
                             ->preload()
                             ->disabled(fn (Forms\Get $get) => ! $get('curso_id'))
-                            ->nullable(),
+                            ->required(),
 
                         Forms\Components\Select::make('professor_id')
                             ->label('Professor')
@@ -103,8 +103,9 @@ class TurmaSecretariaResource extends Resource
 
                         Forms\Components\TextInput::make('codigo')
                             ->label('Código')
-                            ->nullable()
-                            ->helperText('Código único por período letivo quando período e código forem informados.'),
+                            ->required()
+                            ->maxLength(80)
+                            ->helperText('Código único dentro do período letivo.'),
 
                         Forms\Components\TextInput::make('ano_letivo')
                             ->label('Ano Letivo')
@@ -133,14 +134,19 @@ class TurmaSecretariaResource extends Resource
                             ->nullable(),
 
                         Forms\Components\Select::make('modalidade')
-                            ->options(Turma::MODALIDADE_LABELS)
-                            ->nullable()
+                            ->options([
+                                Turma::MODALIDADE_HIBRIDA => 'Híbrido (on-line + presencial)',
+                            ])
+                            ->default(Turma::MODALIDADE_HIBRIDA)
+                            ->required()
+                            ->disabled()
+                            ->dehydrated()
                             ->native(false),
 
                         Forms\Components\Select::make('status')
                             ->options(Turma::STATUS_LABELS)
                             ->default(Turma::STATUS_PLANEJADA)
-                            ->nullable()
+                            ->required()
                             ->native(false),
                     ])
                     ->columns(2),

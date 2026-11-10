@@ -5,30 +5,31 @@ namespace App\Filament\Professor\Resources;
 use App\Filament\Professor\Resources\CursoResource\Pages;
 use App\Filament\Professor\Resources\CursoResource\RelationManagers;
 use App\Models\Curso;
-use App\Models\Modulo;
 use Filament\Forms;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Tabs;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Tabs;
-use Filament\Support\Enums\FontWeight;
-use Filament\Infolists;
-use Filament\Infolists\Infolist;
-use Filament\Notifications\Notification;
 
 class CursoResource extends Resource
 {
     protected static ?string $model = Curso::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
+
     protected static ?string $navigationLabel = 'Meus Cursos';
+
     protected static ?string $modelLabel = 'Curso';
+
     protected static ?string $pluralModelLabel = 'Meus Cursos';
+
     protected static ?string $navigationGroup = 'Gerenciamento de Conteúdo';
+
     protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
@@ -187,14 +188,16 @@ class CursoResource extends Resource
                                         Forms\Components\Placeholder::make('duracao_calc')
                                             ->label('⏱️ Duração Total Calculada')
                                             ->content(function ($record) {
-                                                $minutos = $record->aulas()->get()->sum(function($aula) {
+                                                $minutos = $record->aulas()->get()->sum(function ($aula) {
                                                     $parts = explode(':', $aula->duracao ?? '0:00');
-                                                    return count($parts) === 3 
-                                                        ? ($parts[0] * 60 + $parts[1]) 
+
+                                                    return count($parts) === 3
+                                                        ? ($parts[0] * 60 + $parts[1])
                                                         : ($parts[0] ?? 0);
                                                 });
                                                 $horas = intdiv($minutos, 60);
                                                 $min = $minutos % 60;
+
                                                 return "{$horas}h {$min}min";
                                             }),
 
@@ -228,7 +231,7 @@ class CursoResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::Bold)
-                    ->description(fn ($record) => $record->categoria . ' • ' . $record->nivel)
+                    ->description(fn ($record) => $record->categoria.' • '.$record->nivel)
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('modulos_count')
@@ -291,36 +294,6 @@ class CursoResource extends Resource
                 Tables\Actions\EditAction::make()
                     ->label('Editar'),
 
-                Tables\Actions\Action::make('duplicar')
-                    ->label('Duplicar')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('gray')
-                    ->requiresConfirmation()
-                    ->modalHeading('Duplicar Curso')
-                    ->modalDescription('Isso criará uma cópia do curso com todos os módulos e aulas. Os alunos matriculados NÃO serão copiados.')
-                    ->action(function (Curso $record) {
-                        $novoCurso = $record->replicate();
-                        $novoCurso->titulo = $record->titulo . ' (Cópia)';
-                        $novoCurso->ativo = false;
-                        $novoCurso->save();
-
-                        foreach ($record->modulos as $modulo) {
-                            $novoModulo = $modulo->replicate();
-                            $novoModulo->curso_id = $novoCurso->id;
-                            $novoModulo->save();
-
-                            foreach ($modulo->aulas as $aula) {
-                                $novaAula = $aula->replicate();
-                                $novaAula->modulo_id = $novoModulo->id;
-                                $novaAula->save();
-                            }
-                        }
-
-                        Notification::make()
-                            ->title('Curso duplicado com sucesso!')
-                            ->success()
-                            ->send();
-                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

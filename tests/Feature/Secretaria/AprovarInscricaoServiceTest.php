@@ -11,6 +11,7 @@ use App\Services\AprovarInscricaoException;
 use App\Services\AprovarInscricaoService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -23,6 +24,7 @@ class AprovarInscricaoServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Mail::fake();
         $this->service = app(AprovarInscricaoService::class);
     }
 
@@ -33,7 +35,7 @@ class AprovarInscricaoServiceTest extends TestCase
     {
         return Curso::query()->create([
             'titulo' => $titulo,
-            'ativo'  => true,
+            'ativo' => true,
         ]);
     }
 
@@ -41,54 +43,54 @@ class AprovarInscricaoServiceTest extends TestCase
     {
         return CourseModality::query()->create([
             'curso_id' => $curso->id,
-            'nome'     => $nome,
-            'ativo'    => true,
+            'nome' => $nome,
+            'ativo' => true,
         ]);
     }
 
     private function criarSecretaria(): User
     {
         return User::query()->create([
-            'name'     => 'Secretária Fulana',
-            'email'    => 'secretaria@cetsadp.test',
+            'name' => 'Secretária Fulana',
+            'email' => 'secretaria@cetsadp.test',
             'password' => 'x',
-            'nivel'    => 'secretario',
-            'ativo'    => true,
+            'nivel' => 'secretario',
+            'ativo' => true,
         ]);
     }
 
     private function criarAdmin(): User
     {
         return User::query()->create([
-            'name'     => 'Admin',
-            'email'    => 'admin@cetsadp.test',
+            'name' => 'Admin',
+            'email' => 'admin@cetsadp.test',
             'password' => 'x',
-            'nivel'    => 'admin',
-            'ativo'    => true,
+            'nivel' => 'admin',
+            'ativo' => true,
         ]);
     }
 
     private function criarInscricao(Curso $curso, CourseModality $mod, array $override = []): Application
     {
         return Application::query()->create(array_merge([
-            'protocol'           => 'PROT-' . uniqid(),
-            'nome_completo'      => 'Maria da Silva',
-            'cpf'                => '12345678901',
-            'data_nascimento'    => '1990-01-15',
-            'sexo'               => 'F',
-            'nacionalidade'      => 'Brasileira',
-            'email'              => 'maria@example.test',
-            'telefone'           => '11999999999',
-            'cep'                => '01001-000',
-            'logradouro'         => 'Praça da Sé',
-            'numero'             => '1',
-            'bairro'             => 'Sé',
-            'cidade'             => 'São Paulo',
-            'estado'             => 'SP',
-            'escolaridade'       => 'medio_completo',
-            'curso_id'           => $curso->id,
+            'protocol' => 'PROT-'.uniqid(),
+            'nome_completo' => 'Maria da Silva',
+            'cpf' => '12345678901',
+            'data_nascimento' => '1990-01-15',
+            'sexo' => 'F',
+            'nacionalidade' => 'Brasileira',
+            'email' => 'maria@example.test',
+            'telefone' => '11999999999',
+            'cep' => '01001-000',
+            'logradouro' => 'Praça da Sé',
+            'numero' => '1',
+            'bairro' => 'Sé',
+            'cidade' => 'São Paulo',
+            'estado' => 'SP',
+            'escolaridade' => 'medio_completo',
+            'curso_id' => $curso->id,
             'course_modality_id' => $mod->id,
-            'status'             => Application::STATUS_EM_ANALISE,
+            'status' => Application::STATUS_EM_ANALISE,
         ], $override));
     }
 
@@ -115,8 +117,8 @@ class AprovarInscricaoServiceTest extends TestCase
         $this->assertSame($inscricao->id, $resultado->matricula->application_id);
 
         $this->assertDatabaseHas('matriculas', [
-            'user_id'        => $resultado->user->id,
-            'curso_id'       => $curso->id,
+            'user_id' => $resultado->user->id,
+            'curso_id' => $curso->id,
             'application_id' => $inscricao->id,
         ]);
     }
@@ -184,17 +186,17 @@ class AprovarInscricaoServiceTest extends TestCase
 
         // Usuário existente com o CPF da inscrição, mas outro e-mail.
         User::query()->create([
-            'name'     => 'Outra Pessoa',
-            'email'    => 'outro@example.test',
-            'cpf'      => '12345678901',
+            'name' => 'Outra Pessoa',
+            'email' => 'outro@example.test',
+            'cpf' => '12345678901',
             'password' => 'x',
-            'nivel'    => 'aluno',
-            'ativo'    => true,
+            'nivel' => 'aluno',
+            'ativo' => true,
         ]);
 
         $inscricao = $this->criarInscricao($curso, $mod, [
             'email' => 'maria@example.test',
-            'cpf'   => '12345678901',
+            'cpf' => '12345678901',
         ]);
 
         try {
@@ -208,7 +210,7 @@ class AprovarInscricaoServiceTest extends TestCase
         $this->assertSame(0, Matricula::query()->count());
         $this->assertSame(1, User::query()->where('cpf', '12345678901')->count());
         $this->assertDatabaseHas('applications', [
-            'id'     => $inscricao->id,
+            'id' => $inscricao->id,
             'status' => Application::STATUS_EM_ANALISE,
         ]);
     }
@@ -319,21 +321,21 @@ class AprovarInscricaoServiceTest extends TestCase
 
         // Usuário já existente com o MESMO CPF/e-mail da inscrição.
         $userExistente = User::query()->create([
-            'name'     => 'Maria da Silva',
-            'email'    => 'maria@example.test',
-            'cpf'      => '12345678901',
+            'name' => 'Maria da Silva',
+            'email' => 'maria@example.test',
+            'cpf' => '12345678901',
             'password' => 'x',
-            'nivel'    => 'aluno',
-            'ativo'    => true,
+            'nivel' => 'aluno',
+            'ativo' => true,
         ]);
 
         // Matrícula ativa pré-existente, sem application_id (ex.: legado).
         Matricula::query()->create([
-            'user_id'          => $userExistente->id,
-            'curso_id'         => $curso->id,
-            'status'           => 'ativa',
+            'user_id' => $userExistente->id,
+            'curso_id' => $curso->id,
+            'status' => 'ativa',
             'numero_matricula' => 'LEGADO-1',
-            'data_matricula'   => now()->toDateString(),
+            'data_matricula' => now()->toDateString(),
         ]);
 
         $inscricao = $this->criarInscricao($curso, $mod);
@@ -348,7 +350,7 @@ class AprovarInscricaoServiceTest extends TestCase
         // Rollback: nenhuma matrícula nova criada, inscrição continua em análise.
         $this->assertSame(1, Matricula::query()->count());
         $this->assertDatabaseHas('applications', [
-            'id'     => $inscricao->id,
+            'id' => $inscricao->id,
             'status' => Application::STATUS_EM_ANALISE,
         ]);
         // Não deve ter sido disparado nenhum link de senha (usuário já existia

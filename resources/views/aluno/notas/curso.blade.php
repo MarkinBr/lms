@@ -1,8 +1,13 @@
 @extends('layouts.aluno')
 
-@section('title', 'Detalhes - ' . $matricula->turma->curso->nome)
+@php
+    $curso = $matricula->turma?->curso ?? $matricula->curso;
+    $nomeCurso = $curso?->titulo ?? 'Curso em organização';
+@endphp
+
+@section('title', 'Detalhes - ' . $nomeCurso)
 @section('header_title', 'Detalhes de Notas')
-@section('header_subtitle', $matricula->turma->curso->nome)
+@section('header_subtitle', $nomeCurso)
 
 @section('content')
 <div class="space-y-6">

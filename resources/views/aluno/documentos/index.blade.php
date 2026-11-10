@@ -119,7 +119,7 @@
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-center gap-2">
                                         {{-- Botão VISUALIZAR --}}
-                                        <a href="{{ route('aluno.documentos.visualizar', $declaracao->id) }}" 
+                                        <a href="{{ route('documentos.visualizar', $declaracao->id) }}"
                                            target="_blank"
                                            class="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold uppercase transition-colors flex items-center gap-1"
                                            title="Visualizar PDF">
@@ -173,7 +173,7 @@
                         
                         <div class="flex items-center gap-2">
                             {{-- Botão VISUALIZAR Histórico --}}
-                            <a href="{{ route('aluno.documentos.historico.visualizar', $matricula->id) }}" 
+                            <a href="{{ route('documentos.historico.visualizar', $matricula->id) }}"
                                target="_blank"
                                class="px-3 py-2 border border-slate-200 hover:border-blue-300 text-slate-600 hover:text-blue-600 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-1">
                                 <i class="fa-solid fa-eye"></i> Visualizar

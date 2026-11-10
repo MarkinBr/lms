@@ -4,13 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Curso;
 use App\Models\Modulo;
+use App\Models\NewsletterSubscriber;
 use App\Models\PaginaInicial;
+use App\Services\NotificarContatoRecebidoService;
 use Database\Seeders\MatrizCurricularTeologiaSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class SiteController extends Controller
 {
+    public function __construct(
+        private readonly NotificarContatoRecebidoService $notificadorContato,
+    ) {}
+
     public function index()
     {
         // Pega a página ativa (ou a última criada se nenhuma estiver ativa)
@@ -87,25 +93,56 @@ class SiteController extends Controller
     {
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
-            'email' => 'required|email',
-            'mensagem' => 'required|string',
+            'email' => 'required|email|max:255',
+            'telefone' => 'nullable|string|max:30',
+            'assunto' => 'required|string|max:120',
+            'mensagem' => 'required|string|max:5000',
+            'consentimento' => 'accepted',
         ]);
 
-        // Aqui você pode enviar email, salvar no banco, etc.
-        // Mail::to('contato@cetsadp.com.br')->send(new ContatoMail($validated));
+        $enviado = $this->notificadorContato->enviar([
+            ...$validated,
+            'telefone' => $validated['telefone'] ?? null,
+        ]);
+        $mensagem = $enviado
+            ? 'Mensagem enviada com sucesso! Retornaremos em até 24 horas úteis.'
+            : 'Não foi possível enviar sua mensagem agora. Tente novamente em instantes.';
 
-        return back()->with('success', 'Mensagem enviada com sucesso!');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => $enviado,
+                'message' => $mensagem,
+            ]);
+        }
+
+        return back()->with($enviado ? 'success' : 'error', $mensagem);
     }
 
     public function newsletter(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|email|unique:newsletter,email',
+            'email' => 'required|email|max:255',
         ]);
 
-        // Salvar no banco de newsletter
-        // Newsletter::create($validated);
+        $email = mb_strtolower(trim($validated['email']));
+        $assinante = NewsletterSubscriber::query()->firstOrCreate(
+            ['email' => $email],
+            ['ativo' => true],
+        );
 
-        return back()->with('success', 'Inscrito com sucesso!');
+        if (! $assinante->ativo) {
+            $assinante->update(['ativo' => true]);
+        }
+
+        $mensagem = 'Inscrição na newsletter confirmada! Que Deus abençoe.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $mensagem,
+            ]);
+        }
+
+        return back()->with('success', $mensagem);
     }
 }

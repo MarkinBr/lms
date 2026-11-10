@@ -2,12 +2,13 @@
 
 namespace App\Filament\Resources\CursoResource\RelationManagers;
 
+use App\Filament\Resources\ModuloResource;
+use App\Models\Modulo;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class ModulosRelationManager extends RelationManager
 {
@@ -57,9 +58,9 @@ class ModulosRelationManager extends RelationManager
                     ->sortable()
                     ->description(fn ($record) => $record->descricao),
 
-                Tables\Columns\TextColumn::make('aulas_count')
-                    ->counts('aulas')
-                    ->label('Aulas')
+                Tables\Columns\TextColumn::make('disciplinas_count')
+                    ->counts('disciplinas')
+                    ->label('Disciplinas')
                     ->alignCenter()
                     ->badge(),
 
@@ -78,20 +79,16 @@ class ModulosRelationManager extends RelationManager
                     ->icon('heroicon-o-plus'),
             ])
             ->actions([
-                Tables\Actions\Action::make('gerenciar_aulas')
-                    ->label('Aulas')
-                    ->icon('heroicon-o-play')
-                    ->url(fn ($record) => route('filament.admin.resources.modulos.edit', ['record' => $record->id]))
-                    ->openUrlInNewTab(),
-                    
+                Tables\Actions\Action::make('gerenciar_disciplinas')
+                    ->label('Disciplinas')
+                    ->icon('heroicon-o-book-open')
+                    ->url(fn (Modulo $record): string => ModuloResource::getUrl('edit', ['record' => $record])),
+
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (Modulo $record): bool => $record->podeSerExcluido()),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('ordem')
             ->reorderable('ordem')
             ->emptyStateHeading('Nenhum módulo cadastrado')

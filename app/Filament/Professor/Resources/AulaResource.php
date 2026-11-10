@@ -4,29 +4,36 @@ namespace App\Filament\Professor\Resources;
 
 use App\Filament\Professor\Resources\AulaResource\Pages;
 use App\Models\Aula;
-use App\Models\Modulo;
 use App\Models\Curso;
+use App\Models\Disciplina;
 use Filament\Forms;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Tabs;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Tabs;
-use Filament\Support\Enums\FontWeight;
-use Filament\Notifications\Notification;
-use Filament\Forms\Get;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class AulaResource extends Resource
 {
     protected static ?string $model = Aula::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-play-circle';
+
     protected static ?string $navigationLabel = 'Aulas';
+
     protected static ?string $modelLabel = 'Aula';
+
     protected static ?string $pluralModelLabel = 'Aulas';
+
     protected static ?string $navigationGroup = 'Gerenciamento de Conteúdo';
+
     protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
@@ -49,21 +56,27 @@ class AulaResource extends Resource
                                     ->icon('heroicon-o-document-text')
                                     ->collapsible()
                                     ->schema([
-                                        Forms\Components\Select::make('modulo_id')
-                                            ->label('Módulo')
+                                        Forms\Components\Select::make('disciplina_id')
+                                            ->label('Disciplina')
                                             ->options(function () {
                                                 $professorId = auth()->id();
-                                                return Modulo::whereHas('curso', function ($q) use ($professorId) {
-                                                    $q->where('instrutor_id', $professorId);
-                                                })->with('curso')->get()->mapWithKeys(function ($modulo) {
-                                                    return [$modulo->id => $modulo->curso->titulo . ' → ' . $modulo->titulo];
-                                                });
+
+                                                return Disciplina::query()
+                                                    ->where('ativa', true)
+                                                    ->whereNotNull('modulo_id')
+                                                    ->whereHas('modulo.curso', fn ($query) => $query->where('instrutor_id', $professorId))
+                                                    ->with('modulo.curso')
+                                                    ->orderBy('ordem')
+                                                    ->get()
+                                                    ->mapWithKeys(fn (Disciplina $disciplina) => [
+                                                        $disciplina->id => $disciplina->modulo->curso->titulo.' → '.$disciplina->modulo->titulo.' → '.$disciplina->nome,
+                                                    ]);
                                             })
                                             ->searchable()
                                             ->preload()
                                             ->required()
                                             ->columnSpanFull()
-                                            ->helperText('Selecione o módulo/curso onde esta aula será inserida'),
+                                            ->helperText('Selecione a disciplina; o módulo será definido automaticamente no servidor.'),
 
                                         Forms\Components\TextInput::make('titulo')
                                             ->label('Título da Aula')
@@ -212,32 +225,34 @@ class AulaResource extends Resource
                                     ->columns(2),
 
                                 Section::make('Prévia do Vídeo')
-                                    ->visible(fn (Get $get) => !empty($get('video_url')))
+                                    ->visible(fn (Get $get) => ! empty($get('video_url')))
                                     ->schema([
                                         Forms\Components\Placeholder::make('video_preview')
                                             ->label('')
                                             ->content(function (Get $get) {
                                                 $url = $get('video_url');
-                                                if (empty($url)) return 'Nenhum vídeo configurado';
+                                                if (empty($url)) {
+                                                    return 'Nenhum vídeo configurado';
+                                                }
 
                                                 // Extrair ID do YouTube
                                                 if (str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be')) {
                                                     preg_match('/(?:v=|\/)([\w-]{11})/', $url, $matches);
                                                     $videoId = $matches[1] ?? '';
                                                     if ($videoId) {
-                                                        return new \Illuminate\Support\HtmlString(
+                                                        return new HtmlString(
                                                             '<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
-                                                                <iframe src="https://www.youtube.com/embed/' . $videoId . '" 
-                                                                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" 
+                                                                <iframe src="https://www.youtube.com/embed/'.$videoId.'"
+                                                                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
                                                                     allowfullscreen></iframe>
                                                             </div>'
                                                         );
                                                     }
                                                 }
 
-                                                return new \Illuminate\Support\HtmlString(
+                                                return new HtmlString(
                                                     '<div style="padding:20px;background:#f3f4f6;border-radius:12px;text-align:center;">
-                                                        <p>🎬 Vídeo configurado: <a href="' . e($url) . '" target="_blank" style="color:#3b82f6;">' . e($url) . '</a></p>
+                                                        <p>🎬 Vídeo configurado: <a href="'.e($url).'" target="_blank" style="color:#3b82f6;">'.e($url).'</a></p>
                                                     </div>'
                                                 );
                                             })
@@ -258,7 +273,6 @@ class AulaResource extends Resource
                                         Forms\Components\RichEditor::make('conteudo_texto')
                                             ->label('Conteúdo da Aula')
                                             ->toolbarButtons([
-                                                'attachFiles',
                                                 'blockquote',
                                                 'bold',
                                                 'bulletList',
@@ -274,11 +288,8 @@ class AulaResource extends Resource
                                                 'underline',
                                                 'undo',
                                             ])
-                                            ->fileAttachmentsDisk('public')
-                                            ->fileAttachmentsDirectory('aulas/conteudo')
-                                            ->fileAttachmentsVisibility('public')
                                             ->columnSpanFull()
-                                            ->helperText('Use o editor para criar conteúdo rico com textos, imagens, listas, blocos de código, etc. Semelhante ao conteúdo escrito do Estratégia Concursos.'),
+                                            ->helperText('Anexos devem ser publicados pelo fluxo privado de documentos.'),
                                     ]),
 
                                 Section::make('Blocos de Conteúdo Estruturado')
@@ -321,12 +332,10 @@ class AulaResource extends Resource
                                                         'bold', 'italic', 'underline', 'strike',
                                                         'bulletList', 'orderedList',
                                                         'h3', 'h4', 'link', 'blockquote',
-                                                        'attachFiles', 'undo', 'redo',
+                                                        'undo', 'redo',
                                                     ])
-                                                    ->fileAttachmentsDisk('public')
-                                                    ->fileAttachmentsDirectory('aulas/blocos')
                                                     ->columnSpanFull()
-                                                    ->visible(fn (Get $get) => !in_array($get('tipo'), ['video_extra', 'audio', 'imagem'])),
+                                                    ->visible(fn (Get $get) => ! in_array($get('tipo'), ['video_extra', 'audio', 'imagem'])),
 
                                                 Forms\Components\TextInput::make('url')
                                                     ->label('URL do Recurso')
@@ -349,8 +358,7 @@ class AulaResource extends Resource
                                             ->columns(3)
                                             ->collapsible()
                                             ->collapsed()
-                                            ->itemLabel(fn (array $state): ?string => 
-                                                ($state['tipo'] ?? '') . ': ' . ($state['titulo'] ?? 'Sem título')
+                                            ->itemLabel(fn (array $state): ?string => ($state['tipo'] ?? '').': '.($state['titulo'] ?? 'Sem título')
                                             )
                                             ->defaultItems(0)
                                             ->addActionLabel('+ Adicionar Bloco de Conteúdo')
@@ -579,10 +587,8 @@ class AulaResource extends Resource
                                                     ->toolbarButtons([
                                                         'bold', 'italic', 'underline',
                                                         'bulletList', 'orderedList',
-                                                        'link', 'attachFiles',
+                                                        'link',
                                                     ])
-                                                    ->fileAttachmentsDisk('public')
-                                                    ->fileAttachmentsDirectory('aulas/questoes')
                                                     ->columnSpanFull(),
 
                                                 // Alternativas para Múltipla Escolha
@@ -638,8 +644,7 @@ class AulaResource extends Resource
                                             ->columns(3)
                                             ->collapsible()
                                             ->collapsed()
-                                            ->itemLabel(fn (array $state): ?string => 
-                                                'Q' . ($state['tipo'] ?? '') . ': ' . \Illuminate\Support\Str::limit(strip_tags($state['enunciado'] ?? ''), 60)
+                                            ->itemLabel(fn (array $state): ?string => 'Q'.($state['tipo'] ?? '').': '.Str::limit(strip_tags($state['enunciado'] ?? ''), 60)
                                             )
                                             ->defaultItems(0)
                                             ->addActionLabel('+ Adicionar Questão')
@@ -671,7 +676,7 @@ class AulaResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::Bold)
-                    ->description(fn ($record) => \Illuminate\Support\Str::limit($record->descricao, 60))
+                    ->description(fn ($record) => Str::limit($record->descricao, 60))
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('modulo.titulo')
@@ -792,7 +797,7 @@ class AulaResource extends Resource
                     ->requiresConfirmation()
                     ->action(function (Aula $record) {
                         $nova = $record->replicate();
-                        $nova->titulo = $record->titulo . ' (Cópia)';
+                        $nova->titulo = $record->titulo.' (Cópia)';
                         $nova->ordem = $record->ordem + 1;
                         $nova->save();
 
@@ -812,7 +817,7 @@ class AulaResource extends Resource
             ->reorderable('ordem')
             ->defaultSort('ordem')
             ->emptyStateHeading('Nenhuma aula encontrada')
-            ->emptyStateDescription('Crie aulas a partir dos módulos do curso ou clique no botão acima.')
+            ->emptyStateDescription('Crie aulas a partir das disciplinas atribuídas aos seus cursos.')
             ->emptyStateIcon('heroicon-o-play-circle');
     }
 

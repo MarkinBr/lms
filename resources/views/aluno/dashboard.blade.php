@@ -6,6 +6,11 @@
 
 @section('content')
 
+    @php
+        /** @var \App\Support\ApplicationDocuments\DocumentosInscricaoService $documentosService */
+        $documentosInscricao = app(\App\Support\ApplicationDocuments\DocumentosInscricaoService::class)->resumoDo(Auth::user());
+    @endphp
+
     <div class="space-y-6">
         {{-- Header de Boas-vindas Personalizado --}}
         <div class="bg-gradient-to-r from-[#003366] via-[#004488] to-[#003366] rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
@@ -17,14 +22,36 @@
                     <h1 class="text-4xl font-bold mb-2">Olá, {{ Auth::user()->name ?? 'Estudante' }}</h1>
                     <p class="text-blue-100 text-lg">Continue sua jornada acadêmica</p>
                 </div>
-                <div class="hidden lg:flex items-center space-x-4">
-                    <div class="text-right">
-                        <p class="text-sm text-blue-200">Semestre Atual</p>
-                        <p class="text-2xl font-bold">{{ date('Y') }}.{{ ceil(date('n')/6) }}</p>
-                    </div>
-                </div>
             </div>
         </div>
+
+        @if(($documentosInscricao['tem_inscricao'] ?? false) && (($documentosInscricao['pendentes'] ?? 0) > 0 || ($documentosInscricao['rejeitados'] ?? 0) > 0))
+            <section class="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-orange-50 p-6 shadow-sm" aria-labelledby="documentos-pendentes-titulo">
+                <div class="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-amber-200/30"></div>
+                <div class="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-start gap-4">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">
+                            <i class="fa-solid fa-file-circle-exclamation text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div>
+                            <h2 id="documentos-pendentes-titulo" class="text-lg font-black text-slate-800">Documentos da inscrição</h2>
+                            <p class="mt-1 text-sm text-slate-600">
+                                @if(($documentosInscricao['rejeitados'] ?? 0) > 0)
+                                    Há documentos que precisam ser reenviados pela Central.
+                                @else
+                                    Sua inscrição tem {{ $documentosInscricao['pendentes'] }} documento(s) pendente(s) de envio.
+                                @endif
+                            </p>
+                            <p class="mt-2 text-xs font-semibold text-slate-500">{{ $documentosInscricao['enviados'] }} de {{ $documentosInscricao['total'] }} documentos enviados</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('aluno.documentos-inscricao') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#003366] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#002244] focus:outline-none focus:ring-2 focus:ring-[#003366] focus:ring-offset-2">
+                        Enviar documentos
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </section>
+        @endif
         
         {{-- Cards de Estatísticas Rápidas --}}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -90,7 +117,7 @@
                     <div class="mt-4 pt-4 border-t border-slate-100">
                         <div class="flex items-center text-xs text-slate-400">
                             <i class="fa-solid fa-clock mr-2"></i>
-                            <span>Próximos 7 dias</span>
+                            <span>Aulas ainda não concluídas</span>
                         </div>
                     </div>
                 </div>
@@ -213,6 +240,17 @@
                             </div>
                             <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-green-500 group-hover:translate-x-1 transition-all"></i>
                         </a>
+
+                        <a href="{{ route('aluno.documentos-inscricao') }}" class="flex items-center space-x-3 p-4 rounded-xl hover:bg-amber-50 transition-all group">
+                            <div class="w-11 h-11 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-lg group-hover:scale-110 transition-all">
+                                <i class="fa-solid fa-file-circle-check text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold text-slate-800">Documentos da inscrição</p>
+                                <p class="text-xs text-slate-500">Envie arquivos pendentes</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all"></i>
+                        </a>
                     </div>
                 </div>
                 
@@ -278,23 +316,6 @@
                         </div>
                         
                         <div class="pt-5 border-t border-slate-100">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <p class="text-xs font-semibold text-slate-600">Frequência</p>
-                                    <p class="text-[10px] text-slate-400 mt-0.5">Estimativa atual</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-lg font-bold text-green-600">100%</p>
-                                    <p class="text-[10px] text-green-500">Excelente</p>
-                                </div>
-                            </div>
-                            <div class="relative h-3 bg-slate-100 rounded-full overflow-hidden">
-                                <div class="absolute inset-0 bg-gradient-to-r from-green-500 via-green-600 to-green-500 rounded-full transition-all duration-700 animate-pulse" style="width: 100%; opacity: 0.2;"></div>
-                                <div class="relative h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full shadow-sm transition-all duration-700" style="width: 100%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="pt-5 border-t border-slate-100">
                             <a href="{{ route('aluno.notas') }}" class="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-slate-50 to-blue-50 hover:from-blue-50 hover:to-blue-100 transition-all group">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
@@ -313,49 +334,5 @@
             </div>
         </div>
         
-        {{-- Rodapé com Informações Adicionais --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
-            <div class="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-100">
-                <div class="flex items-center space-x-3 mb-3">
-                    <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-headset text-white"></i>
-                    </div>
-                    <h4 class="text-sm font-bold text-slate-800">Suporte Acadêmico</h4>
-                </div>
-                <p class="text-xs text-slate-600 mb-3">Precisa de ajuda? Nossa equipe está pronta para auxiliar.</p>
-                <a href="#" class="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center">
-                    <span>Abrir chamado</span>
-                    <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
-                </a>
-            </div>
-            
-            <div class="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-100">
-                <div class="flex items-center space-x-3 mb-3">
-                    <div class="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-book text-white"></i>
-                    </div>
-                    <h4 class="text-sm font-bold text-slate-800">Biblioteca Virtual</h4>
-                </div>
-                <p class="text-xs text-slate-600 mb-3">Acesse milhares de livros e artigos acadêmicos.</p>
-                <a href="#" class="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center">
-                    <span>Explorar acervo</span>
-                    <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
-                </a>
-            </div>
-            
-            <div class="bg-gradient-to-br from-green-50 to-white p-6 rounded-2xl border border-green-100">
-                <div class="flex items-center space-x-3 mb-3">
-                    <div class="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-users text-white"></i>
-                    </div>
-                    <h4 class="text-sm font-bold text-slate-800">Comunidade</h4>
-                </div>
-                <p class="text-xs text-slate-600 mb-3">Conecte-se com outros alunos e professores.</p>
-                <a href="#" class="text-xs font-semibold text-green-600 hover:text-green-700 flex items-center">
-                    <span>Participar</span>
-                    <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
-                </a>
-            </div>
-        </div>
     </div>
 @endsection
