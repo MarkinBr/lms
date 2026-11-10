@@ -54,7 +54,7 @@ class PeriodoLetivoResource extends Resource
 
                 Forms\Components\Toggle::make('ativo')
                     ->label('Ativo')
-                    ->helperText('Somente um período letivo pode estar ativo por vez.'),
+                    ->helperText('Vários períodos podem permanecer ativos simultaneamente.'),
             ]);
     }
 
