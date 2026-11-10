@@ -65,9 +65,10 @@ class RedefinirSenhaController extends Controller
      */
     public function solicitarPrimeiroAcesso(Request $request, IdentificadorAluno $identificadores): RedirectResponse
     {
-        $request->merge([
-            'email' => mb_strtolower(trim((string) $request->input('email'))),
-        ]);
+        $email = $request->input('email');
+        if (is_string($email)) {
+            $request->merge(['email' => mb_strtolower(trim($email))]);
+        }
 
         $dados = $request->validate([
             'email' => ['required', 'string', 'email:filter', 'max:255'],

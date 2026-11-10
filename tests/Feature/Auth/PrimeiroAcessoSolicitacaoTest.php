@@ -141,6 +141,33 @@ class PrimeiroAcessoSolicitacaoTest extends PortalAuthTestCase
         Notification::assertNothingSent();
     }
 
+    public function test_email_com_formato_de_lista_retorna_erro_de_validacao(): void
+    {
+        $this->postJson(route('aluno.primeiro-acesso.solicitar'), [
+            'email' => ['novo@example.test'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('email');
+
+        Notification::assertNothingSent();
+        $this->assertDatabaseCount('password_reset_tokens', 0);
+    }
+
+    public function test_link_de_primeiro_acesso_fica_inutilizavel_durante_acesso_assistido(): void
+    {
+        $aluno = $this->alunoPendente();
+        $this->post(route('aluno.primeiro-acesso.solicitar'), ['email' => $aluno->email])
+            ->assertSessionHas('status');
+
+        $url = Notification::sent($aluno, AtivarAcessoAluno::class)->sole()->toMail($aluno)->actionUrl;
+        $aluno->forceFill(['senha_definitiva_pendente' => true])->save();
+
+        $this->get($url)->assertForbidden();
+        $this->post($url, [
+            'password' => 'NovaSenha#2026',
+            'password_confirmation' => 'NovaSenha#2026',
+        ])->assertForbidden();
+        $this->assertNull($aluno->fresh()->email_verified_at);
+    }
+
     private function alunoPendente(array $alteracoes = []): User
     {
         return User::factory()->create(array_merge([
