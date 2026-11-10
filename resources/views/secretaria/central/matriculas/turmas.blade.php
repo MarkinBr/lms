@@ -10,7 +10,7 @@
     @include('secretaria.central.matriculas.nav', ['secao' => 'turmas'])
     <section class="sc-panel">
         <div class="sc-panel-heading">
-            <h2>Filtrar turmas</h2><p>Uma turma pode estar planejada, aberta, encerrada ou cancelada.</p>
+            <h2>Filtrar turmas</h2><p>Consulte a situação acadêmica e o calendário de inscrições separadamente.</p>
             <form class="sc-ac-filter" action="{{ route('secretaria.matriculas.turmas') }}" method="get" role="search" style="grid-template-columns:minmax(170px,1fr) repeat(2,minmax(130px,auto)) auto">
                 <label for="turma-busca" class="sc-sr-only">Nome, código, disciplina ou professor</label>
                 <input id="turma-busca" name="busca" value="{{ $busca }}" type="search" maxlength="150" placeholder="Nome, código ou professor...">
@@ -21,7 +21,7 @@
                 <label for="turma-situacao" class="sc-sr-only">Situação</label>
                 <select id="turma-situacao" name="situacao">
                     <option value="">Todas as situações</option>
-                    @foreach(\App\Models\Turma::STATUS_LABELS as $valor => $rotulo)
+                    @foreach(\App\Models\Turma::SITUACOES_ACADEMICAS as $valor => $rotulo)
                         <option value="{{ $valor }}" @selected($situacao === $valor)>{{ $rotulo }}</option>
                     @endforeach
                 </select>
@@ -41,17 +41,18 @@
                 $capacidade = $turma->capacidade !== null ? (int)$turma->capacidade : null;
                 $vagas = $capacidade !== null ? max(0,$capacidade-$ocupacao) : null;
                 $percentual = $capacidade && $capacidade>0 ? min(100,round(($ocupacao/$capacidade)*100)) : 0;
-                $classe = $turma->status === 'aberta' ? 'is-green' : ($turma->status === 'planejada' ? 'is-amber' : 'is-neutral');
+                $classe = $turma->situacao_academica === 'em_andamento' ? 'is-green' : ($turma->situacao_academica === 'planejada' ? 'is-amber' : 'is-neutral');
             @endphp
             <article class="sc-ac-class">
                 <div class="sc-ac-class-top">
                     <span class="sc-ac-class-code">{{ $turma->codigo ?: 'Sem código' }} · {{ $turma->periodoLetivo?->nome ?? $turma->ano_letivo ?? 'Período não informado' }}</span>
-                    <span class="sc-ac-badge {{ $classe }}">{{ \App\Models\Turma::STATUS_LABELS[$turma->status] ?? 'Sem situação' }}</span>
+                    <span class="sc-ac-badge {{ $classe }}">{{ \App\Models\Turma::SITUACOES_ACADEMICAS[$turma->situacao_academica] ?? 'Sem situação' }}</span>
                 </div>
                 <h3>{{ $turma->nome }}</h3>
-                <p>{{ $turma->curso?->titulo ?? 'Curso não informado' }} · {{ $turma->disciplina?->nome ?? 'Disciplina não definida' }}</p>
+                <p>{{ $turma->curso?->titulo ?? 'Curso não informado' }} · {{ ($turma->disciplinas_count ?? 0) }} disciplina(s) vinculada(s)</p>
                 <dl class="sc-ac-class-details">
-                    <div><dt>Docente</dt><dd>{{ $turma->professor?->name ?? 'Não atribuído' }}</dd></div>
+                    <div><dt>Atribuições docentes</dt><dd>{{ $turma->professor_atribuicoes_count ?? 0 }} designação(ões)</dd></div>
+                    <div><dt>Inscrições</dt><dd>{{ \App\Models\Turma::SITUACOES_INSCRICOES[$turma->situacao_inscricoes] ?? 'Não definidas' }}</dd></div>
                     <div><dt>Encontro</dt><dd>{{ match($turma->turno) {
                         '1_sabado'=>'1º sábado','2_sabado'=>'2º sábado','3_sabado'=>'3º sábado','4_sabado'=>'4º sábado',
                         default=>$turma->turno ?? 'Não definido',
