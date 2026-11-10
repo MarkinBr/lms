@@ -30,8 +30,12 @@ class CentralMatriculasController extends Controller
             ->whereNull('turma_id')
             ->whereDoesntHave('turmasHistorico', fn ($q) => $q->where('matricula_turma.status', MatriculaTurma::STATUS_ATIVO));
 
-        $turmasAbertas = Turma::query()->where('status', Turma::STATUS_ABERTA)
-            ->get(['id', 'nome', 'curso_id', 'capacidade']);
+        $turmasAbertas = Turma::query()
+            ->where('situacao_inscricoes', 'abertas')
+            ->whereNotIn('situacao_academica', ['concluida', 'cancelada', 'arquivada'])
+            ->get(['id', 'nome', 'curso_id', 'capacidade', 'situacao_inscricoes',
+                'situacao_academica', 'inscricoes_inicio', 'inscricoes_fim'])
+            ->filter(fn (Turma $turma) => $turma->podeReceberMatriculasEm());
         $ocupacaoPorTurma = $this->ocupacoesTurmas($turmasAbertas->pluck('id')->all());
         $turmasLotadas = $turmasAbertas->filter(fn (Turma $t) => $t->capacidade !== null
             && (int) ($ocupacaoPorTurma->get($t->id) ?? 0) >= (int) $t->capacidade);
@@ -153,8 +157,11 @@ class CentralMatriculasController extends Controller
 
         $turmasDisponiveis = $matricula->curso_id
             ? Turma::query()->where('curso_id', $matricula->curso_id)
-                ->where('ativa', true)->where('status', Turma::STATUS_ABERTA)
-                ->orderBy('nome')->get(['id', 'nome', 'capacidade', 'disciplina_id'])
+                ->where('ativa', true)->where('situacao_inscricoes', 'abertas')
+                ->whereNotIn('situacao_academica', ['concluida', 'cancelada', 'arquivada'])
+                ->orderBy('nome')->get(['id', 'nome', 'capacidade', 'disciplina_id',
+                    'situacao_inscricoes', 'situacao_academica', 'inscricoes_inicio', 'inscricoes_fim'])
+                ->filter(fn (Turma $turma) => $turma->podeReceberMatriculasEm())
             : collect();
 
         $outrasMatriculas = $matricula->user_id
@@ -180,11 +187,17 @@ class CentralMatriculasController extends Controller
                     $q->whereRaw('LOWER(nome) LIKE ?', [$term])
                         ->orWhereRaw('LOWER(codigo) LIKE ?', [$term])
                         ->orWhereHas('professor', fn ($p) => $p->whereRaw('LOWER(name) LIKE ?', [$term]))
-                        ->orWhereHas('disciplina', fn ($p) => $p->whereRaw('LOWER(nome) LIKE ?', [$term]));
+                        ->orWhereHas('disciplina', fn ($p) => $p->whereRaw('LOWER(nome) LIKE ?', [$term]))
+                        ->orWhereHas('disciplinas', fn ($p) => $p->whereRaw('LOWER(nome) LIKE ?', [$term]))
+                        ->orWhereHas('professorAtribuicoes.professor', fn ($p) => $p->whereRaw('LOWER(name) LIKE ?', [$term]));
                 });
             })
             ->when($cursoId, fn ($q) => $q->where('curso_id', $cursoId))
-            ->when(in_array($situacao, Turma::STATUS_PERMITIDOS, true), fn ($q) => $q->where('status', $situacao))
+            ->when(array_key_exists($situacao, Turma::SITUACOES_ACADEMICAS),
+                fn ($q) => $q->where('situacao_academica', $situacao))
+            ->when(! array_key_exists($situacao, Turma::SITUACOES_ACADEMICAS)
+                && in_array($situacao, Turma::STATUS_PERMITIDOS, true),
+                fn ($q) => $q->where('status', $situacao))
             ->orderByDesc('ano_letivo')->orderBy('nome')
             ->paginate(15)->withQueryString();
         $cursos = Curso::query()->orderBy('titulo')->get(['id', 'titulo']);
@@ -280,7 +293,7 @@ class CentralMatriculasController extends Controller
             if (! in_array(mb_strtolower((string) $matriculaAtual->status), ['ativo', 'ativa'], true)) {
                 throw ValidationException::withMessages(['turma_id' => 'A matrícula precisa estar ativa para receber um novo vínculo.']);
             }
-            if (! $turma->ativa || $turma->status !== Turma::STATUS_ABERTA) {
+            if (! $turma->ativa || ! $turma->podeReceberMatriculasEm()) {
                 throw ValidationException::withMessages(['turma_id' => 'A turma precisa estar aberta para receber alunos.']);
             }
             if ((int) $matriculaAtual->turma_id === (int) $turma->id ||
@@ -288,15 +301,28 @@ class CentralMatriculasController extends Controller
                 throw ValidationException::withMessages(['turma_id' => 'O aluno já possui vínculo com esta turma.']);
             }
 
-            // Para uma disciplina, o aluno deve ter uma turma ativa por vez.
+            // Uma matrícula não pode estar ativa em duas turmas com disciplinas sobrepostas.
+            // Compatível com a disciplina singular legada e com as ofertas N:N.
+            $disciplinasDestino = $turma->disciplinas()->pluck('disciplinas.id')->all();
             if ($turma->disciplina_id) {
+                $disciplinasDestino[] = (int) $turma->disciplina_id;
+            }
+            $disciplinasDestino = array_unique($disciplinasDestino);
+            if ($disciplinasDestino) {
                 $outrasTurmas = $matriculaAtual->turmasHistorico()
                     ->wherePivot('status', MatriculaTurma::STATUS_ATIVO)->pluck('turmas.id')->all();
                 if ($matriculaAtual->turma_id) {
                     $outrasTurmas[] = $matriculaAtual->turma_id;
                 }
-                if (Turma::query()->whereIn('id', $outrasTurmas)->where('disciplina_id', $turma->disciplina_id)->exists()) {
-                    throw ValidationException::withMessages(['turma_id' => 'Já existe turma ativa nesta disciplina. Utilize a transferência para preservar o histórico.']);
+                $conflito = Turma::query()->whereIn('id', array_unique($outrasTurmas))
+                    ->where(function ($q) use ($disciplinasDestino) {
+                        $q->whereIn('disciplina_id', $disciplinasDestino)
+                            ->orWhereHas('disciplinas', fn ($sub) => $sub->whereIn('disciplinas.id', $disciplinasDestino));
+                    })->exists();
+                if ($conflito) {
+                    throw ValidationException::withMessages([
+                        'turma_id' => 'Esta matrícula já possui turma ativa em disciplina desta oferta. Use a transferência para preservar o histórico.',
+                    ]);
                 }
             }
 
@@ -349,11 +375,28 @@ class CentralMatriculasController extends Controller
             $destino = $turmas->get((int) $dados['turma_destino_id']);
             if (! $origem || ! $destino ||
                 (int) $origem->curso_id !== (int) $registro->curso_id ||
-                (int) $destino->curso_id !== (int) $registro->curso_id ||
-                ! $origem->disciplina_id || (int) $origem->disciplina_id !== (int) $destino->disciplina_id) {
-                throw ValidationException::withMessages(['turma_destino_id' => 'A transferência exige turmas do mesmo curso e da mesma disciplina definida.']);
+                (int) $destino->curso_id !== (int) $registro->curso_id) {
+                throw ValidationException::withMessages(['turma_destino_id' => 'As turmas devem pertencer ao mesmo curso da matrícula.']);
             }
-            if (! $destino->ativa || $destino->status !== Turma::STATUS_ABERTA) {
+
+            $disciplinasOrigem = $origem->disciplinas()->pluck('disciplinas.id')->all();
+            $disciplinasDestino = $destino->disciplinas()->pluck('disciplinas.id')->all();
+            if ($origem->disciplina_id) {
+                $disciplinasOrigem[] = (int) $origem->disciplina_id;
+            }
+            if ($destino->disciplina_id) {
+                $disciplinasDestino[] = (int) $destino->disciplina_id;
+            }
+            $disciplinasOrigem = array_unique($disciplinasOrigem);
+            $disciplinasDestino = array_unique($disciplinasDestino);
+            sort($disciplinasOrigem);
+            sort($disciplinasDestino);
+            if (! $disciplinasOrigem || $disciplinasOrigem !== $disciplinasDestino) {
+                throw ValidationException::withMessages([
+                    'turma_destino_id' => 'A transferência integral exige exatamente as mesmas disciplinas nas duas turmas. Transferência parcial requer vínculo acadêmico por disciplina.',
+                ]);
+            }
+            if (! $destino->ativa || ! $destino->podeReceberMatriculasEm()) {
                 throw ValidationException::withMessages(['turma_destino_id' => 'A turma de destino precisa estar aberta.']);
             }
 
@@ -443,8 +486,8 @@ class CentralMatriculasController extends Controller
                     $turmaIds[] = $registro->turma_id;
                 }
                 foreach (Turma::query()->whereIn('id', array_unique($turmaIds))->orderBy('id')->lockForUpdate()->get() as $turma) {
-                    if (! $turma->ativa || $turma->status !== Turma::STATUS_ABERTA) {
-                        throw ValidationException::withMessages(['situacao' => 'Existe uma turma encerrada ou indisponível; regularize o vínculo antes de reativar.']);
+                    if (! $turma->ativa || in_array($turma->situacao_academica, ['concluida', 'cancelada', 'arquivada'], true)) {
+                        throw ValidationException::withMessages(['situacao' => 'Existe uma turma concluída ou indisponível; regularize o vínculo antes de reativar.']);
                     }
                     if ($turma->capacidade === null) {
                         continue;
