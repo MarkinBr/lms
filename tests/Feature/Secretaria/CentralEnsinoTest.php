@@ -176,12 +176,30 @@ class CentralEnsinoTest extends TestCase
         $this->assertDatabaseHas('instrumento_questoes', [
             'instrumento_id' => $instrumento->id, 'questao_id' => $questao->id, 'pontos' => 2,
         ]);
+        $outraDisciplina = Disciplina::create([
+            'curso_id' => $curso->id, 'modulo_id' => $modulo->id, 'codigo' => 'HIST-2',
+            'nome' => 'História Contemporânea', 'carga_horaria' => 40, 'ordem' => 2, 'ativa' => true,
+        ]);
+        $dadosOutraDisciplina = array_replace($dados, ['disciplina_id' => $outraDisciplina->id]);
+        $this->put(route('secretaria.ensino.questoes.atualizar', $questao), $dadosOutraDisciplina)
+            ->assertSessionHasNoErrors();
+        $this->assertSame($outraDisciplina->id, $questao->fresh()->disciplina_id);
         $this->post(route('secretaria.ensino.instrumento.publicar', $instrumento), [
             'confirmar_publicacao' => '1',
-        ])->assertRedirect();
-        $this->assertSame('publicado', $instrumento->fresh()->status);
+        ])->assertSessionHasErrors('confirmar_publicacao');
+        $this->assertSame('rascunho', $instrumento->fresh()->status);
+
         $this->put(route('secretaria.ensino.questoes.atualizar', $questao), $dados)
-            ->assertSessionHasErrors('enunciado');
+            ->assertSessionHasNoErrors();
+        $this->post(route('secretaria.ensino.instrumento.publicar', $instrumento), [
+            'confirmar_publicacao' => '1',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('publicado', $instrumento->fresh()->status);
+        $this->put(route('secretaria.ensino.questoes.atualizar', $questao), array_replace($dadosOutraDisciplina, [
+            'revisada' => '0',
+        ]))->assertSessionHasErrors('enunciado');
+        $this->assertSame($disciplina->id, $questao->fresh()->disciplina_id);
+        $this->assertSame('revisada', $questao->fresh()->status);
     }
 
     public function test_rascunhos_de_texto_exigem_transcricao_e_nao_inventam_gabarito(): void

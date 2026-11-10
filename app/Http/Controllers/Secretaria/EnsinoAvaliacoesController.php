@@ -71,25 +71,31 @@ class EnsinoAvaliacoesController extends Controller
             throw ValidationException::withMessages(['gabarito' => 'Questões dissertativas precisam ser corrigidas por um professor.']);
         }
 
-        if ($questao?->exists && $questao->instrumentos()
-            ->where('instrumentos_avaliacao.status', 'publicado')->exists()) {
-            throw ValidationException::withMessages(['enunciado' => 'Questões de instrumentos já publicados não podem ser alteradas.']);
-        }
+        DB::transaction(function () use ($questao, $disciplina, $dados, $tipo, $alternativas, $gabarito, $request) {
+            $questao = $questao?->exists
+                ? BancoQuestao::query()->lockForUpdate()->findOrFail($questao->id)
+                : new BancoQuestao;
 
-        ($questao?->exists ? $questao : new BancoQuestao)->fill([
-            'disciplina_id' => $disciplina->id,
-            'aula_id' => $dados['aula_id'] ?? null,
-            'criada_por' => $questao?->criada_por ?? $request->user()->id,
-            'tipo' => $tipo,
-            'dificuldade' => $dados['dificuldade'],
-            'enunciado' => trim($dados['enunciado']),
-            'alternativas' => $alternativas,
-            'gabarito' => $gabarito,
-            'explicacao' => $dados['explicacao'] ?? null,
-            'referencia' => $dados['referencia'] ?? null,
-            'origem' => 'manual',
-            'status' => $request->boolean('revisada') ? 'revisada' : 'rascunho',
-        ])->save();
+            if ($questao->exists && $questao->instrumentos()
+                ->where('instrumentos_avaliacao.status', 'publicado')->exists()) {
+                throw ValidationException::withMessages(['enunciado' => 'Questões de instrumentos já publicados não podem ser alteradas.']);
+            }
+
+            $questao->fill([
+                'disciplina_id' => $disciplina->id,
+                'aula_id' => $dados['aula_id'] ?? null,
+                'criada_por' => $questao->criada_por ?? $request->user()->id,
+                'tipo' => $tipo,
+                'dificuldade' => $dados['dificuldade'],
+                'enunciado' => trim($dados['enunciado']),
+                'alternativas' => $alternativas,
+                'gabarito' => $gabarito,
+                'explicacao' => $dados['explicacao'] ?? null,
+                'referencia' => $dados['referencia'] ?? null,
+                'origem' => 'manual',
+                'status' => $request->boolean('revisada') ? 'revisada' : 'rascunho',
+            ])->save();
+        });
 
         return redirect()->route('secretaria.ensino.questoes')->with('status', 'Questão salva no banco.');
     }
@@ -261,11 +267,18 @@ class EnsinoAvaliacoesController extends Controller
         $request->validate(['confirmar_publicacao' => ['accepted']]);
         DB::transaction(function () use ($instrumento) {
             $instrumento = InstrumentoAvaliacao::query()->lockForUpdate()->findOrFail($instrumento->id);
-            if ($instrumento->status !== 'rascunho' || ! $instrumento->questoes()->exists()) {
+            if ($instrumento->status !== 'rascunho') {
+                throw ValidationException::withMessages(['confirmar_publicacao' => 'Apenas rascunhos podem ser publicados.']);
+            }
+            $questoes = BancoQuestao::query()
+                ->whereKey($instrumento->questoes()->pluck('banco_questoes.id')->all())
+                ->orderBy('id')->lockForUpdate()->get();
+            if ($questoes->isEmpty()) {
                 throw ValidationException::withMessages(['confirmar_publicacao' => 'Adicione questões antes de publicar.']);
             }
-            if ($instrumento->questoes()->where('banco_questoes.status', '!=', 'revisada')->exists()) {
-                throw ValidationException::withMessages(['confirmar_publicacao' => 'Existem questões não revisadas.']);
+            if ($questoes->contains(fn ($questao) => $questao->status !== 'revisada' ||
+                (int) $questao->disciplina_id !== (int) $instrumento->disciplina_id)) {
+                throw ValidationException::withMessages(['confirmar_publicacao' => 'Todas as questões precisam estar revisadas e pertencer à disciplina do instrumento.']);
             }
             $instrumento->update(['status' => 'publicado']);
         });
