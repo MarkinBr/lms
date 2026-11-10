@@ -62,7 +62,7 @@
 
                         <div>
                             <div class="flex items-center gap-3 mb-1">
-                                <a href="{{ route('aluno.comunicacao.show', $aviso->id) }}" class="text-lg font-bold text-slate-800 group-hover:text-[#061a30] transition-colors">
+                                <a href="{{ route('aluno.comunicacao.show', $aviso->id) }}" class="text-lg font-bold text-slate-800 group-hover:text-[#003366] transition-colors">
                                     {{ $aviso->titulo }}
                                 </a>
                                 @if($aviso->tipo == 'importante')
@@ -73,7 +73,7 @@
                             </div>
                             
                             <p class="text-sm text-slate-500 leading-relaxed mb-2 line-clamp-2">
-                                {{ \Str::limit(strip_tags($aviso->mensagem), 150) }}
+                                {{ \Str::limit(strip_tags($aviso->conteudo), 150) }}
                             </p>
 
                             <div class="flex items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-wide">
@@ -92,7 +92,7 @@
 
                     {{-- Seta (apenas desktop) --}}
                     <div class="hidden md:flex items-center self-center">
-                        <a href="{{ route('aluno.comunicacao.show', $aviso->id) }}" class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 group-hover:bg-[#061a30] group-hover:border-[#061a30] group-hover:text-white transition-all">
+                        <a href="{{ route('aluno.comunicacao.show', $aviso->id) }}" class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 group-hover:bg-[#003366] group-hover:border-[#003366] group-hover:text-white transition-all">
                             <i class="fa-solid fa-chevron-right"></i>
                         </a>
                     </div>

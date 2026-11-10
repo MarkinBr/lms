@@ -53,7 +53,7 @@
                 </div>
 
                 <div class="login-photo">
-                    <img class="auth-photo-local" src="{{ asset('assets/portal/biblia-banner.webp') }}" alt="Bíblia aberta sobre uma mesa">
+                    <img class="auth-photo-local" src="{{ asset('assets/images/curso1.png') }}" alt="Bíblia aberta sobre uma mesa">
                 </div>
             </div>
 
@@ -81,16 +81,15 @@
                 @endif
 
                 <div class="lfield">
-                    <label for="email">MATRÍCULA, CPF OU E-MAIL CONFIRMADO</label>
+                    <label for="email">E-MAIL, CPF OU MATRÍCULA</label>
                     <div class="inp">
                         <input
                             id="email"
                             type="text"
                             name="email"
                             value="{{ old('email') }}"
-                            placeholder="Sua matrícula, CPF ou e-mail confirmado"
+                            placeholder="E-mail, CPF ou matrícula"
                             autocomplete="username"
-                            inputmode="text"
                             maxlength="255"
                             required
                             autofocus
@@ -132,7 +131,7 @@
                     <span data-submit-text>ENTRAR NO PORTAL</span>
                 </button>
 
-                <p class="secure-box">Não possui e-mail confirmado ou precisa de ajuda no primeiro acesso? Procure a secretaria. Sua matrícula permite estudar sem e-mail.</p><div class="divider-or">OU</div>
+                <div class="divider-or">OU</div>
 
                 <a href="{{ route('password.request', ['primeiro_acesso' => 1]) }}" class="btn btn-outline btn-block">
                     PRIMEIRO ACESSO

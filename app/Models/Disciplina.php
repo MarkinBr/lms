@@ -84,6 +84,13 @@ class Disciplina extends Model
                 }
             }
 
+            if ($disciplina->exists && $disciplina->isDirty('curso_id')
+                && $disciplina->modulos()->where('modulos.curso_id', '!=', $disciplina->curso_id)->exists()) {
+                throw ValidationException::withMessages([
+                    'curso_id' => 'Desvincule os módulos do curso anterior antes de alterar o curso da disciplina.',
+                ]);
+            }
+
             if (! filled($disciplina->modulo_id)) {
                 if (! $disciplina->exists || $disciplina->isDirty('modulo_id')) {
                     throw ValidationException::withMessages([

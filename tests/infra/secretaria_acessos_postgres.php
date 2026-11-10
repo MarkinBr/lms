@@ -2,7 +2,7 @@
 
 /**
  * Exige PostgreSQL descartável já migrado, sem workers de fila.
- * APP_ENV=testing DB_CONNECTION=pgsql DB_DATABASE=cetsadp_telegram_ci \
+ * APP_ENV=testing DB_CONNECTION=pgsql DB_DATABASE=cetsadp_secretaria_ci \
  *   php tests/infra/secretaria_acessos_postgres.php
  * Não migra nem limpa tabelas: deixa somente fixtures sintéticas para inspeção.
  * Compatível com composer --no-dev, sem Faker, PHPUnit, Mockery ou Tests\TestCase.
@@ -15,8 +15,10 @@ use App\Services\Acessos\AtendimentoAluno;
 use App\Services\Acessos\CadastroAluno;
 use App\Services\Acessos\CredenciaisAluno;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -32,8 +34,8 @@ use Throwable;
 
 // Guardar antes do autoload/bootstrap, inclusive em cada processo filho.
 if (getenv('APP_ENV') !== 'testing' || getenv('DB_CONNECTION') !== 'pgsql'
-    || getenv('DB_DATABASE') !== 'cetsadp_telegram_ci') {
-    fwrite(STDERR, "Bloqueado: exige APP_ENV=testing, DB_CONNECTION=pgsql e DB_DATABASE=cetsadp_telegram_ci.\n");
+    || getenv('DB_DATABASE') !== 'cetsadp_secretaria_ci') {
+    fwrite(STDERR, "Bloqueado: exige APP_ENV=testing, DB_CONNECTION=pgsql e DB_DATABASE=cetsadp_secretaria_ci.\n");
     exit(2);
 }
 
@@ -43,7 +45,6 @@ $ambiente = [
     'APP_URL' => 'https://example.test', 'APP_DEBUG' => 'false', 'DB_URL' => '',
     'MAIL_MAILER' => 'array', 'QUEUE_CONNECTION' => 'sync', 'CACHE_STORE' => 'array',
     'SESSION_DRIVER' => 'array', 'LOG_CHANNEL' => 'null', 'BCRYPT_ROUNDS' => '4',
-    'TELEGRAM_ENABLED' => 'false',
 ];
 if (! $worker) {
     $ambiente['APP_KEY'] = 'base64:'.base64_encode(random_bytes(32));
@@ -190,10 +191,10 @@ try {
     // Conferir configuração efetiva antes da primeira consulta e o servidor conectado depois.
     verificar(app()->environment('testing') && config('database.default') === 'pgsql'
         && config('database.connections.pgsql.driver') === 'pgsql'
-        && config('database.connections.pgsql.database') === 'cetsadp_telegram_ci'
+        && config('database.connections.pgsql.database') === 'cetsadp_secretaria_ci'
         && empty(config('database.connections.pgsql.url')), 'Configuração efetiva fora do banco descartável.');
-    verificar(DB::getDatabaseName() === 'cetsadp_telegram_ci'
-        && DB::selectOne('SELECT current_database() AS nome')->nome === 'cetsadp_telegram_ci',
+    verificar(DB::getDatabaseName() === 'cetsadp_secretaria_ci'
+        && DB::selectOne('SELECT current_database() AS nome')->nome === 'cetsadp_secretaria_ci',
         'Servidor conectado a outro banco.');
     DB::statement("SET lock_timeout = '25s'");
     DB::statement("SET statement_timeout = '35s'");
@@ -272,6 +273,14 @@ try {
     foreach (['users', 'acesso_auditorias', 'acesso_credenciais', 'matriculas', 'mensalidades', 'password_reset_tokens'] as $tabela) {
         verificar(Schema::hasTable($tabela), 'Aplique as migrations antes da integração: tabela '.$tabela.' ausente.');
     }
+    $kernelHttp = $app->make(HttpKernel::class);
+    foreach (['GET', 'POST'] as $metodo) {
+        $requisicao = Request::create('https://example.test/aluno/acesso-assistido/senha', $metodo);
+        $resposta = $kernelHttp->handle($requisicao);
+        $kernelHttp->terminate($requisicao, $resposta);
+        verificar($resposta->getStatusCode() === 403, $metodo.' sem sessão assistida deve retornar 403.');
+    }
+
     $execucao = bin2hex(random_bytes(8));
     $atores = [];
     foreach ([0, 1] as $indice) {

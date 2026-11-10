@@ -16,7 +16,7 @@ class CreateAula extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $disciplina = Disciplina::query()->find($data['disciplina_id'] ?? null);
-        $moduloId = (int) ($data['modulo_id'] ?? $disciplina?->modulo_id ?? 0);
+        $moduloId = (int) ($data['modulo_id'] ?? 0);
 
         if (! $disciplina || ! app(PermissoesDocentes::class)
             ->podeCriarAula((int) auth()->id(), $disciplina, $moduloId)) {

@@ -35,7 +35,7 @@
                             <input type="hidden" name="estado" value="{{ $estado }}">
                             <div class="sc-field"><label for="foto">Selecionar foto</label><input id="foto" type="file" name="foto" accept="image/jpeg,image/png,image/webp" required aria-describedby="foto-ajuda"><small id="foto-ajuda">JPG, PNG ou WebP. A imagem será validada antes de salvar.</small></div>
                             <div class="sc-field"><label for="foto-motivo">Motivo da atualização</label><textarea id="foto-motivo" name="motivo" rows="2" maxlength="500" required></textarea></div>
-                            <div class="sc-field"><label for="foto-senha">Sua senha de Secretaria</label><input id="foto-senha" name="senha_confirmacao" type="password" autocomplete="current-password" required></div>
+                            <div class="sc-field"><label for="foto-senha">Senha administrativa</label><input id="foto-senha" name="senha_confirmacao" type="password" autocomplete="current-password" required></div>
                             <button type="submit" class="sc-button">@include('secretaria.central.icone', ['nome' => 'foto']) Salvar foto</button>
                         </form>
                     </section>
@@ -53,7 +53,7 @@
             <h2 class="sc-section-title">Acesso e segurança</h2>
             <div class="sc-layout">
                 <div class="sc-stack">
-                    <section class="sc-panel"><div class="sc-panel-heading"><h2>Atendimento do acesso</h2><p>Confira o aluno, escolha a operação e confirme com a sua senha de Secretaria.</p></div><div class="sc-panel-body sc-stack">
+                    <section class="sc-panel"><div class="sc-panel-heading"><h2>Atendimento do acesso</h2><p>Confira o aluno, escolha a operação e confirme com a senha administrativa.</p></div><div class="sc-panel-body sc-stack">
                         @include('secretaria.central.status')
                         @include('secretaria.central.acao', ['acao' => 'ativacao', 'titulo' => 'Preparar ativação', 'descricao' => 'Instruções individuais para o primeiro acesso.'])
                         @include('secretaria.central.acao', ['acao' => 'recuperacao', 'titulo' => 'Recuperar acesso', 'descricao' => 'Orientar o aluno a definir uma nova senha.'])
@@ -74,7 +74,7 @@
                             <div class="sc-field sc-template-field" hidden data-template-field><label for="mensagem-modelo">Usar um modelo de orientação</label><select id="mensagem-modelo" data-message-template><option value="">Texto personalizado</option><option value="acesso">Orientação de acesso</option><option value="assistido">Atendimento assistido</option><option value="documentacao">Documentação</option></select><small>Revise e personalize o texto para este atendimento.</small></div>
                             <div class="sc-field"><label for="mensagem-texto">Mensagem</label><textarea id="mensagem-texto" name="mensagem" rows="6" maxlength="2000" required data-message-text aria-describedby="mensagem-ajuda">{{ old('mensagem') }}</textarea><small id="mensagem-ajuda">Não inclua senha permanente, CPF ou documentos. Use as operações de acesso para emitir códigos e links individuais.</small></div>
                             <div class="sc-field"><label for="mensagem-motivo">Motivo do atendimento</label><textarea id="mensagem-motivo" name="motivo" rows="2" maxlength="500" required></textarea></div>
-                            <div class="sc-field"><label for="mensagem-senha">Sua senha de Secretaria</label><input id="mensagem-senha" name="senha_confirmacao" type="password" autocomplete="current-password" required></div>
+                            <div class="sc-field"><label for="mensagem-senha">Senha administrativa</label><input id="mensagem-senha" name="senha_confirmacao" type="password" autocomplete="current-password" required></div>
                             <label class="sc-check"><input type="checkbox" name="destino_conferido" value="1" required><span>Conferi o contato do próprio aluno e revisei o conteúdo da mensagem.</span></label>
                             <button class="sc-button sc-primary" type="submit">Revisar mensagem e destino @include('secretaria.central.icone', ['nome' => 'seta'])</button>
                         </form>
@@ -89,7 +89,7 @@
                             <input type="hidden" name="estado" value="{{ $estado }}"><input type="hidden" name="canal" value="email">
                             <div class="sc-field"><label for="email-motivo">Motivo do reenvio</label><textarea id="email-motivo" name="motivo" rows="2" maxlength="500" required></textarea></div>
                             <label class="sc-check"><input type="checkbox" name="destino_conferido" value="1" required><span>Conferi o novo e-mail com o aluno.</span></label>
-                            <div class="sc-field"><label for="email-senha">Sua senha de Secretaria</label><input type="password" id="email-senha" name="senha_confirmacao" autocomplete="current-password" required></div>
+                            <div class="sc-field"><label for="email-senha">Senha administrativa</label><input type="password" id="email-senha" name="senha_confirmacao" autocomplete="current-password" required></div>
                             <button type="submit" class="sc-button">Preparar confirmação de e-mail</button>
                         </form></section>
                     @endif

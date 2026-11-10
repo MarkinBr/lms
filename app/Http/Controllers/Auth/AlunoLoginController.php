@@ -69,7 +69,7 @@ class AlunoLoginController extends Controller
                 return $sessao ? ['sessao' => $sessao] : null;
             }
             $senhaValida = $senhas->confere($dados['password'], $atual?->password ?: self::HASH_SENHA_FICTICIA);
-            if (! $atual || ! $atual->ativo || $atual->nivel !== 'aluno' || ! $senhaValida) {
+            if (! $atual || ! $atual->ativo || $atual->nivel !== 'aluno' || $atual->primeiro_acesso_pendente || ! $senhaValida) {
                 return null;
             }
             if (Hash::needsRehash($atual->password)) {

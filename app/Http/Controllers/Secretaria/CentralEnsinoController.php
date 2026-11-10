@@ -22,7 +22,8 @@ class CentralEnsinoController extends Controller
     {
         return [
             'cursos' => Curso::query()->orderBy('titulo')->get(['id', 'titulo']),
-            'disciplinas' => Disciplina::query()->with('curso:id,titulo')->orderBy('nome')->get(['id', 'curso_id', 'modulo_id', 'nome']),
+            'disciplinas' => Disciplina::query()->with(['curso:id,titulo', 'modulos:id,curso_id,titulo'])
+                ->orderBy('nome')->get(['id', 'curso_id', 'modulo_id', 'nome']),
             'modulos' => Modulo::query()->orderBy('ordem')->get(['id', 'curso_id', 'titulo']),
         ];
     }

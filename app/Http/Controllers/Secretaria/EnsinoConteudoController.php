@@ -37,6 +37,7 @@ class EnsinoConteudoController extends Controller
     {
         $dados = $request->validate([
             'disciplina_id' => ['required', 'integer', 'exists:disciplinas,id'],
+            'modulo_id' => ['nullable', 'integer', 'exists:modulos,id'],
             'titulo' => ['required', 'string', 'max:255'],
             'descricao' => ['nullable', 'string', 'max:2000'],
             'conteudo_texto' => ['nullable', 'string', 'max:60000'],
@@ -51,8 +52,11 @@ class EnsinoConteudoController extends Controller
             'materiais.*' => ['file', 'max:15360', 'mimes:pdf,txt,doc,docx,ppt,pptx,odt,odp,mp3,mp4,jpg,jpeg,png'],
         ]);
         $disciplina = Disciplina::query()->with('modulo')->findOrFail($dados['disciplina_id']);
-        if (! $disciplina->modulo || (int) $disciplina->modulo->curso_id !== (int) $disciplina->curso_id) {
-            throw ValidationException::withMessages(['disciplina_id' => 'A disciplina precisa pertencer a um módulo válido do mesmo curso.']);
+        $moduloId = $dados['modulo_id'] ?? $aula?->modulo_id ?? $disciplina->modulo_id;
+        $modulo = Modulo::query()->find($moduloId);
+        if (! $modulo || (int) $modulo->curso_id !== (int) $disciplina->curso_id ||
+            ((int) $modulo->id !== (int) $disciplina->modulo_id && ! $disciplina->modulos()->whereKey($modulo->id)->exists())) {
+            throw ValidationException::withMessages(['modulo_id' => 'Escolha um módulo vinculado à disciplina e ao mesmo curso.']);
         }
         if ($aula?->exists && (int) $aula->disciplina_id !== (int) $disciplina->id) {
             throw ValidationException::withMessages(['disciplina_id' => 'Não é possível mover uma aula existente para outra disciplina nesta tela.']);
@@ -66,11 +70,11 @@ class EnsinoConteudoController extends Controller
 
         $novosArquivos = [];
         try {
-            $aula = DB::transaction(function () use ($dados, $request, $disciplina, $aula, &$novosArquivos) {
+            $aula = DB::transaction(function () use ($dados, $request, $disciplina, $modulo, $aula, &$novosArquivos) {
                 $aula = $aula?->exists ? Aula::query()->lockForUpdate()->findOrFail($aula->id) : new Aula;
                 $aula->fill([
                     'disciplina_id' => $disciplina->id,
-                    'modulo_id' => $disciplina->modulo_id,
+                    'modulo_id' => $modulo->id,
                     'titulo' => $dados['titulo'],
                     'descricao' => $dados['descricao'] ?? null,
                     'conteudo_texto' => $dados['conteudo_texto'] ?? null,

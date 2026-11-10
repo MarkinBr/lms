@@ -1,6 +1,6 @@
 # Estrutura acadêmica flexível — CETSADP
 
-> Implementação em branch de integração: **depende da PR #134**, que depende da PR #133. Não é procedimento de deploy automático.
+> PR #146 revisada sobre a `main` que incorporou a Central pela PR #145. Issue de revisão e implantação: #147. O deploy continua assistido, com backup e validação em cópia isolada do banco.
 
 ## O que foi alterado
 
@@ -43,7 +43,7 @@ Os campos antigos não são removidos. Matrículas, notas, frequência, progress
 ## Limites e decisões pendentes
 
 - O portal do aluno e os instrumentos de avaliação da PR #134 **ainda não** executam todas as provas on-line ou lançam notas automaticamente; novas atribuições de correção não criam por si só esse fluxo.
-- A permissão de docente para editar **conteúdo de aula compartilhado** altera o conteúdo da disciplina para outras turmas que o reutilizam. Requer modelagem de versões ou aulas por oferta para edições privativas.
+- Professores com atribuições locais não podem criar ou alterar aulas de disciplinas compartilhadas por várias turmas. O responsável pelo curso e a Secretaria/Administração mantêm a edição global. Edições privativas por turma ainda exigem versões ou aulas por oferta.
 - A transferência na Central é **integral** e só aceita turmas com exatamente as mesmas disciplinas. Transferências de uma disciplina isolada em turmas multidisciplinares exigem modelagem adicional de vínculo matrícula–oferta de disciplina.
 - O novo campo `turmas.publicada` é informativo para a gestão e método `inscricoesAbertasEm`; é necessário atualizar os catálogos externos específicos que ainda utilizem exclusivamente os filtros legados.
 - Para professor vinculado apenas a um instrumento de avaliação, a autorização para correção está modelada; implementar tela de correção e gravação de notas depende da ativação do fluxo de tentativas.
@@ -60,4 +60,4 @@ Os campos antigos não são removidos. Matrículas, notas, frequência, progress
 - [ ] Preservar códigos, matrículas e históricos de produção na migração.
 - [ ] CI e testes de integração, banco PostgreSQL e validação funcional no navegador aprovados.
 
-**Estado:** código em revisão (não instalado na VPS).
+**Validação:** testes de regressão cobrem migração legada, revogação e limites de permissões, formulários docentes e aulas em módulos adicionais. O CI PostgreSQL valida os vínculos antes e depois da nova migração. A implantação requer aprovação desses testes e do ensaio em cópia da base ativa.

@@ -333,6 +333,22 @@ class CentralMatriculasTest extends TestCase
             'turma_id' => $outra->id, 'status' => 'ativo']);
         $this->assertDatabaseHas('matricula_movimentacoes', ['matricula_id' => $matricula->id,
             'tipo' => 'transferencia_turma', 'valor_anterior' => $origem->nome, 'valor_novo' => $destino->nome]);
+
+        $this->post(route('secretaria.matriculas.transferir-turma', $matricula), $this->confirmacao([
+            'turma_origem_id' => $destino->id, 'turma_destino_id' => $origem->id,
+        ]))->assertRedirect(route('secretaria.matriculas.show', $matricula))->assertSessionHasNoErrors();
+
+        $this->assertSame($origem->id, $matricula->fresh()->turma_id);
+        $this->assertDatabaseCount('matricula_turma', 3);
+        $this->assertDatabaseHas('matricula_turma', ['matricula_id' => $matricula->id,
+            'turma_id' => $origem->id, 'status' => 'ativo']);
+        $this->assertDatabaseHas('matricula_turma', ['matricula_id' => $matricula->id,
+            'turma_id' => $destino->id, 'status' => 'cancelado']);
+        $this->assertDatabaseHas('matricula_turma', ['matricula_id' => $matricula->id,
+            'turma_id' => $outra->id, 'status' => 'ativo']);
+        $this->assertDatabaseCount('matricula_movimentacoes', 2);
+        $this->assertDatabaseHas('matricula_movimentacoes', ['matricula_id' => $matricula->id,
+            'tipo' => 'transferencia_turma', 'valor_anterior' => $destino->nome, 'valor_novo' => $origem->nome]);
     }
 
     public function test_transferencia_rejeita_disciplinas_diferentes(): void

@@ -103,7 +103,13 @@ class CredenciaisAluno
 
     public function validarSessao(array $sessao): bool
     {
-        $registro = DB::table('acesso_credenciais')->find($sessao['credencial_id'] ?? '');
+        $credencialId = $sessao['credencial_id'] ?? null;
+
+        if (! is_string($credencialId) || ! Str::isUuid($credencialId)) {
+            return false;
+        }
+
+        $registro = DB::table('acesso_credenciais')->find($credencialId);
         $aluno = User::find($sessao['aluno_id'] ?? 0);
 
         return $aluno && $registro && $registro->consumida_em !== null
@@ -114,9 +120,21 @@ class CredenciaisAluno
 
     public function definirSenha(array $sessao, string $senha, string $confirmacao): void
     {
-        validator(['password' => $senha, 'password_confirmation' => $confirmacao], [
-            'password' => ['required', 'string', 'max:1024', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()->symbols()],
-        ])->validate();
+        validator(
+            ['password' => $senha, 'password_confirmation' => $confirmacao],
+            ['password' => ['required', 'string', 'max:1024', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()->symbols()]],
+            [
+                'password.required' => 'Informe sua nova senha.',
+                'password.string' => 'Informe uma senha válida.',
+                'password.max' => 'A senha não pode ultrapassar 1024 caracteres.',
+                'password.confirmed' => 'A confirmação da senha não corresponde.',
+                'password.min' => 'A senha deve ter pelo menos 12 caracteres.',
+                'password.mixed' => 'A senha deve conter letras maiúsculas e minúsculas.',
+                'password.numbers' => 'A senha deve conter pelo menos um número.',
+                'password.symbols' => 'A senha deve conter pelo menos um símbolo.',
+            ],
+            ['password' => 'nova senha', 'password_confirmation' => 'confirmação da senha'],
+        )->validate();
         DB::transaction(function () use ($sessao, $senha) {
             $aluno = User::query()->lockForUpdate()->find($sessao['aluno_id'] ?? 0);
             $registro = DB::table('acesso_credenciais')->where('id', $sessao['credencial_id'] ?? '')->lockForUpdate()->first();

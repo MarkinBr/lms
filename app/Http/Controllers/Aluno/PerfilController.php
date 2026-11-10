@@ -104,7 +104,6 @@ class PerfilController extends Controller
         ], [
             'name.required' => 'O nome é obrigatório.',
             'name.min' => 'O nome deve ter pelo menos 3 caracteres.',
-
             'data_nasc.before' => 'A data de nascimento deve ser anterior à data atual.',
             'data_nasc.after' => 'Data de nascimento inválida.',
             'foto.image' => 'O arquivo deve ser uma imagem.',

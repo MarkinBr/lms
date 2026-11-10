@@ -6,8 +6,9 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Tests\TestCase;
 
-class AlunoLoginTest extends PortalAuthTestCase
+class AlunoLoginTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -37,6 +38,24 @@ class AlunoLoginTest extends PortalAuthTestCase
         ]);
 
         $resposta->assertRedirect(route('aluno.dashboard'));
+        $this->assertAuthenticatedAs($aluno);
+    }
+
+    public function test_login_preserva_email_legado_sem_confirmacao_mas_recusa_primeiro_acesso_pendente(): void
+    {
+        $aluno = User::factory()->create([
+            'nivel' => 'aluno',
+            'ativo' => true,
+            'email_verified_at' => null,
+            'primeiro_acesso_pendente' => true,
+        ]);
+        $dados = ['email' => $aluno->email, 'password' => 'password'];
+
+        $this->post(route('aluno.login.submit'), $dados)->assertSessionHasErrors('email');
+        $this->assertGuest();
+
+        $aluno->forceFill(['primeiro_acesso_pendente' => false])->save();
+        $this->post(route('aluno.login.submit'), $dados)->assertRedirect(route('aluno.dashboard'));
         $this->assertAuthenticatedAs($aluno);
     }
 
@@ -153,15 +172,12 @@ class AlunoLoginTest extends PortalAuthTestCase
 
     private function criarUsuario(array $atributos = []): User
     {
-        $usuario = User::query()->create(array_merge([
+        return User::query()->create(array_merge([
             'name' => 'Aluno de Teste',
             'email' => 'aluno@example.test',
             'password' => Hash::make(self::SENHA),
             'nivel' => 'aluno',
             'ativo' => true,
         ], $atributos));
-        $usuario->forceFill(['email_verified_at' => now()])->save();
-
-        return $usuario;
     }
 }

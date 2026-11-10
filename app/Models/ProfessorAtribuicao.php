@@ -170,8 +170,9 @@ class ProfessorAtribuicao extends Model
             'disciplina' => $disciplinaId && (int) $this->disciplina_id === $disciplinaId,
             'modulo' => $disciplinaId && $moduloId
                 && (int) $this->disciplina_id === $disciplinaId && (int) $this->modulo_id === $moduloId,
-            'aula' => $disciplinaId && $aulaId
-                && (int) $this->disciplina_id === $disciplinaId && (int) $this->aula_id === $aulaId,
+            'aula' => $disciplinaId && $moduloId && $aulaId
+                && (int) $this->disciplina_id === $disciplinaId
+                && (int) $this->modulo_id === $moduloId && (int) $this->aula_id === $aulaId,
             'instrumento' => $disciplinaId && $instrumentoId
                 && (int) $this->disciplina_id === $disciplinaId && (int) $this->instrumento_id === $instrumentoId,
             default => false,

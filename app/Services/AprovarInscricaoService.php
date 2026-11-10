@@ -33,7 +33,7 @@ use Illuminate\Support\Str;
  *   6. Gerar número de matrícula único.
  *   7. Atualizar status da inscrição para "matriculado".
  *   8. Registrar auditoria (via Log estruturado).
- *   9. Disparar ativação assinada APENAS para conta recém-criada,
+ *   9. Disparar Password Reset APENAS para conta recém-criada,
  *      DEPOIS do commit. Nunca expor senha em texto puro.
  *
  * Idempotência:
@@ -55,7 +55,6 @@ class AprovarInscricaoService
         Application $application,
         User $operador,
         ?string $observacoes = null,
-        bool $notificar = true,
     ): AprovarInscricaoResult {
         $decisaoEfetivada = false;
 
@@ -130,10 +129,6 @@ class AprovarInscricaoService
                 $matriculaRecemCriada = true;
             }
 
-            if ($usuarioRecemCriado) {
-                $user->forceFill(['matricula_login' => $matricula->numero_matricula])->save();
-            }
-
             // 7) Atualizar inscrição → matriculado + auditoria simples.
             $inscricao->update([
                 'status' => Application::STATUS_MATRICULADO,
@@ -168,11 +163,11 @@ class AprovarInscricaoService
 
         // 9) FORA da transação (após commit): disparar link seguro
         // de definição de senha SOMENTE para conta recém-criada.
-        if ($notificar && $resultado->usuarioRecemCriado) {
+        if ($resultado->usuarioRecemCriado) {
             $this->dispararLinkDefinicaoSenha($resultado->user);
         }
 
-        if ($notificar && $decisaoEfetivada) {
+        if ($decisaoEfetivada) {
             $this->notificarDecisao->notificarMatricula(
                 $resultado->application,
                 $resultado->matricula->numero_matricula,
@@ -191,7 +186,6 @@ class AprovarInscricaoService
         Application $application,
         User $operador,
         string $motivo,
-        bool $notificar = true,
     ): Application {
         $motivo = trim($motivo);
         if ($motivo === '') {
@@ -239,13 +233,13 @@ class AprovarInscricaoService
             $this->registrarAuditoria('inscricao.rejeitada', [
                 'application_id' => $inscricao->id,
                 'operador_id' => $operador->id,
-                'motivo_registrado' => true,
+                'motivo' => $motivo,
             ]);
 
             return $inscricao->refresh();
         });
 
-        if ($notificar && $decisaoEfetivada) {
+        if ($decisaoEfetivada) {
             $this->notificarDecisao->notificarRejeicao($resultado, $motivo);
         }
 
@@ -376,7 +370,7 @@ class AprovarInscricaoService
     }
 
     /**
-     * Dispara ativação individual assinada via broker nativo; só o consumo confirma o e-mail.
+     * Dispara o link seguro de definição de senha via broker nativo do Laravel.
      * Falha do envio não desfaz a matrícula: registra erro e sinaliza a Secretaria.
      */
     protected function dispararLinkDefinicaoSenha(User $user): void
@@ -389,6 +383,7 @@ class AprovarInscricaoService
                 'ativo' => true,
                 'primeiro_acesso_pendente' => true,
                 'email_verified_at' => null,
+                'senha_definitiva_pendente' => false,
             ], function (User $aluno, string $token): void {
                 $aluno->notify(new AtivarAcessoAluno($token));
             });
@@ -399,7 +394,7 @@ class AprovarInscricaoService
             ]);
         } catch (\Throwable $e) {
             // Não relançamos: a matrícula não pode ser desfeita por falha de e-mail.
-            Log::error('Falha ao enviar link de ativação para novo aluno.', [
+            Log::error('Falha ao enviar link de definição de senha para novo aluno.', [
                 'user_id' => $user->id,
                 'exception' => $e::class,
             ]);

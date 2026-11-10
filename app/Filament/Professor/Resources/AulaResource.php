@@ -7,7 +7,6 @@ use App\Models\Aula;
 use App\Models\Curso;
 use App\Models\Disciplina;
 use App\Services\GestaoAcademica\PermissoesDocentes;
-use App\Support\TranscricaoVideo;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs;
@@ -61,18 +60,18 @@ class AulaResource extends Resource
                                     ->schema([
                                         Forms\Components\Select::make('disciplina_id')
                                             ->label('Disciplina')
-                                            ->options(function () {
+                                            ->options(function (?Aula $record) {
                                                 $professorId = auth()->id();
 
                                                 $ids = app(PermissoesDocentes::class)->disciplinasParaCriacao((int) $professorId);
+                                                if ($record && static::canEdit($record)) {
+                                                    $ids[] = $record->disciplina_id;
+                                                }
 
                                                 return Disciplina::query()
                                                     ->where('ativa', true)
                                                     ->whereNotNull('modulo_id')
-                                                    ->where(function (Builder $query) use ($professorId, $ids) {
-                                                        $query->whereHas('modulo.curso', fn ($curso) => $curso->where('instrutor_id', $professorId))
-                                                            ->orWhereIn('id', $ids);
-                                                    })
+                                                    ->whereIn('id', $ids)
                                                     ->with('modulo.curso')
                                                     ->orderBy('ordem')
                                                     ->get()
@@ -83,15 +82,26 @@ class AulaResource extends Resource
                                             ->searchable()
                                             ->preload()
                                             ->required()
+                                            ->live()
                                             ->columnSpanFull()
-                                            ->helperText('Selecione a disciplina; o módulo será definido automaticamente no servidor.'),
+                                            ->helperText('Selecione a disciplina e um módulo autorizado.'),
 
                                         Forms\Components\Select::make('modulo_id')
                                             ->label('Módulo específico da aula')
-                                            ->options(fn (Get $get) => $get('disciplina_id')
-                                                ? Disciplina::query()->find($get('disciplina_id'))?->modulos()
-                                                    ->pluck('modulos.titulo', 'modulos.id') ?? []
-                                                : [])
+                                            ->options(function (Get $get, ?Aula $record) {
+                                                $disciplina = Disciplina::query()->find($get('disciplina_id'));
+                                                if (! $disciplina) {
+                                                    return [];
+                                                }
+
+                                                return $disciplina->modulos()->get()
+                                                    ->filter(fn ($modulo) => app(PermissoesDocentes::class)->podeCriarAula(
+                                                        (int) auth()->id(), $disciplina, (int) $modulo->id
+                                                    ) || ($record && static::canEdit($record)
+                                                        && (int) $record->disciplina_id === (int) $disciplina->id
+                                                        && (int) $record->modulo_id === (int) $modulo->id))
+                                                    ->pluck('titulo', 'id');
+                                            })
                                             ->searchable()->required()
                                             ->helperText('Permissões do professor são validadas no servidor para esse módulo.'),
 
@@ -214,13 +224,6 @@ class AulaResource extends Resource
                                             ->columnSpanFull()
                                             ->visible(fn (Get $get) => $get('video_provider') !== 'upload')
                                             ->helperText('Cole a URL completa do vídeo'),
-
-                                        Forms\Components\Textarea::make('transcricao_video')
-                                            ->label('Transcrição e legendas do vídeo')
-                                            ->helperText('Cole a transcrição em texto simples ou o conteúdo de um arquivo WebVTT (.vtt). WebVTT habilita legendas e trechos clicáveis. Revise o texto antes de publicar.')
-                                            ->rows(8)
-                                            ->maxLength(TranscricaoVideo::MAX_CARACTERES)
-                                            ->columnSpanFull(),
 
                                         Forms\Components\FileUpload::make('video_upload')
                                             ->label('Upload do Vídeo')
@@ -819,9 +822,9 @@ class AulaResource extends Resource
                     ->icon('heroicon-o-document-duplicate')
                     ->color('gray')
                     ->requiresConfirmation()
-                    ->visible(fn (Aula $record): bool => static::canEdit($record))
+                    ->visible(fn (Aula $record): bool => static::canReplicate($record))
                     ->action(function (Aula $record) {
-                        abort_unless(static::canEdit($record), 403);
+                        abort_unless(static::canReplicate($record), 403);
                         $nova = $record->replicate();
                         $nova->titulo = $record->titulo.' (Cópia)';
                         $nova->ordem = $record->ordem + 1;
@@ -835,11 +838,7 @@ class AulaResource extends Resource
 
                 Tables\Actions\DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('ordem')
             ->emptyStateHeading('Nenhuma aula encontrada')
             ->emptyStateDescription('Crie aulas a partir das disciplinas atribuídas aos seus cursos.')
@@ -882,6 +881,22 @@ class AulaResource extends Resource
     public static function canDelete(Model $record): bool
     {
         return static::canEdit($record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        // Exclusões só por registro, com a mesma verificação de escopo da edição.
+        return false;
+    }
+
+    public static function canReplicate(Model $record): bool
+    {
+        $aula = $record instanceof Aula ? Aula::query()->find($record->getKey()) : null;
+
+        return $aula && static::canEdit($aula) && $aula->disciplina
+            && app(PermissoesDocentes::class)->podeCriarAula(
+                (int) auth()->id(), $aula->disciplina, (int) $aula->modulo_id
+            );
     }
 
     public static function getNavigationBadge(): ?string

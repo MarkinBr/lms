@@ -14,10 +14,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Tests\Feature\Auth\PortalAuthTestCase;
+use Tests\TestCase;
 
-// Novos alunos recebem ativação assinada: recuperação comum exige e-mail já confirmado.
-class AprovarInscricaoServiceTest extends PortalAuthTestCase
+class AprovarInscricaoServiceTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -277,7 +276,9 @@ class AprovarInscricaoServiceTest extends PortalAuthTestCase
 
         $r = $this->service->executar($inscricao, $secretaria);
 
-        Notification::assertSentTo($r->user, AtivarAcessoAluno::class);
+        $this->assertTrue($r->user->primeiro_acesso_pendente);
+        Notification::assertSentTo($r->user, AtivarAcessoAluno::class,
+            fn (AtivarAcessoAluno $notificacao): bool => str_contains($notificacao->toMail($r->user)->actionUrl, 'signature='));
 
         // O modelo tem cast 'hashed' — a senha nunca sai em texto puro,
         // e o resultado do serviço não expõe nenhuma senha.
@@ -401,7 +402,7 @@ class AprovarInscricaoServiceTest extends PortalAuthTestCase
             'instituicao_anterior' => 'Instituto de Teste', 'como_conheceu' => 'igreja', 'indicacao_nome' => 'Pessoa de Teste',
         ];
 
-        $resultado = $this->service->executar($inscricao, $this->criarSecretaria(), notificar: false);
+        $resultado = $this->service->executar($inscricao, $this->criarSecretaria());
 
         $this->assertTrue($resultado->usuarioRecemCriado);
         foreach ($esperado as $campo => $valor) {
@@ -414,7 +415,7 @@ class AprovarInscricaoServiceTest extends PortalAuthTestCase
         $this->assertArrayNotHasKey('termos_versao', $resultado->user->getAttributes());
 
         $resultado->user->forceFill(['instituicao_anterior' => 'Cadastro corrigido'])->save();
-        $repetido = $this->service->executar($inscricao->fresh(), $this->criarAdmin(), notificar: false);
+        $repetido = $this->service->executar($inscricao->fresh(), $this->criarAdmin());
         $this->assertSame('Cadastro corrigido', $repetido->user->instituicao_anterior);
     }
 
@@ -423,7 +424,7 @@ class AprovarInscricaoServiceTest extends PortalAuthTestCase
         $curso = $this->criarCurso();
         $inscricao = $this->criarInscricao($curso, $this->criarModalidade($curso));
 
-        $resultado = $this->service->executar($inscricao, $this->criarSecretaria(), notificar: false);
+        $resultado = $this->service->executar($inscricao, $this->criarSecretaria());
 
         foreach (['ano_conclusao', 'formacao_teologica', 'instituicao_anterior', 'como_conheceu', 'indicacao_nome'] as $campo) {
             $this->assertNull($resultado->user->{$campo}, $campo);
@@ -449,7 +450,7 @@ class AprovarInscricaoServiceTest extends PortalAuthTestCase
                 'whatsapp' => '5521999999999', 'ano_conclusao' => 2008, 'formacao_teologica' => true,
                 'instituicao_anterior' => 'Instituto antigo', 'como_conheceu' => 'site', 'indicacao_nome' => 'Nome antigo',
             ]);
-            $resultado = $this->service->executar($inscricao, $secretaria, notificar: false);
+            $resultado = $this->service->executar($inscricao, $secretaria);
             $this->assertFalse($resultado->usuarioRecemCriado);
             $this->assertSame($antes, $aluno->fresh()->getAttributes());
         }

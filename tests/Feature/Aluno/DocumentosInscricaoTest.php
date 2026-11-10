@@ -318,7 +318,7 @@ class DocumentosInscricaoTest extends TestCase
             ->assertSee('Documentos da inscrição')
             ->assertSee('Enviar documentos')
             ->assertSee(route('aluno.documentos-inscricao'))
-            ->assertSee('Aulas pendentes')
+            ->assertSee('Aulas ainda não concluídas')
             ->assertDontSee('Semestre Atual')
             ->assertDontSee('Próximos 7 dias')
             ->assertDontSee('Suporte Acadêmico')
@@ -341,7 +341,7 @@ class DocumentosInscricaoTest extends TestCase
         $this->actingAs($aluno)
             ->get(route('aluno.dashboard'))
             ->assertOk()
-            ->assertSee('Cursos matriculados')
+            ->assertSee('Cursos Ativos')
             ->assertSee('Curso de Teologia');
     }
 

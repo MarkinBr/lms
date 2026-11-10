@@ -5,7 +5,6 @@ namespace App\Services\Acessos;
 use App\Jobs\EntregarAcessoAluno;
 use App\Mail\AtendimentoAcessoMail;
 use App\Models\User;
-use App\Services\Telegram\TransporteEmailTelegram;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Crypt;
@@ -26,7 +25,7 @@ class EntregasAcesso
             AtendimentoAluno::autorizar($ator, $aluno);
             abort_unless($aluno->ativo && in_array($canal, ['email', 'whatsapp', 'presencial'], true), 403);
             $destino = $this->destino($aluno, $canal, $tipo);
-            if ($canal === 'email' && ! app(TransporteEmailTelegram::class)->disponivel()) {
+            if ($canal === 'email' && ! app(TransporteEmailAcesso::class)->disponivel()) {
                 throw ValidationException::withMessages(['canal' => 'O serviço de e-mail está indisponível. Escolha o atendimento pelo WhatsApp.']);
             }
             $id = (string) Str::uuid();
@@ -98,7 +97,7 @@ class EntregasAcesso
 
                 return;
             }
-            if (! app(TransporteEmailTelegram::class)->disponivel()) {
+            if (! app(TransporteEmailAcesso::class)->disponivel()) {
                 throw new RuntimeException('Transporte de e-mail indisponível no atendimento.');
             }
             $dados = json_decode(Crypt::decryptString($linha->conteudo), true, flags: JSON_THROW_ON_ERROR);

@@ -37,7 +37,7 @@ return new class extends Migration
         // A associação adicional é N:N; não duplica aulas ou conteúdo curricular.
         Schema::create('disciplina_modulo', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('disciplina_id')->constrained('disciplinas')->restrictOnDelete();
+            $table->foreignId('disciplina_id')->constrained('disciplinas')->cascadeOnDelete();
             $table->foreignId('modulo_id')->constrained('modulos')->restrictOnDelete();
             $table->timestamps();
             $table->unique(['disciplina_id', 'modulo_id']);

@@ -252,14 +252,25 @@ class Turma extends Model
             if ($turma->disciplina_id) {
                 $turma->disciplinas()->syncWithoutDetaching([$turma->disciplina_id]);
             }
-            if ($turma->professor_id && ! $turma->professorAtribuicoes()
-                ->where('professor_id', $turma->professor_id)->where('escopo', 'turma')->exists()) {
-                $turma->professorAtribuicoes()->create([
+            // Trocar o responsável legado revoga a concessão anterior, preservando
+            // o histórico e as designações independentes de outros professores.
+            if ($turma->isDirty('professor_id') && $turma->getRawOriginal('professor_id')) {
+                $turma->professorAtribuicoes()
+                    ->where('professor_id', $turma->getRawOriginal('professor_id'))
+                    ->where('escopo', 'turma')->update(['ativa' => false]);
+            }
+            // Uma edição sem troca de professor não pode ressuscitar acesso revogado.
+            if ($turma->isDirty('professor_id') && $turma->professor_id) {
+                $atribuicao = $turma->professorAtribuicoes()->firstOrCreate([
                     'professor_id' => $turma->professor_id,
                     'escopo' => 'turma',
+                ], [
                     'permissoes' => ['visualizar', 'editar_conteudo', 'gerenciar_atividades', 'corrigir', 'lancar_notas'],
                     'ativa' => true,
                 ]);
+                if (! $atribuicao->ativa) {
+                    $atribuicao->update(['ativa' => true]);
+                }
             }
         });
     }

@@ -245,14 +245,23 @@ class CentralEnsinoTest extends TestCase
         $rota = route('aluno.aula.material', [$aula, 0]);
 
         $this->actingAs($outro)->get($rota)->assertForbidden();
-        $this->actingAs($aluno)->get($rota)->assertOk();
+        $this->actingAs($aluno)->get($rota)->assertDownload('apostila.pdf');
         $this->get(route('aluno.aula', $aula->id))->assertOk()
-            ->assertSee('apostila.pdf');
+            ->assertSee('apostila.pdf')->assertSee($rota)->assertDontSee($arquivo);
+
+        $aula->update(['anexos' => [[
+            'caminho' => 'ensino/aulas/'.$aula->id.'/../apostila.pdf', 'nome' => 'Outro material',
+        ]]]);
+        Storage::disk('local')->put('ensino/aulas/apostila.pdf', '%PDF-1.4 Outro conteúdo');
+        $this->get($rota)->assertNotFound();
+        $aula->update(['anexos' => [['caminho' => $arquivo, 'nome' => 'apostila.pdf']]]);
 
         $aula->update(['liberada' => false]);
         $this->get($rota)->assertForbidden();
         $aula->update(['liberada' => true, 'permite_download' => false]);
         $this->get($rota)->assertForbidden();
+        $this->get(route('aluno.aula', $aula->id))->assertOk()
+            ->assertDontSee('apostila.pdf')->assertDontSee($rota);
     }
 
     public function test_previa_do_simulado_corrige_sem_gravar_nota_ou_tentativa(): void

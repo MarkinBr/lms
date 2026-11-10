@@ -9,6 +9,7 @@ use App\Models\InstrumentoAvaliacao;
 use App\Models\ProfessorAtribuicao;
 use App\Models\Turma;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class PermissoesDocentes
 {
@@ -31,9 +32,31 @@ class PermissoesDocentes
             && ! $turma->disciplinas()->whereKey($disciplinaId)->exists()) {
             return false;
         }
-        if ($moduloId && (! $disciplinaId || ! Disciplina::query()
-            ->whereKey($disciplinaId)->whereHas('modulos', fn ($query) => $query->whereKey($moduloId))
-            ->exists())) {
+        // Os IDs enviados precisam descrever o mesmo caminho persistido.
+        // Nunca use um módulo/aula alegado para autorizar outra avaliação.
+        if ($instrumentoId) {
+            $instrumento = InstrumentoAvaliacao::query()->find($instrumentoId);
+            if (! $instrumento || ! $disciplinaId || (int) $instrumento->disciplina_id !== $disciplinaId
+                || ($aulaId && (int) $instrumento->aula_id !== $aulaId)
+                || ($moduloId && ! $instrumento->aula_id)) {
+                return false;
+            }
+            $aulaId = $instrumento->aula_id ? (int) $instrumento->aula_id : null;
+        }
+        if ($aulaId) {
+            $aula = Aula::query()->find($aulaId);
+            if (! $aula || ! $disciplinaId || (int) $aula->disciplina_id !== $disciplinaId
+                || ($moduloId && (int) $aula->modulo_id !== $moduloId)) {
+                return false;
+            }
+            $moduloId = (int) $aula->modulo_id;
+        }
+        if ($disciplinaId && ! Disciplina::query()->whereKey($disciplinaId)
+            ->where('curso_id', $turma->curso_id)->exists()) {
+            return false;
+        }
+        if ($moduloId && (! $disciplinaId || ! ($disciplina = Disciplina::query()->find($disciplinaId))
+            || ! $this->moduloValido($disciplina, $moduloId))) {
             return false;
         }
         if ($aulaId && (! $disciplinaId || ! Aula::query()
@@ -52,15 +75,17 @@ class PermissoesDocentes
             ->where('turma_id', $turmaId)
             ->where('ativa', true)
             ->get()
-            ->contains(fn (ProfessorAtribuicao $atribuicao) => $atribuicao->permite(
+            ->contains(fn (ProfessorAtribuicao $atribuicao) => $this->atribuicaoValida($atribuicao) && $atribuicao->permite(
                 $permissao, $disciplinaId, $moduloId, $aulaId, $instrumentoId
             ));
     }
 
     public function podeEditarAula(int $professorId, Aula $aula): bool
     {
-        $disciplina = $aula->disciplina;
-        if (! $disciplina) {
+        // Autoriza a origem persistida, nunca relações/atributos alterados em memória.
+        $aula = $aula->exists ? Aula::query()->find($aula->getKey()) : null;
+        $disciplina = $aula?->disciplina;
+        if (! $disciplina || ! $this->moduloValido($disciplina, (int) $aula->modulo_id)) {
             return false;
         }
         if (Curso::query()->whereKey($disciplina->curso_id)
@@ -68,7 +93,13 @@ class PermissoesDocentes
             return true; // Preserva o responsável geral pelo curso.
         }
 
-        foreach ($disciplina->turmasVinculadas()->pluck('turmas.id') as $turmaId) {
+        $turmas = $this->turmasDaDisciplina($disciplina);
+        // Atribuições locais não concedem edição da biblioteca compartilhada.
+        // Até existir versionamento por oferta, só o responsável do curso a altera.
+        if ($turmas->count() !== 1) {
+            return false;
+        }
+        foreach ($turmas as $turmaId) {
             if ($this->permite($professorId, $turmaId, 'editar_conteudo',
                 $disciplina->id, $aula->modulo_id, $aula->id)) {
                 return true;
@@ -80,7 +111,8 @@ class PermissoesDocentes
 
     public function podeCriarAula(int $professorId, Disciplina $disciplina, int $moduloId): bool
     {
-        if (! $disciplina->modulos()->whereKey($moduloId)->exists()) {
+        $disciplina = Disciplina::query()->find($disciplina->getKey());
+        if (! $disciplina || ! $this->moduloValido($disciplina, $moduloId)) {
             return false;
         }
         if (Curso::query()->whereKey($disciplina->curso_id)
@@ -88,14 +120,18 @@ class PermissoesDocentes
             return true;
         }
 
-        foreach ($disciplina->turmasVinculadas()->pluck('turmas.id') as $turmaId) {
+        $turmas = $this->turmasDaDisciplina($disciplina);
+        if ($turmas->count() !== 1) {
+            return false;
+        }
+        foreach ($turmas as $turmaId) {
             $atribuicoes = ProfessorAtribuicao::query()
                 ->where('turma_id', $turmaId)->where('professor_id', $professorId)
                 ->where('ativa', true)->whereIn('escopo', ['turma', 'disciplina', 'modulo'])->get();
 
             if ($atribuicoes->contains(fn (ProfessorAtribuicao $a) => $a->permite(
                 'editar_conteudo', $disciplina->id, $moduloId
-            ))) {
+            )) && $this->permite($professorId, $turmaId, 'editar_conteudo', $disciplina->id, $moduloId)) {
                 return true;
             }
         }
@@ -105,10 +141,7 @@ class PermissoesDocentes
 
     public function podeCriarEmAlgumLugar(int $professorId): bool
     {
-        return Curso::query()->where('instrutor_id', $professorId)->exists()
-            || ProfessorAtribuicao::query()->where('professor_id', $professorId)
-                ->where('ativa', true)->whereIn('escopo', ['turma', 'disciplina', 'modulo'])
-                ->whereJsonContains('permissoes', 'editar_conteudo')->exists();
+        return $this->disciplinasParaCriacao($professorId) !== [];
     }
 
     public function disciplinasParaCriacao(int $professorId): array
@@ -126,7 +159,58 @@ class PermissoesDocentes
             }
         }
 
-        return array_values(array_unique($ids));
+        array_push($ids, ...Disciplina::query()->whereHas('curso', fn ($q) => $q
+            ->where('instrutor_id', $professorId))->pluck('id')->all());
+
+        return Disciplina::query()->whereIn('id', array_unique($ids))->get()
+            ->filter(fn (Disciplina $d) => $d->modulos()->pluck('modulos.id')
+                ->contains(fn ($id) => $this->podeCriarAula($professorId, $d, (int) $id)))
+            ->pluck('id')->all();
+    }
+
+    private function moduloValido(Disciplina $disciplina, int $moduloId): bool
+    {
+        return $disciplina->modulos()->whereKey($moduloId)
+            ->where('modulos.curso_id', $disciplina->curso_id)->exists();
+    }
+
+    private function turmasDaDisciplina(Disciplina $disciplina): Collection
+    {
+        // Inclui referências legadas: omiti-las tornaria conteúdo reutilizado editável.
+        return Turma::query()->where('disciplina_id', $disciplina->id)
+            ->orWhereHas('disciplinas', fn ($q) => $q->whereKey($disciplina->id))
+            ->pluck('id');
+    }
+
+    private function atribuicaoValida(ProfessorAtribuicao $atribuicao): bool
+    {
+        $turma = $atribuicao->turma;
+        if (! $turma) {
+            return false;
+        }
+        if ($atribuicao->escopo === 'turma') {
+            return true;
+        }
+        $disciplina = Disciplina::query()->find($atribuicao->disciplina_id);
+        if (! $disciplina || (int) $disciplina->curso_id !== (int) $turma->curso_id
+            || ((int) $turma->disciplina_id !== (int) $disciplina->id
+                && ! $turma->disciplinas()->whereKey($disciplina->id)->exists())) {
+            return false;
+        }
+        if (in_array($atribuicao->escopo, ['modulo', 'aula'], true)
+            && ! $this->moduloValido($disciplina, (int) $atribuicao->modulo_id)) {
+            return false;
+        }
+        if ($atribuicao->escopo === 'aula') {
+            return Aula::query()->whereKey($atribuicao->aula_id)
+                ->where('disciplina_id', $disciplina->id)->where('modulo_id', $atribuicao->modulo_id)->exists();
+        }
+        if ($atribuicao->escopo === 'instrumento') {
+            return InstrumentoAvaliacao::query()->whereKey($atribuicao->instrumento_id)
+                ->where('disciplina_id', $disciplina->id)->exists();
+        }
+
+        return in_array($atribuicao->escopo, ['disciplina', 'modulo'], true);
     }
 
     public function filtrarAulasVisiveis(Builder $query, int $professorId): Builder
@@ -138,6 +222,9 @@ class PermissoesDocentes
         return $query->where(function (Builder $query) use ($professorId, $atribuicoes) {
             $query->whereHas('modulo.curso', fn ($curso) => $curso->where('instrutor_id', $professorId));
             foreach ($atribuicoes as $a) {
+                if (! $this->atribuicaoValida($a)) {
+                    continue;
+                }
                 if ($a->escopo === 'turma') {
                     $ids = $a->turma->disciplinas()->pluck('disciplinas.id')->all();
                     $query->orWhereIn('disciplina_id', $ids);

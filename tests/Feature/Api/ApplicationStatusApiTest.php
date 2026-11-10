@@ -12,10 +12,9 @@ use App\Notifications\AtivarAcessoAluno;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use Tests\Feature\Auth\PortalAuthTestCase;
+use Tests\TestCase;
 
-// Novos alunos recebem ativação assinada: recuperação comum exige e-mail já confirmado.
-class ApplicationStatusApiTest extends PortalAuthTestCase
+class ApplicationStatusApiTest extends TestCase
 {
     use RefreshDatabase;
 

@@ -10,7 +10,6 @@ use App\Models\Matricula;
 use App\Models\Progresso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -29,7 +28,7 @@ class AulaController extends Controller
 
         $matriculado = Matricula::where('user_id', $alunoId)
             ->where('curso_id', $curso->id)
-            ->visiveisNoPortal()
+            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
             ->exists();
 
         // 403 genérico: não confirma existência da aula/curso a quem não tem vínculo.
@@ -46,7 +45,7 @@ class AulaController extends Controller
 
         $arquivo = ($aula->anexos ?? [])[$indice] ?? null;
         $caminho = is_array($arquivo) ? ($arquivo['caminho'] ?? null) : null;
-        if (! is_string($caminho) || ! str_starts_with($caminho, 'ensino/aulas/'.$aula->id.'/')) {
+        if (! is_string($caminho) || ! preg_match('~\Aensino/aulas/'.$aula->id.'/[a-zA-Z0-9][a-zA-Z0-9._-]*\z~', $caminho)) {
             abort(404);
         }
 
@@ -77,7 +76,7 @@ class AulaController extends Controller
 
         $matriculado = Matricula::where('user_id', $aluno->id)
             ->where('curso_id', $curso->id)
-            ->visiveisNoPortal()
+            ->whereIn(DB::raw('LOWER(status)'), ['ativo', 'ativa', 'concluido'])
             ->exists();
 
         if (! $matriculado) {
@@ -163,12 +162,7 @@ class AulaController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $caderno = Schema::hasTable('cadernos_aula')
-            ? DB::table('cadernos_aula')->where('aluno_id', $aluno->id)->where('aula_id', $aula->id)->first()
-            : null;
-
         return view('aluno.sala-aula', compact(
-            'caderno',
             'aula',
             'curso',
             'modulo',
@@ -284,7 +278,7 @@ class AulaController extends Controller
     public function salvarQuiz(Request $request, $id)
     {
         $request->validate([
-            'score' => 'nullable|integer|min:0|max:100',
+            'score' => 'required|integer|min:0|max:100',
             'answers' => 'required|array',
             'attempts' => 'nullable|array',
         ]);
@@ -300,30 +294,19 @@ class AulaController extends Controller
             ['progresso_porcentagem' => 0, 'concluida' => false]
         );
 
-        $respostas = $request->input('answers');
-        if ($aula->temQuestoes()) {
-            $nota = $aula->calcularNotaQuiz($respostas);
-        } else {
-            $questoes = is_string($aula->quiz) ? json_decode($aula->quiz, true) : $aula->quiz;
-            abort_unless(is_array($questoes) && count($questoes), 422, 'Esta aula não possui exercícios cadastrados.');
-            $acertos = collect($questoes)->filter(fn ($q, $i) => array_key_exists($i, $respostas)
-                && isset($q['resposta_correta']) && (string) $respostas[$i] === (string) $q['resposta_correta'])->count();
-            $nota = (int) round($acertos / count($questoes) * 100);
-        }
-
         $progresso->update([
-            'quiz_score' => $nota,
+            'quiz_score' => $request->input('score'),
             'quiz_respostas' => $request->input('answers'),
             'quiz_tentativas' => $request->input('attempts', []),
             'quiz_concluido_em' => now(),
         ]);
 
         $notaMinima = $aula->nota_minima_aprovacao ?: 60;
-        if ($nota >= $notaMinima) {
+        if ((int) $request->input('score') >= $notaMinima) {
             $this->concluir($request, $id);
         }
 
-        return response()->json(['success' => true, 'score' => $nota, 'passed' => $nota >= $notaMinima]);
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -364,11 +347,6 @@ class AulaController extends Controller
 
         // Issue #49: só permite comentar em aula do próprio vínculo.
         $this->autorizarVinculo((int) $aluno->id, $aula);
-
-        abort_unless($aula->permite_comentarios, 403, 'Os comentários estão desativados para esta aula.');
-        if ($request->filled('parent_id')) {
-            abort_unless(ComentarioAula::whereKey($request->input('parent_id'))->where('aula_id', $aula->id)->where('aprovado', true)->exists(), 422);
-        }
 
         $comentario = ComentarioAula::create([
             'aula_id' => $aula->id,

@@ -19,54 +19,6 @@ env:
   FILESYSTEM_DISK: local
 
 jobs:
-  telegram_postgres:
-    name: Telegram concorrência PostgreSQL 16 isolado
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: cetsadp_telegram_ci
-          POSTGRES_USER: telegram_ci
-          POSTGRES_PASSWORD: postgres_ci_local
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U telegram_ci -d cetsadp_telegram_ci"
-          --health-interval 5s --health-timeout 5s --health-retries 10
-    env:
-      APP_ENV: testing
-      DB_CONNECTION: pgsql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 5432
-      DB_DATABASE: cetsadp_telegram_ci
-      DB_USERNAME: telegram_ci
-      DB_PASSWORD: postgres_ci_local
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: PHP e extensão PostgreSQL
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, dom, fileinfo, pgsql, pdo_pgsql
-          coverage: none
-      - name: Preparar diretórios Laravel
-        run: mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
-      - name: Instalar dependências
-        run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Preparar aplicação e migrar banco efêmero
-        run: |
-          cp .env.example .env
-          mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
-          php artisan key:generate --force
-          php artisan migrate --force
-      - name: Disputar confirmações e revogações em dois processos
-        run: php tests/infra/telegram_postgres_race.php
-      - name: Homologar decisões e notas administrativas sem efeitos externos
-        run: php tests/infra/telegram_administracao_postgres.php
-      - name: Homologar cadastro e concorrência da Gestão de Acessos
-        run: php tests/infra/secretaria_acessos_postgres.php
-
   quality:
     name: PHP e JavaScript
     runs-on: ubuntu-latest
@@ -123,19 +75,13 @@ jobs:
           if [ "${#files[@]}" -gt 0 ]; then vendor/bin/pint --test "${files[@]}"; fi
 
       - name: Testes Laravel direcionados
-        run: php artisan test --filter='Application|Contato|Newsletter|Acompanhamento|Inscricao|Auth|PortalAlunoPublico|SsoController|PortalRoutesPlaceholderTest|TelegramAdministrativo|TelegramMenuConsulta|TelegramOperacional|TelegramCentralInteligente|TelegramNavegacao35|TelegramAlertasPreferencias|TelegramOutbox|TelegramSegurancaRegressao|TelegramOutboxAutorizacao|TelegramRespostaProtegida|TelegramDesativacaoRevogacao|TelegramPublicarComandos|TelegramRevogacaoAuditoria|TelegramConfirmacoes|TelegramPreAnaliseInscricao|Legado'
+        run: php artisan test --filter='Application|Contato|Newsletter|Acompanhamento|Inscricao|Auth|PortalAlunoPublico|SsoController|PortalRoutesPlaceholderTest'
 
-      - name: Testes de operações administrativas Telegram
-        run: php artisan test --filter='TelegramConteudoTest|TelegramOperacoesAcademicasTest|TelegramPublicacoesTest|TelegramFinanceiroEAlertasTest|TelegramDecisaoInscricaoTest|TelegramAlunosEscritaTest|TelegramNotasEscritaTest|TelegramNoticiasTest'
+      - name: Testes da Central da Secretaria
+        run: php artisan test --filter='GestaoCadastroAcessosTest|CredenciaisAcessoTest|EntregasAcessoTest|CentralAcessosHttpTest|CentralAcessosFormasTest|AtendimentoSeguroHttpTest|InscricaoCamposComplementaresTest|CentralMatriculasTest|CentralEnsinoTest|CentralDocumentosTest|CentralFinanceiroTest'
 
-      - name: Testes da Gestão de Acessos e inscrição complementar
-        run: php artisan test --filter='GestaoCadastroAcessosTest|CredenciaisAcessoTest|EntregasAcessoTest|CentralAcessosHttpTest|CentralMatriculasTest|CentralEnsinoTest|AtendimentoSeguroHttpTest|InscricaoCamposComplementaresTest'
-
-      - name: Testes da estrutura acadêmica flexível e permissões docentes
-        run: php artisan test --filter='EstruturaAcademicaFlexivelTest|PeriodoLetivoTest|TurmaAcademicaTest|HierarquiaAcademicaProfessorTest'
-
-      - name: Testes da infraestrutura isolada
-        run: python3 -m unittest discover -s tests/infra -p 'test_*.py'
+      - name: Testes da estrutura acadêmica flexível
+        run: php artisan test --filter='EstruturaAcademica|PermissoesDocentes|CentralEnsinoMultiplosModulosTest|PeriodoLetivoTest|TurmaAcademicaTest|DisciplinaTest'
 
       - name: Instalar dependências JavaScript
         run: npm ci
@@ -145,6 +91,56 @@ jobs:
 
       - name: Checar JavaScript público
         run: npm run check:js
+
+
+  secretaria_postgres:
+    name: Gestão de Acessos em PostgreSQL 16
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cetsadp_secretaria_ci
+          POSTGRES_USER: secretaria_ci
+          POSTGRES_PASSWORD: postgres_ci_local
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U secretaria_ci -d cetsadp_secretaria_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: cetsadp_secretaria_ci
+      DB_USERNAME: secretaria_ci
+      DB_PASSWORD: postgres_ci_local
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PHP e extensão PostgreSQL
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, pgsql, pdo_pgsql
+          coverage: none
+
+      - name: Preparar diretórios Laravel
+        run: mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
+
+      - name: Instalar dependências
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Preparar aplicação para banco efêmero
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Migrar e validar os vínculos acadêmicos legados
+        run: php tests/infra/academico_flexivel_postgres.php
+
+      - name: Verificar cadastro e concorrência da Gestão de Acessos
+        run: php tests/infra/secretaria_acessos_postgres.php
 
   e2e:
     name: Playwright E2E

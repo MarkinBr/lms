@@ -26,7 +26,7 @@ class AlunoPanelProvider extends PanelProvider
         return $panel
             ->id('aluno') // Identificador do painel
             ->path('aluno') // O link será: seusite.com/aluno
-            ->login(fn () => redirect()->route('aluno.login')) // Uma única política de autenticação para o aluno.
+            ->login(fn () => redirect()->route('aluno.login'))
             ->colors([
                 'primary' => Color::Green, // Verde para Alunos (diferente do Admin)
             ])

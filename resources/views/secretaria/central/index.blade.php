@@ -27,7 +27,10 @@
                 @forelse ($alunos as $aluno)
                     <li class="sc-student">
                         <div class="sc-person">@include('secretaria.central.avatar', ['grande' => false])<div><h3>{{ $aluno->name }}</h3><p>Matrícula de acesso · {{ $aluno->matricula_login ?: 'Não informada' }}</p><p>{{ $aluno->email ?: 'E-mail não cadastrado' }}</p></div></div>
-                        <a class="sc-button" href="{{ route('secretaria.acessos.show', $aluno) }}">Abrir ficha <span class="sc-sr-only">de {{ $aluno->name }}</span>@include('secretaria.central.icone', ['nome' => 'seta'])</a>
+                        <div class="sc-student-actions">
+                            <a class="sc-button" href="{{ route('secretaria.acessos.formas', $aluno) }}">Ver formas de acesso <span class="sc-sr-only">de {{ $aluno->name }}</span></a>
+                            <a class="sc-button" href="{{ route('secretaria.acessos.show', $aluno) }}">Abrir ficha <span class="sc-sr-only">de {{ $aluno->name }}</span>@include('secretaria.central.icone', ['nome' => 'seta'])</a>
+                        </div>
                         @include('secretaria.central.status')
                     </li>
                 @empty

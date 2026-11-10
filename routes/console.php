@@ -70,12 +70,6 @@ Schedule::command('cobrancas:disparar-atrasadas')
     ->dailyAt('10:00')->withoutOverlapping()->runInBackground()
     ->appendOutputTo(storage_path('logs/cobrancas.log'));
 
-// Telegram: lembretes apenas com opt-in; outbox revalida vínculo antes de entregar.
-Schedule::command('telegram:alertas-diarios')
-    ->dailyAt('08:00')->timezone('America/Sao_Paulo')->withoutOverlapping();
-Schedule::command('telegram:outbox-drenar')
-    ->everyMinute()->withoutOverlapping();
-
 Artisan::command('acessos:limpar-entregas', function () {
     $total = app(EntregasAcesso::class)->limparExpiradas();
     $this->info('Conteúdos expirados removidos: '.$total);

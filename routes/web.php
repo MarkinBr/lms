@@ -1,9 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcompanhamentoInscricaoLinkController;
-use App\Http\Controllers\AdminTelegramController;
 use App\Http\Controllers\Aluno\AulaController;
-use App\Http\Controllers\Aluno\CadernoAulaController;
 use App\Http\Controllers\Aluno\CalendarioController;
 use App\Http\Controllers\Aluno\CertificadosController;
 use App\Http\Controllers\Aluno\ComunicacaoController;
@@ -15,9 +13,9 @@ use App\Http\Controllers\Aluno\EmailAlunoController;
 use App\Http\Controllers\Aluno\FinanceiroController;
 use App\Http\Controllers\Aluno\FrequenciaController;
 use App\Http\Controllers\Aluno\NotasController;
-// Controllers do Portal do Aluno
 use App\Http\Controllers\Aluno\PerfilController;
 use App\Http\Controllers\Aluno\SecretariaController;
+// Controllers do Portal do Aluno
 use App\Http\Controllers\Auth\AdminAccessTokenController;
 use App\Http\Controllers\Auth\AlunoLoginController;
 use App\Http\Controllers\Auth\AtivarAcessoAlunoController;
@@ -31,9 +29,9 @@ use App\Http\Controllers\ReciboPublicoController;
 use App\Http\Controllers\RelatorioFinanceiroController;
 use App\Http\Controllers\RelatorioFluxoCaixaController;
 use App\Http\Controllers\RelatorioInadimplenciaController;
-// Controller de Autenticação
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SsoController;
+// Controller de Autenticação
 use App\Http\Controllers\ValidacaoDeclaracaoController;
 use Illuminate\Support\Facades\Route;
 
@@ -76,6 +74,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/portal/login', [AlunoLoginController::class, 'login'])->middleware('throttle:20,1')->name('aluno.login.submit');
     Route::get('/senha/esqueci', [RedefinirSenhaController::class, 'esqueci'])->name('password.request');
     Route::post('/senha/esqueci', [RedefinirSenhaController::class, 'enviarLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::post('/acesso/primeiro', [RedefinirSenhaController::class, 'solicitarPrimeiroAcesso'])
+        ->middleware('throttle:5,1')->name('aluno.primeiro-acesso.solicitar');
     Route::get('/senha/redefinir/{token}', [RedefinirSenhaController::class, 'redefinir'])->name('password.reset');
     Route::post('/senha/redefinir', [RedefinirSenhaController::class, 'atualizar'])->middleware('throttle:10,1')->name('password.update');
 });
@@ -147,8 +147,6 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
     Route::get('/aula/{id}', [AulaController::class, 'show'])->name('aula');
     Route::get('/aula/{aula}/materiais/{indice}', [AulaController::class, 'material'])
         ->whereNumber('aula')->whereNumber('indice')->middleware('throttle:60,1')->name('aula.material');
-    Route::post('/aula/{id}/caderno', [CadernoAulaController::class, 'salvar'])
-        ->middleware('throttle:90,1')->name('aula.caderno');
 
     // Issue #49: interações de aula exigem perfil de aluno ativo.
     // As três rotas legadas abaixo saíram do grupo aberto 'auth' e passaram
@@ -201,6 +199,7 @@ Route::middleware(['auth', 'aluno'])->prefix('portal')->name('aluno.')->group(fu
         ->middleware(['aluno', 'throttle:10,1'])
         ->name('documentos-inscricao.store');
 
+    // Perfil
     Route::get('/perfil/email', [EmailAlunoController::class, 'index'])->name('email.index');
     Route::post('/perfil/email', [EmailAlunoController::class, 'solicitar'])->middleware('throttle:5,1')->name('email.solicitar');
     Route::get('/perfil/email/confirmar/{token}', [EmailAlunoController::class, 'confirmar'])
@@ -284,11 +283,3 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/relatorios/dre', [DREController::class, 'gerar'])
         ->name('relatorios.dre');
 });
-
-// Vinculação do bot administrativo Telegram — requer autenticação web e nível admin.
-Route::middleware(['auth', 'role:admin', 'throttle:10,1'])
-    ->prefix('admin/telegram')->name('admin.telegram.')->group(function () {
-        Route::get('/', [AdminTelegramController::class, 'index'])->name('index');
-        Route::post('/gerar', [AdminTelegramController::class, 'gerar'])->name('gerar');
-        Route::post('/revogar', [AdminTelegramController::class, 'revogar'])->name('revogar');
-    });

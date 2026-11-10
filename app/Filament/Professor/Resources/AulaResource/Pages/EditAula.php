@@ -43,14 +43,16 @@ class EditAula extends EditRecord
         abort_unless(app(PermissoesDocentes::class)
             ->podeEditarAula((int) auth()->id(), $this->record), 403);
 
-        $disciplina = Disciplina::query()->find($data['disciplina_id'] ?? null);
-        $moduloId = (int) ($data['modulo_id'] ?? $disciplina?->modulo_id ?? 0);
+        $origem = $this->record->fresh();
+        abort_unless($origem, 403);
+        $disciplina = Disciplina::query()->find($data['disciplina_id'] ?? $origem->disciplina_id);
+        $moduloId = (int) ($data['modulo_id'] ?? $origem->modulo_id);
 
         if (! $disciplina || ! app(PermissoesDocentes::class)
             ->podeCriarAula((int) auth()->id(), $disciplina, $moduloId)) {
             // Quem recebeu uma aula específica pode editar essa aula, mas não transferi-la.
-            if (! $disciplina || (int) $disciplina->id !== (int) $this->record->disciplina_id
-                || $moduloId !== (int) $this->record->modulo_id) {
+            if (! $disciplina || (int) $disciplina->id !== (int) $origem->disciplina_id
+                || $moduloId !== (int) $origem->modulo_id) {
                 throw ValidationException::withMessages([
                     'disciplina_id' => 'Você não tem permissão para mover a aula de disciplina/módulo.',
                 ]);
