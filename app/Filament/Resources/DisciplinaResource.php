@@ -62,6 +62,27 @@ class DisciplinaResource extends Resource
                             ->required()
                             ->helperText('Somente módulos do curso selecionado.'),
 
+                        Forms\Components\Select::make('modulos')
+                            ->label('Módulos da disciplina (múltiplos)')
+                            ->multiple()
+                            ->relationship('modulos', 'titulo', modifyQueryUsing:
+                                fn (\Illuminate\Database\Eloquent\Builder $query, Forms\Get $get) =>
+                                    $query->where('curso_id', $get('curso_id') ?: 0))
+                            ->searchable()->preload()
+                            ->helperText('Mantenha o módulo principal. As aulas podem ser organizadas em qualquer módulo vinculado.')
+                            ->saveRelationshipsUsing(function (Disciplina $record, ?array $state): void {
+                                $ids = array_map('intval', $state ?? []);
+                                $validos = Modulo::query()->where('curso_id', $record->curso_id)
+                                    ->whereIn('id', $ids)->pluck('id')->all();
+                                if (count(array_unique($ids)) !== count($validos)) {
+                                    throw \Illuminate\Validation\ValidationException::withMessages([
+                                        'modulos' => 'Todos os módulos devem pertencer ao curso da disciplina.',
+                                    ]);
+                                }
+                                $record->modulos()->sync(array_unique(array_merge($validos, [$record->modulo_id])));
+                            })
+                            ->columnSpanFull(),
+
                         Forms\Components\TextInput::make('codigo')
                             ->label('Código')
                             ->required()
