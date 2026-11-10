@@ -171,4 +171,42 @@ class EstruturaAcademicaFlexivelTest extends TestCase
         $this->assertTrue($turma->publicada);
         $this->assertSame(Turma::STATUS_ABERTA, $turma->status); // compatibilidade legado
     }
+    public function test_codigos_sao_gerados_sem_alterar_codigos_preexistentes(): void
+    {
+        $curso = $this->curso();
+        $periodo = $this->periodo('2026');
+        $turma = $this->turma($curso, ['periodo_letivo_id' => $periodo->id]);
+        $this->assertStringStartsWith('T-', $turma->codigo);
+
+        $modulo = Modulo::query()->create([
+            'curso_id' => $curso->id, 'titulo' => 'Módulo sem código', 'ordem' => 1,
+        ]);
+        $disciplina = Disciplina::query()->create([
+            'curso_id' => $curso->id, 'modulo_id' => $modulo->id,
+            'nome' => 'Disciplina sem código', 'carga_horaria' => 40, 'ordem' => 1,
+        ]);
+        $this->assertStringStartsWith('DISC-', $disciplina->codigo);
+        $codigo = $disciplina->codigo;
+        $disciplina->update(['nome' => 'Nome atualizado']);
+        $this->assertSame($codigo, $disciplina->fresh()->codigo);
+    }
+
+    public function test_inscricoes_respeitam_publicacao_e_datas_sem_mudar_status_academico(): void
+    {
+        $turma = $this->turma($this->curso(), [
+            'situacao_academica' => 'em_andamento',
+            'situacao_inscricoes' => 'abertas',
+            'publicada' => true,
+            'inscricoes_inicio' => '2026-06-01',
+            'inscricoes_fim' => '2026-07-01',
+        ]);
+
+        $this->assertFalse($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-05-31')));
+        $this->assertTrue($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-06-15')));
+        $this->assertFalse($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-07-02')));
+        $this->assertSame('em_andamento', $turma->situacao_academica);
+
+        $turma->update(['publicada' => false]);
+        $this->assertFalse($turma->inscricoesAbertasEm(\\Carbon\\CarbonImmutable::parse('2026-06-15')));
+    }
 }
