@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EventoPublico;
 use App\Models\NewsletterSubscriber;
 use App\Models\PaginaInicial;
 use App\Services\NotificarContatoRecebidoService;
@@ -29,7 +30,11 @@ class SiteController extends Controller
             return view('site.manutencao', compact('dados'));
         }
 
-        return view('site.index', compact('dados'));
+        $eventosPublicos = EventoPublico::visiveis()->get();
+        $categoriasPublicas = $eventosPublicos->pluck('categoria')->unique()->mapWithKeys(fn ($categoria) => [$categoria => EventoPublico::CATEGORIAS[$categoria] ?? 'Outros']);
+
+        return view('site.index', compact('dados', 'eventosPublicos', 'categoriasPublicas'));
+
     }
 
     private function criarPaginaPadrao()
