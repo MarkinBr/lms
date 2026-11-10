@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsAluno;
+use App\Http\Middleware\ValidarSessaoAluno;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -28,7 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'aluno' => EnsureUserIsAluno::class,
             'role' => EnsureUserHasRole::class,
         ]);
+        $middleware->web(append: [ValidarSessaoAluno::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->dontFlash(['password', 'password_confirmation', 'current_password', 'senha_confirmacao', 'codigo', 'segredo', 'token']);
     })->create();

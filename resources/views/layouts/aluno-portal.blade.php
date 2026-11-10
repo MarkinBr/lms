@@ -1,9 +1,6 @@
 @php
     $aluno = auth()->user();
-    $fotoAluno = null;
-    if (!empty($aluno?->foto)) {
-        $fotoAluno = str_starts_with($aluno->foto, 'http') ? $aluno->foto : asset('storage/' . ltrim($aluno->foto, '/'));
-    }
+    $fotoAluno = $aluno?->foto_url;
     $portalPagina = str_replace('aluno.', '', request()->route()?->getName() ?? 'dashboard');
     $portalMenu = [
         ['Início', 'aluno.dashboard', 'fa-house', ['aluno.dashboard']],

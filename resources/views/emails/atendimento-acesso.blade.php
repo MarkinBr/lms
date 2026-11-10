@@ -1,0 +1,3 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;color:#162e43;line-height:1.7"><h1 style="font-size:22px;color:#061a30">CETSADP · Secretaria</h1><p style="white-space:pre-line">@foreach (preg_split('~(https?://[^\s<>]+)~u', $mensagem, -1, PREG_SPLIT_DELIM_CAPTURE) as $parte)@if (preg_match('~^https?://~', $parte))@php($link = rtrim($parte, '.,;!)'))<a href="{{ $link }}" rel="noreferrer">{{ $link }}</a>{{ substr($parte, strlen($link)) }}@else{{ $parte }}@endif@endforeach</p><hr><p>Atendimento individual ao aluno · CETSADP</p></body></html>

@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\Acessos\CredenciaisAluno;
 use App\Services\Auth\IdentificadorAluno;
 use App\Services\Auth\SenhaAluno;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -58,21 +61,37 @@ class AlunoLoginController extends Controller
 
         $aluno = $identificadores->resolver($email);
 
-        $hash = $aluno?->password ?: self::HASH_SENHA_FICTICIA;
-        $senhaValida = $senhas->confere($dados['password'], $hash);
+        $resultado = DB::transaction(function () use ($aluno, $dados, $senhas, $request) {
+            $atual = $aluno ? User::query()->lockForUpdate()->find($aluno->id) : null;
+            if ($atual && $atual->ativo && $atual->nivel === 'aluno' && $atual->senha_definitiva_pendente) {
+                $sessao = app(CredenciaisAluno::class)->consumirTemporaria($atual, $dados['password']);
 
-        if (! $aluno || ! $senhaValida) {
+                return $sessao ? ['sessao' => $sessao] : null;
+            }
+            $senhaValida = $senhas->confere($dados['password'], $atual?->password ?: self::HASH_SENHA_FICTICIA);
+            if (! $atual || ! $atual->ativo || $atual->nivel !== 'aluno' || ! $senhaValida) {
+                return null;
+            }
+            if (Hash::needsRehash($atual->password)) {
+                $atual->forceFill(['password' => Hash::make($dados['password'])])->save();
+            }
+            Auth::login($atual, $request->boolean('remember'));
+            $request->session()->put('aluno_acesso_versao', (int) $atual->acesso_versao);
+
+            return $atual;
+        });
+
+        if (! $resultado) {
             RateLimiter::hit($chaveLimite, self::BLOQUEIO_SEGUNDOS);
 
             return $this->falhar($request);
         }
 
-        if (Hash::needsRehash($aluno->password)) {
-            $aluno->forceFill(['password' => Hash::make($dados['password'])])->save();
+        if (is_array($resultado)) {
+            return AcessoAssistidoController::iniciarSessao($request, $resultado['sessao']);
         }
-
-        Auth::login($aluno, $request->boolean('remember'));
         $request->session()->regenerate();
+        $request->session()->forget('acesso_assistido');
         RateLimiter::clear($chaveLimite);
 
         return redirect()->intended(route('aluno.dashboard'));

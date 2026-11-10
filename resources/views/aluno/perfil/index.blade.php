@@ -42,8 +42,8 @@
                         {{-- Avatar com efeito hover --}}
                         <div class="relative group">
                             <div class="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-3xl blur opacity-25 group-hover:opacity-75 transition duration-300"></div>
-                            @if($aluno->foto)
-                                <img src="{{ asset('storage/' . $aluno->foto) }}" 
+                            @if($aluno->foto_url)
+                                <img src="{{ $aluno->foto_url }}"
                                      alt="{{ $aluno->name }}" 
                                      class="relative w-28 h-28 rounded-2xl object-cover border-4 border-white/20 shadow-2xl ring-2 ring-white/50">
                             @else
@@ -575,8 +575,8 @@
                                                 Foto de Perfil
                                             </label>
                                             <div class="flex items-center gap-6">
-                                                @if($aluno->foto)
-                                                    <img src="{{ asset('storage/' . $aluno->foto) }}" 
+                                                @if($aluno->foto_url)
+                                                    <img src="{{ $aluno->foto_url }}"
                                                          alt="Prévia" 
                                                          class="w-24 h-24 rounded-2xl object-cover border-4 border-gray-200 shadow-lg">
                                                 @else

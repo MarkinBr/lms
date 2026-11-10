@@ -38,6 +38,13 @@ use Illuminate\Support\Str;
  * @property string $cidade
  * @property string $estado
  * @property string $escolaridade
+ * @property int|null $ano_conclusao
+ * @property bool|null $formacao_teologica
+ * @property string|null $instituicao_anterior
+ * @property string|null $como_conheceu
+ * @property string|null $indicacao_nome
+ * @property Carbon|null $aceite_termos_em
+ * @property string|null $termos_versao
  * @property string $curso_id
  * @property string $course_modality_id
  * @property string $status (em_analise, aprovado, rejeitado, matriculado, cancelado)
@@ -65,6 +72,11 @@ class Application extends Model
     const STATUS_MATRICULADO = 'matriculado';
 
     const STATUS_CANCELADO = 'cancelado';
+
+    const ORIGENS_CONHECIMENTO = ['indicacao', 'redes_sociais', 'igreja', 'site'];
+
+    // Versão conjunta dos termos e da política de privacidade apresentados na inscrição.
+    const TERMOS_VERSAO = '2026-10-30';
 
     /**
      * Tipos de documento aceitos
@@ -111,6 +123,13 @@ class Application extends Model
         'cidade',
         'estado',
         'escolaridade',
+        'ano_conclusao',
+        'formacao_teologica',
+        'instituicao_anterior',
+        'como_conheceu',
+        'indicacao_nome',
+        'aceite_termos_em',
+        'termos_versao',
         'curso_id',
         'course_modality_id',
         'protocol',
@@ -126,6 +145,9 @@ class Application extends Model
      */
     protected $casts = [
         'data_nascimento' => 'date',
+        'ano_conclusao' => 'integer',
+        'formacao_teologica' => 'boolean',
+        'aceite_termos_em' => 'datetime',
         'analisado_em' => 'datetime',
         'documentos_urls' => 'array',
         'created_at' => 'datetime',

@@ -37,6 +37,8 @@ class EnsureUserIsAluno
             abort(403, 'Conta inativa.');
         }
 
+        abort_if((bool) $user->senha_definitiva_pendente, 403, 'Defina sua senha definitiva antes de acessar o portal.');
+
         return $next($request);
     }
 }

@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Acessos\AtendimentoAluno;
 use App\Services\Auth\IdentificadorAluno;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Throwable;
 
@@ -90,29 +91,39 @@ class RedefinirSenhaController extends Controller
             return $this->falhaRedefinicao($request);
         }
 
-        $status = Password::broker()->reset(
-            [
-                'email' => $aluno->email,
-                'id' => $aluno->id,
-                'nivel' => 'aluno',
-                'ativo' => true,
-                'password' => $dados['password'],
-                'password_confirmation' => $dados['password_confirmation'],
-                'token' => $dados['token'],
-            ],
-            function (User $user, string $password): void {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                    'remember_token' => Str::random(60),
-                    'senha_alterada_em' => now(),
-                    'email_confirmacao_pendente' => null,
-                    'email_confirmacao_token' => null,
-                    'email_confirmacao_expira_em' => null,
-                ])->save();
+        $status = DB::transaction(function () use ($aluno, $dados, $email) {
+            $atual = User::query()->lockForUpdate()->find($aluno->id);
+            $elegivel = app(IdentificadorAluno::class)->porEmailConfirmado($email);
+            if (! $atual || ! $elegivel || $elegivel->id !== $atual->id) {
+                return Password::INVALID_USER;
+            }
 
-                event(new PasswordReset($user));
-            },
-        );
+            return Password::broker()->reset(
+                [
+                    'email' => $atual->email,
+                    'id' => $atual->id,
+                    'nivel' => 'aluno',
+                    'ativo' => true,
+                    'password' => $dados['password'],
+                    'password_confirmation' => $dados['password_confirmation'],
+                    'token' => $dados['token'],
+                ],
+                function (User $user, string $password): void {
+                    AtendimentoAluno::revogar($user);
+                    $user->forceFill([
+                        'password' => Hash::make($password),
+                        'senha_definitiva_pendente' => false,
+                        'primeiro_acesso_pendente' => false,
+                        'senha_alterada_em' => now(),
+                        'email_confirmacao_pendente' => null,
+                        'email_confirmacao_token' => null,
+                        'email_confirmacao_expira_em' => null,
+                    ])->save();
+
+                    event(new PasswordReset($user));
+                },
+            );
+        });
 
         if ($status !== Password::PASSWORD_RESET) {
             return $this->falhaRedefinicao($request);
