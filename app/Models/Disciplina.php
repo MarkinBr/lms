@@ -69,7 +69,7 @@ class Disciplina extends Model
             }
 
             if ($disciplina->exists && ($disciplina->isDirty('modulo_id') || $disciplina->isDirty('curso_id'))) {
-                if ($disciplina->aulas()->exists() || $disciplina->turmas()->exists()) {
+                if ($disciplina->aulas()->exists() || $disciplina->turmas()->exists() || $disciplina->turmasVinculadas()->exists()) {
                     throw ValidationException::withMessages([
                         'modulo_id' => 'Não é possível mover uma disciplina que possui aulas ou turmas.',
                     ]);
