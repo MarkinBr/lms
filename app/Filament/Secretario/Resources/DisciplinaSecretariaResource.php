@@ -114,8 +114,8 @@ class DisciplinaSecretariaResource extends Resource
                             })
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('codigo')
-                            ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->helperText('Automático se não informado.'),
                         Forms\Components\TextInput::make('nome')
                             ->required()
                             ->maxLength(255),
