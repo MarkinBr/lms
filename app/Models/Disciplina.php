@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Validation\ValidationException;
 
@@ -94,6 +95,12 @@ class Disciplina extends Model
             }
         });
 
+        static::saved(function (Disciplina $disciplina): void {
+            if ($disciplina->modulo_id) {
+                $disciplina->modulos()->syncWithoutDetaching([$disciplina->modulo_id]);
+            }
+        });
+
         static::deleting(function (Disciplina $disciplina) {
             if ($disciplina->aulas()->exists()) {
                 throw ValidationException::withMessages([
@@ -101,7 +108,7 @@ class Disciplina extends Model
                 ]);
             }
 
-            if ($disciplina->turmas()->exists()) {
+            if ($disciplina->turmas()->exists() || $disciplina->turmasVinculadas()->exists()) {
                 throw ValidationException::withMessages([
                     'id' => 'Não é possível excluir uma disciplina com turmas vinculadas.',
                 ]);
@@ -117,6 +124,16 @@ class Disciplina extends Model
     public function modulo(): BelongsTo
     {
         return $this->belongsTo(Modulo::class);
+    }
+
+    public function modulos(): BelongsToMany
+    {
+        return $this->belongsToMany(Modulo::class, 'disciplina_modulo', 'disciplina_id', 'modulo_id')->withTimestamps();
+    }
+
+    public function turmasVinculadas(): BelongsToMany
+    {
+        return $this->belongsToMany(Turma::class, 'turma_disciplinas', 'disciplina_id', 'turma_id')->withTimestamps();
     }
 
     public function turmas(): HasMany
@@ -146,6 +163,6 @@ class Disciplina extends Model
 
     public function podeSerExcluida(): bool
     {
-        return ! $this->turmas()->exists() && ! $this->aulas()->exists();
+        return ! $this->turmas()->exists() && ! $this->turmasVinculadas()->exists() && ! $this->aulas()->exists();
     }
 }
