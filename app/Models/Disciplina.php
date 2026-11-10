@@ -34,6 +34,13 @@ class Disciplina extends Model
     protected static function booted(): void
     {
         static::saving(function (Disciplina $disciplina) {
+            if (! $disciplina->exists && blank($disciplina->codigo) && filled($disciplina->curso_id)) {
+                do {
+                    $disciplina->codigo = sprintf('DISC-%03d-%s', (int) $disciplina->curso_id,
+                        strtoupper(\Illuminate\Support\Str::random(6)));
+                } while (static::query()->where('curso_id', $disciplina->curso_id)
+                    ->where('codigo', $disciplina->codigo)->exists());
+            }
             if (blank($disciplina->codigo)) {
                 throw ValidationException::withMessages([
                     'codigo' => 'Informe o código da disciplina.',
