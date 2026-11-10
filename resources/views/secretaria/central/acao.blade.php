@@ -31,7 +31,7 @@
             @endif
             <div class="sc-field"><label for="{{ $acao }}-motivo">Motivo do atendimento <span class="sc-required">*</span></label><textarea id="{{ $acao }}-motivo" name="motivo" rows="2" maxlength="500" required></textarea><small>Não inclua senhas, códigos ou documentos no motivo.</small></div>
             <label class="sc-check"><input type="checkbox" name="destino_conferido" value="1" required><span>{{ $credencial ? 'Conferi a identidade e o destino com o próprio aluno, ou sua identidade para entrega presencial.' : 'Conferi a identidade do aluno e confirmo os efeitos desta ação.' }}</span></label>
-            <div class="sc-field"><label for="{{ $acao }}-senha">Sua senha de Secretaria <span class="sc-required">*</span></label><input id="{{ $acao }}-senha" name="senha_confirmacao" type="password" autocomplete="current-password" required></div>
+            <div class="sc-field"><label for="{{ $acao }}-senha">Senha administrativa <span class="sc-required">*</span></label><input id="{{ $acao }}-senha" name="senha_confirmacao" type="password" autocomplete="current-password" required></div>
             <button class="sc-button {{ in_array($acao, ['bloquear', 'sessoes']) ? 'sc-danger' : 'sc-primary' }}" type="submit">{{ $credencial ? 'Confirmar e preparar entrega' : $titulo }}</button>
         </fieldset>
     </form>

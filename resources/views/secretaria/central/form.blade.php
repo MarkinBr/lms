@@ -25,7 +25,7 @@
                 <div class="sc-panel-body sc-stack">
                     <div class="sc-field"><label for="motivo">Motivo do atendimento <span class="sc-required">*</span></label><textarea id="motivo" name="motivo" rows="3" maxlength="500" required aria-describedby="motivo-ajuda">{{ old('motivo') }}</textarea><small id="motivo-ajuda">Descreva a necessidade sem incluir senhas, códigos ou documentos.</small></div>
                     @if ($aluno)<label class="sc-check"><input type="checkbox" name="destino_conferido" value="1" required @checked(old('destino_conferido'))><span>Conferi a identidade do aluno e os contatos que estou atualizando.</span></label>@endif
-                    <div class="sc-field"><label for="senha-confirmacao">Sua senha de Secretaria <span class="sc-required">*</span></label><input id="senha-confirmacao" name="senha_confirmacao" type="password" autocomplete="current-password" required><small>Confirma a autorização do atendimento. Nunca informe a senha do aluno.</small></div>
+                    <div class="sc-field"><label for="senha-confirmacao">Senha administrativa <span class="sc-required">*</span></label><input id="senha-confirmacao" name="senha_confirmacao" type="password" autocomplete="current-password" required><small>Confirma a autorização do atendimento. Nunca informe a senha do aluno.</small></div>
                     <div class="sc-actions"><a class="sc-button" href="{{ $aluno ? route('secretaria.acessos.show', $aluno) : route('secretaria.acessos.index') }}">Cancelar</a><button type="submit" class="sc-button sc-primary">Revisar {{ $aluno ? 'alterações' : 'cadastro e entrega' }} @include('secretaria.central.icone', ['nome' => 'seta'])</button></div>
                 </div>
             </section>

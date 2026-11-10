@@ -39,6 +39,25 @@ class CentralAcessosHttpTest extends TestCase
         $this->assertDatabaseCount('matriculas', 0);
     }
 
+    public function test_todas_as_operacoes_na_central_utilizam_rotulo_senha_administrativa(): void
+    {
+        $ator = User::factory()->create(['nivel' => 'secretario', 'ativo' => true]);
+        $aluno = User::factory()->create(['nivel' => 'aluno', 'ativo' => true]);
+
+        $this->actingAs($ator)
+            ->get(route('secretaria.acessos.create'))
+            ->assertOk()
+            ->assertSee('Senha administrativa')
+            ->assertDontSee('Sua senha de Secretaria');
+
+        $this->get(route('secretaria.acessos.show', $aluno))
+            ->assertOk()
+            ->assertSee('Senha administrativa')
+            ->assertSee('senha administrativa')
+            ->assertDontSee('Sua senha de Secretaria')
+            ->assertDontSee('sua senha de Secretaria');
+    }
+
     public function test_senha_de_confirmacao_nao_e_guardada_em_old_input(): void
     {
         $ator = User::factory()->create(['nivel' => 'admin', 'ativo' => true]);
