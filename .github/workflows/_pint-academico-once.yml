@@ -1,0 +1,43 @@
+name: Pint acadêmico (execução única)
+
+on:
+  push:
+    branches:
+      - feat/estrutura-academica-flexivel-20261110
+    paths:
+      - .github/workflows/_pint-academico-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo
+          coverage: none
+      - name: Instalar Pint
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Aplicar Pint somente ao PHP alterado nesta entrega
+        shell: bash
+        run: |
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR origin/feat/central-ensino-aprendizagem HEAD -- '*.php')
+          if [ "${#files[@]}" -gt 0 ]; then vendor/bin/pint "${files[@]}"; fi
+      - name: Gravar formatação e remover workflow temporário
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/_pint-academico-once.yml
+          git add -u
+          git commit -m 'style(academico): aplicar Laravel Pint nas alterações'
+          git push origin HEAD:feat/estrutura-academica-flexivel-20261110
