@@ -363,8 +363,10 @@ class CentralMatriculasController extends Controller
             if (! $origemLegada && $origemVinculo?->status !== MatriculaTurma::STATUS_ATIVO) {
                 throw ValidationException::withMessages(['turma_origem_id' => 'A matrícula não possui vínculo ativo com a turma de origem.']);
             }
+            $destinoVinculo = MatriculaTurma::query()->where('matricula_id', $registro->id)
+                ->where('turma_id', $destino->id)->lockForUpdate()->first();
             if ((int) $registro->turma_id === (int) $destino->id ||
-                MatriculaTurma::query()->where('matricula_id', $registro->id)->where('turma_id', $destino->id)->exists()) {
+                ($destinoVinculo && $destinoVinculo->status !== MatriculaTurma::STATUS_CANCELADO)) {
                 throw ValidationException::withMessages(['turma_destino_id' => 'Já existe vínculo com a turma de destino.']);
             }
 
@@ -397,7 +399,11 @@ class CentralMatriculasController extends Controller
                 $registro->turma_id = $destino->id;
                 $registro->save();
             }
-            $vinculos->executar($registro, $destino, MatriculaTurma::STATUS_ATIVO, $motivo);
+            if ($destinoVinculo) {
+                $destinoVinculo->update(['status' => MatriculaTurma::STATUS_ATIVO]);
+            } else {
+                $vinculos->executar($registro, $destino, MatriculaTurma::STATUS_ATIVO, $motivo);
+            }
             $this->auditar((int) $request->user()->id, $registro->id, $destino->id,
                 'transferencia_turma', $origem->nome, $destino->nome, $motivo);
         });
