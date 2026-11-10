@@ -95,6 +95,20 @@ class ProfessorAtribuicao extends Model
                 throw ValidationException::withMessages(['escopo' => 'Atribuição de disciplina não aceita itens específicos.']);
             }
 
+            $inconsistentes = match ($atribuicao->escopo) {
+                'turma' => false,
+                'disciplina' => false,
+                'modulo' => (bool) ($atribuicao->aula_id || $atribuicao->instrumento_id),
+                'aula' => (bool) $atribuicao->instrumento_id,
+                'instrumento' => (bool) ($atribuicao->modulo_id || $atribuicao->aula_id),
+                default => true,
+            };
+            if ($inconsistentes) {
+                throw ValidationException::withMessages([
+                    'escopo' => 'A atribuição contém alvos de outra responsabilidade.',
+                ]);
+            }
+
             $duplicado = static::query()
                 ->where('turma_id', $atribuicao->turma_id)
                 ->where('professor_id', $atribuicao->professor_id)
