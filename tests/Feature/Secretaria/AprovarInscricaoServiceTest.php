@@ -7,12 +7,13 @@ use App\Models\CourseModality;
 use App\Models\Curso;
 use App\Models\Matricula;
 use App\Models\User;
+use App\Notifications\AtivarAcessoAluno;
 use App\Services\AprovarInscricaoException;
 use App\Services\AprovarInscricaoService;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class AprovarInscricaoServiceTest extends TestCase
@@ -275,7 +276,9 @@ class AprovarInscricaoServiceTest extends TestCase
 
         $r = $this->service->executar($inscricao, $secretaria);
 
-        Notification::assertSentTo($r->user, ResetPassword::class);
+        $this->assertTrue($r->user->primeiro_acesso_pendente);
+        Notification::assertSentTo($r->user, AtivarAcessoAluno::class,
+            fn (AtivarAcessoAluno $notificacao): bool => str_contains($notificacao->toMail($r->user)->actionUrl, 'signature='));
 
         // O modelo tem cast 'hashed' — a senha nunca sai em texto puro,
         // e o resultado do serviço não expõe nenhuma senha.
@@ -300,10 +303,10 @@ class AprovarInscricaoServiceTest extends TestCase
         $inscricao = $this->criarInscricao($curso, $mod);
 
         $this->service->executar($inscricao, $secretaria);
-        Notification::assertSentTimes(ResetPassword::class, 1);
+        Notification::assertSentTimes(AtivarAcessoAluno::class, 1);
 
         $this->service->executar($inscricao->fresh(), $secretaria);
-        Notification::assertSentTimes(ResetPassword::class, 1);
+        Notification::assertSentTimes(AtivarAcessoAluno::class, 1);
     }
 
     /**
@@ -374,5 +377,83 @@ class AprovarInscricaoServiceTest extends TestCase
 
         $r = $this->service->executar($inscricao, $admin);
         $this->assertSame($admin->id, $r->application->analisado_por_id);
+    }
+
+    public static function formacoesAnteriores(): array
+    {
+        return [[true], [false], [null]];
+    }
+
+    #[DataProvider('formacoesAnteriores')]
+    public function test_conta_nova_recebe_cadastro_complementar_da_inscricao_sem_alterar_origem(?bool $formacao): void
+    {
+        $curso = $this->criarCurso();
+        $inscricao = $this->criarInscricao($curso, $this->criarModalidade($curso), [
+            'rg' => '1234567', 'estado_civil' => 'Solteiro(a)', 'nacionalidade' => 'Brasileira',
+            'naturalidade_cidade' => 'Niterói', 'naturalidade_estado' => 'RJ', 'whatsapp' => '5521999999999',
+            'ano_conclusao' => 2008, 'formacao_teologica' => $formacao,
+            'instituicao_anterior' => 'Instituto de Teste', 'como_conheceu' => 'igreja', 'indicacao_nome' => 'Pessoa de Teste',
+            'aceite_termos_em' => now(), 'termos_versao' => '2026-10-30',
+        ]);
+        $esperado = [
+            'rg' => '1234567', 'genero' => 'F', 'estado_civil' => 'Solteiro(a)', 'nacionalidade' => 'Brasileira',
+            'naturalidade_cidade' => 'Niterói', 'naturalidade_estado' => 'RJ', 'whatsapp' => '5521999999999',
+            'escolaridade' => 'medio_completo', 'ano_conclusao' => 2008, 'formacao_teologica' => $formacao,
+            'instituicao_anterior' => 'Instituto de Teste', 'como_conheceu' => 'igreja', 'indicacao_nome' => 'Pessoa de Teste',
+        ];
+
+        $resultado = $this->service->executar($inscricao, $this->criarSecretaria());
+
+        $this->assertTrue($resultado->usuarioRecemCriado);
+        foreach ($esperado as $campo => $valor) {
+            $this->assertSame($valor, $resultado->user->{$campo}, $campo);
+        }
+        foreach (['ano_conclusao', 'formacao_teologica', 'instituicao_anterior', 'como_conheceu', 'indicacao_nome'] as $campo) {
+            $this->assertSame($inscricao->{$campo}, $inscricao->fresh()->{$campo});
+        }
+        $this->assertArrayNotHasKey('aceite_termos_em', $resultado->user->getAttributes());
+        $this->assertArrayNotHasKey('termos_versao', $resultado->user->getAttributes());
+
+        $resultado->user->forceFill(['instituicao_anterior' => 'Cadastro corrigido'])->save();
+        $repetido = $this->service->executar($inscricao->fresh(), $this->criarAdmin());
+        $this->assertSame('Cadastro corrigido', $repetido->user->instituicao_anterior);
+    }
+
+    public function test_inscricao_antiga_nao_inventa_complementares_na_criacao_da_conta(): void
+    {
+        $curso = $this->criarCurso();
+        $inscricao = $this->criarInscricao($curso, $this->criarModalidade($curso));
+
+        $resultado = $this->service->executar($inscricao, $this->criarSecretaria());
+
+        foreach (['ano_conclusao', 'formacao_teologica', 'instituicao_anterior', 'como_conheceu', 'indicacao_nome'] as $campo) {
+            $this->assertNull($resultado->user->{$campo}, $campo);
+        }
+    }
+
+    public function test_aprovar_outro_curso_preserva_cadastro_existente_inclusive_campos_nulos(): void
+    {
+        $aluno = User::factory()->create(['nivel' => 'aluno', 'ativo' => true, 'cpf' => '12345678901', 'email' => 'maria@example.test']);
+        $aluno->forceFill([
+            'rg' => 'RG atualizado', 'genero' => 'Outro', 'estado_civil' => null, 'nacionalidade' => 'Outra',
+            'naturalidade_cidade' => null, 'naturalidade_estado' => null, 'whatsapp' => null,
+            'escolaridade' => 'superior_completo', 'ano_conclusao' => 2022, 'formacao_teologica' => false,
+            'instituicao_anterior' => null, 'como_conheceu' => null, 'indicacao_nome' => 'Nome atualizado',
+        ])->save();
+        $antes = $aluno->fresh()->getAttributes();
+        $secretaria = $this->criarSecretaria();
+
+        foreach (['Curso A', 'Curso B'] as $titulo) {
+            $curso = $this->criarCurso($titulo);
+            $inscricao = $this->criarInscricao($curso, $this->criarModalidade($curso), [
+                'rg' => 'RG antigo', 'estado_civil' => 'Casado(a)', 'naturalidade_cidade' => 'Niterói', 'naturalidade_estado' => 'RJ',
+                'whatsapp' => '5521999999999', 'ano_conclusao' => 2008, 'formacao_teologica' => true,
+                'instituicao_anterior' => 'Instituto antigo', 'como_conheceu' => 'site', 'indicacao_nome' => 'Nome antigo',
+            ]);
+            $resultado = $this->service->executar($inscricao, $secretaria);
+            $this->assertFalse($resultado->usuarioRecemCriado);
+            $this->assertSame($antes, $aluno->fresh()->getAttributes());
+        }
+        $this->assertSame(2, $aluno->matriculas()->count());
     }
 }

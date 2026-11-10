@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\ValidarSessaoAluno;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -25,7 +26,7 @@ class AlunoPanelProvider extends PanelProvider
         return $panel
             ->id('aluno') // Identificador do painel
             ->path('aluno') // O link será: seusite.com/aluno
-            ->login() // Cria a tela de login em /aluno/login
+            ->login(fn () => redirect()->route('aluno.login'))
             ->colors([
                 'primary' => Color::Green, // Verde para Alunos (diferente do Admin)
             ])
@@ -51,6 +52,7 @@ class AlunoPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                ValidarSessaoAluno::class,
             ]);
     }
 }

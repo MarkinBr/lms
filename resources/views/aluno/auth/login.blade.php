@@ -81,16 +81,15 @@
                 @endif
 
                 <div class="lfield">
-                    <label for="email">E-MAIL</label>
+                    <label for="email">E-MAIL, CPF OU MATRÍCULA</label>
                     <div class="inp">
                         <input
                             id="email"
-                            type="email"
+                            type="text"
                             name="email"
                             value="{{ old('email') }}"
-                            placeholder="seuemail@exemplo.com"
-                            autocomplete="email"
-                            inputmode="email"
+                            placeholder="E-mail, CPF ou matrícula"
+                            autocomplete="username"
                             maxlength="255"
                             required
                             autofocus

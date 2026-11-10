@@ -1,12 +1,6 @@
 @php
     $aluno = auth()->user();
-    $fotoAluno = null;
-
-    if (!empty($aluno?->foto)) {
-        $fotoAluno = str_starts_with($aluno->foto, 'http')
-            ? $aluno->foto
-            : asset('storage/' . ltrim($aluno->foto, '/'));
-    }
+    $fotoAluno = $aluno?->foto_url;
 @endphp
 <!DOCTYPE html>
 <html lang="pt-BR" class="h-full bg-slate-50">
