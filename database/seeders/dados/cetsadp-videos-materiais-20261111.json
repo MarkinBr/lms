@@ -2,7 +2,7 @@
   "fonte": "CETSADP_VIDEOS_E_MATERIAIS.json",
   "extraidoEm": "2026-11-11T00:53:39.937Z",
   "timezone": "America/Sao_Paulo",
-  "aviso": "Metadados exportados do painel administrativo. URLs e conteúdos não foram verificados fora do painel. As associações curriculares sem indicação explícita ficam pendentes.",
+  "aviso": "Metadados exportados do painel administrativo. URLs e conteúdos não foram verificados fora do painel. As associações curriculares sem indicação explícita ficam pendentes. Seis materiais não indicam o curso no título e foram agrupados em Diaconato apenas como sugestão temática, não publicada.",
   "videos": [
     {
       "id": "14",
@@ -200,7 +200,7 @@
       "curso": "Habilitação ao Diaconato",
       "disciplina_codigo": null,
       "categoria": "Atividades práticas · Primeiros Socorros",
-      "classificacao": "curso"
+      "classificacao": "sugestao"
     },
     {
       "titulo": "Apostila - Primeiros Socorros",
@@ -209,7 +209,7 @@
       "curso": "Habilitação ao Diaconato",
       "disciplina_codigo": null,
       "categoria": "Atividades práticas · Primeiros Socorros",
-      "classificacao": "curso"
+      "classificacao": "sugestao"
     },
     {
       "titulo": "EMENTA -  HISTÓRIA E CULTURA JUDAICA",
@@ -236,7 +236,7 @@
       "curso": "Habilitação ao Diaconato",
       "disciplina_codigo": null,
       "categoria": "Núcleo Comum · História/Identidade da Igreja",
-      "classificacao": "curso"
+      "classificacao": "sugestao"
     },
     {
       "titulo": "Declaração de Fé das ADs no Brasil",
@@ -245,7 +245,7 @@
       "curso": "Habilitação ao Diaconato",
       "disciplina_codigo": null,
       "categoria": "Núcleo Comum · Doutrina",
-      "classificacao": "curso"
+      "classificacao": "sugestao"
     },
     {
       "titulo": "Breve história dos avivamentos mundiais na igreja",
@@ -254,7 +254,7 @@
       "curso": "Habilitação ao Diaconato",
       "disciplina_codigo": null,
       "categoria": "Núcleo Comum · História da Igreja",
-      "classificacao": "curso"
+      "classificacao": "sugestao"
     },
     {
       "titulo": "A igreja, sua identidade, missão e desafios",
@@ -263,7 +263,7 @@
       "curso": "Habilitação ao Diaconato",
       "disciplina_codigo": null,
       "categoria": "Núcleo Comum · Igreja",
-      "classificacao": "curso"
+      "classificacao": "sugestao"
     },
     {
       "titulo": "Manual Diaconato",
