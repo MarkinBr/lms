@@ -38,7 +38,7 @@ As URLs do Drive foram extraídas do HTML administrativo, mas **permissões, exi
 
 ## O que será modificado ao aplicar em ambiente de homologação
 
-- Novo `AcervoDidatico` com associação opcional a curso/discipлина/aula, classificação e indicador de publicação; a administração pode revisar itens no menu **Acadêmico → Acervo didático**.
+- Novo `AcervoDidatico` com associação opcional a curso/disciplina/aula, classificação e indicador de publicação; a administração pode revisar itens no menu **Acadêmico → Acervo didático**.
 - O seeder `AcervoCetsadp2026Seeder` registra 17 eventos/links no `aulas_ao_vivo`, sem criar turmas nem vincular disciplinas não comprovadas.
 - A **Aula 1 de História e Cultura Judaica** recebe a gravação sobre o povo hebreu e os dois links do material da disciplina, sem perder a leitura existente; a aula permanece **bloqueada até liberação acadêmica**.
 - O portal do aluno exibe gravações de encontros **realizados** na página do curso para quem possui matrícula; exibe também materiais do curso **somente se `publicado=true`**. A tela da aula passa a mostrar vídeos de aulas do tipo `misto` e links de `aulas.materiais`.
