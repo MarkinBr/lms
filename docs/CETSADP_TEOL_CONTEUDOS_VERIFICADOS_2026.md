@@ -58,3 +58,28 @@ Confirme no banco **6 módulos, 40 disciplinas e 960 horas cadastradas em Teolog
 Não execute `migrate:fresh` ou o `DatabaseSeeder` demonstrativo em banco de produção. O seeder de acervo é invocado isoladamente.
 
 **Estado desta alteração:** código e protótipo preparados na branch de revisão; não houve execução de migrations, importação ou implantação no banco de dados do usuário.
+
+
+## Atualização de 11/11/2026 — identificação por transcrições
+
+A coordenação enviou as transcrições completas dos encontros #26, #32 e #36. A identificação curricular não depende mais dos títulos genéricos do painel:
+
+| ID no painel | Data da aula | Vídeo | Disciplina comprovada pelo conteúdo | Período da matriz | Ordem dentro da disciplina |
+|---|---|---|---|---|---|
+| #20 | 17/05/2026 (painel) | `S7s27o1xXps` | História e Cultura Judaica (já vinculada por transcrição anterior) | 2º — `TEO-M02-12` | Aula 1 |
+| **#26** | 20/06/2026 | `NOsvbWaaaus` | **História e Cultura Judaica**. Professor diz expressamente que é a segunda e última aula sobre a história judaica; retoma a divisão dos reinos. | **2º — `TEO-M02-12`** | **Aula 2** |
+| **#32** | 15/08/2026 | `5Osxg5CvQ2w` | **Teologia Bíblica do Antigo Testamento**. A exposição trata da criação, da revelação divina e da relação entre a teologia do Antigo Testamento e a Teologia Sistemática. Embora examine palavras hebraicas, não é um curso separado de línguas. | **1º — `TEO-M01-01`** | **Aula 1** |
+| **#36** | 17/10/2026 | `pQ8aokW5-Ls` | **Teologia Bíblica do Novo Testamento**. Professor menciona repetidamente essa disciplina, explica sua natureza, métodos, exegese e revelação progressiva. Não é apenas Novo Testamento I (Evangelhos). | **1º — `TEO-M01-02`** | **Aula 1** |
+
+Trechos de evidência do material recebido:
+- #26, início **00:39–04:22**: identificada a disciplina **História e Cultura Judaica** e anunciada a segunda aula; em **04:59–05:31**, retomada do tema anterior e divisão do reino.
+- #32, em **26:17–30:13**: apresentação da Teologia do Antigo Testamento e sua relação com a Teologia Sistemática; os primeiros minutos tratam de verbos hebraicos associados à criação.
+- #36, em **01:04:47–01:05:53**, **01:17:07–01:20:43** e **01:58:12–01:59:08**: Teologia do Novo Testamento enquanto disciplina e introdução teológica.
+
+**Importante: o número “Aula 4”/“Aula 5” é o ordinal do calendário do antigo painel, não da disciplina.** No LMS cada um desses encontros é a primeira aula da sua própria matéria, pois não havia material anterior da mesma disciplina identificado.
+
+A nova classe `VincularTranscricoesTeologia2026Seeder` é executada pelo importador `AcervoCetsadp2026Seeder`, depois de criar o catálogo. Ela cria **3 aulas curriculares adicionais**, todas bloqueadas para revisão, com vídeo original, resumo acadêmico e materiais da disciplina quando houver. Os dois PDFs de Judaica são colocados também na **Aula 2**, rotulados explicitamente como material compartilhado de disciplina, sem afirmar que correspondem somente à segunda gravação. Nenhum PDF de outra matéria foi associado por aproximação.
+
+**Inconsistências a homologar, sem modificar automaticamente o currículo:** no encontro de Judaica #26 o expositor menciona **8 horas**, enquanto a matriz atual registra **16 horas** para a disciplina; no encontro #32 são mencionadas **930 horas** para o curso, e em #36 aparecem referências a outros totais, enquanto o seeder mantém **960 horas**. A coordenação acadêmica deve validar formalmente a carga total e as cargas disciplinares antes da emissão de documentos.
+
+**Condição da alteração:** todos os vínculos acima estão preparados em **PR de revisão**, não executados no banco de produção; as URLs e as transcrições foram fornecidas pela coordenação e a disponibilidade pública dos vídeos e PDFs ainda não foi validada por acesso externo.
