@@ -26,15 +26,15 @@ Os registros `encerrada` são criados como encontros `realizada`, com URL de gra
 | Quantidade | Curso | Classificação de conteúdo |
 | ---: | --- | --- |
 | 2 | Teologia | Ementa e material de **História e Cultura Judaica**; disciplina `TEO-M02-12`. Links associados à Aula 1 como **material da disciplina**, não como afirmação de correspondência exata com a gravação. |
-| 2 | Diaconato | Slides + apostila de **Primeiros Socorros**, organizados em **Atividades Práticas**. |
-| 4 | Diaconato | **Três Eixos de Sustentação**, **Declaração de Fé**, **Avivamentos**, **Identidade/Missão da Igreja**, no **Núcleo Comum**. |
+| 2 | Diaconato (sugestão) | Slides + apostila de **Primeiros Socorros**, organizados tematicamente em **Atividades Práticas**. Confirmar curso antes de publicar. |
+| 4 | Diaconato (sugestão) | **Três Eixos de Sustentação**, **Declaração de Fé**, **Avivamentos**, **Identidade/Missão da Igreja**, agrupados tematicamente no **Núcleo Comum**. Confirmar curso antes de publicar. |
 | 1 | Diaconato | **Manual Diaconato** (documento de referência). |
 | 1 | Diaconato | Vídeo geral “Curso de Habilitação ao Diaconato” (link separado das 7 aulas do calendário). |
 | 1 | **Pendente** | PDF “Aula Inaugural”: título não informa a qual dos três cursos pertence. **Não atribuir por suposição.** |
 | 1 | **Descartado** | Registro de teste `jkhj`, endereço `kjhkhj`, **URL inválida**. |
 | **12** | | **11 catalogados, 1 ignorado por URL inválida**. |
 
-As URLs do Drive foram extraídas do HTML administrativo, mas **permissões, existência e autorização de uso não foram verificadas**. Os materiais ficam **não publicados** no acervo até serem aprovados.
+Os títulos de 6 materiais não indicam curso: foram colocados provisoriamente no grupo Diaconato por **afinidade temática** com a matriz compartilhada, mas estão marcados `sugestao` e o sistema **impede sua publicação até a classificação ser confirmada**. As URLs do Drive foram extraídas do HTML administrativo, mas **permissões, existência e autorização de uso não foram verificadas**. Os demais materiais também ficam **não publicados** até aprovação.
 
 ## O que será modificado ao aplicar em ambiente de homologação
 
