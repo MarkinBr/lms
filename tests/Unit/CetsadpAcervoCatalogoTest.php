@@ -52,7 +52,19 @@ class CetsadpAcervoCatalogoTest extends TestCase
             'TEO-M02-12',
             $videos->firstWhere('id', '20')['disciplina_codigo'],
         );
-        $this->assertCount(1, $videos->filter(fn ($item) => filled($item['disciplina_codigo'])));
+        $this->assertSame(
+            'TEO-M02-12',
+            $videos->firstWhere('id', '26')['disciplina_codigo'],
+        );
+        $this->assertSame(
+            'TEO-M01-01',
+            $videos->firstWhere('id', '32')['disciplina_codigo'],
+        );
+        $this->assertSame(
+            'TEO-M01-02',
+            $videos->firstWhere('id', '36')['disciplina_codigo'],
+        );
+        $this->assertCount(4, $videos->filter(fn ($item) => filled($item['disciplina_codigo'])));
 
         $this->assertCount(6, collect($dados['materiais'])->where('classificacao', 'sugestao'));
         $this->assertCount(1, collect($dados['materiais'])->where('classificacao', 'pendente'));
