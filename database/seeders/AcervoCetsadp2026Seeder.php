@@ -17,8 +17,9 @@ use RuntimeException;
  *
  * - Os 17 links de vídeo são cadastrados como ENCONTROS do curso em
  *   aulas_ao_vivo, sem inventar disciplina ou turma.
- * - Só o vídeo sobre a História do Povo Hebreu é vinculado à aula digital
- *   de História e Cultura Judaica (2º período), que já tem leitura própria.
+ * - A gravação sobre a História do Povo Hebreu permanece na Aula 1 de
+ *   Judaica. As outras três transcrições recebidas são processadas por
+ *   VincularTranscricoesTeologia2026Seeder, sem adivinhar disciplinas.
  * - Materiais são agrupados por curso/assunto; URLs sem disciplina/aula
  *   comprovada ficam no acervo para classificação pela secretaria.
  * - Nenhum material do acervo é publicado automaticamente.
