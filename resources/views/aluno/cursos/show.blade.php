@@ -77,6 +77,46 @@
             </div>
         </div>
 
+        {{-- Acervo de gravações gerais: não equivale à classificação por disciplina. --}}
+        @if($gravacoes->isNotEmpty())
+            <section class="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" aria-label="Gravações de encontros do curso">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Gravações de encontros deste curso</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    Vídeos extraídos do calendário do CETSADP. O vínculo com cada disciplina ainda precisa ser confirmado.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    @foreach($gravacoes as $gravacao)
+                        <a href="{{ $gravacao->gravacao_url }}" target="_blank" rel="noopener noreferrer"
+                           class="block border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                            <span class="block font-semibold text-blue-700 dark:text-blue-300">{{ $gravacao->titulo }}</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                {{ optional($gravacao->data_hora)->format('d/m/Y H:i') }}
+                                @if($gravacao->duracao) · {{ $gravacao->duracao }} min @endif
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
+        {{-- Apenas materiais cujo vínculo e compartilhamento foram aprovados. --}}
+        @if($materiaisCurso->isNotEmpty())
+            <section class="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" aria-label="Biblioteca do curso">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Biblioteca e materiais do curso</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    @foreach($materiaisCurso as $item)
+                        <a href="{{ $item->url }}" target="_blank" rel="noopener noreferrer"
+                           class="block border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                            <span class="block font-semibold text-blue-700 dark:text-blue-300">{{ $item->titulo }}</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                {{ $item->categoria ?? $item->tipo }}
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <!-- Conteúdo do Curso -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Módulos e Aulas (Coluna Principal) -->

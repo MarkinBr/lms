@@ -1,0 +1,305 @@
+{
+  "fonte": "CETSADP_VIDEOS_E_MATERIAIS.json",
+  "extraidoEm": "2026-11-11T00:53:39.937Z",
+  "timezone": "America/Sao_Paulo",
+  "aviso": "Metadados exportados do painel administrativo. URLs e conteúdos não foram verificados fora do painel. As associações curriculares sem indicação explícita ficam pendentes. Seis materiais não indicam o curso no título e foram agrupados em Diaconato apenas como sugestão temática, não publicada. As transcrições fornecidas em 11/11/2026 identificaram explicitamente a disciplina dos encontros 26, 32 e 36; não corrigir cargas horárias com base nas falas, que divergem do LMS.",
+  "videos": [
+    {
+      "id": "14",
+      "curso": "Curso de Habilitação ao Diaconato",
+      "titulo": "Aula 1 - Aula Inaugural do Curso de Habilitação ao Diaconato",
+      "data": "29/03/26, 09:00",
+      "duracao_min": 166,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=ngV4XZfOYvQ",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "18",
+      "curso": "Curso de Habilitação ao Diaconato",
+      "titulo": "Aula 2 - Curso de Habilitação ao Diaconato",
+      "data": "26/04/26, 09:00",
+      "duracao_min": 231,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=dlFIfErs3eI",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "21",
+      "curso": "Curso de Habilitação ao Diaconato",
+      "titulo": "Aula 3 - Curso de Habilitação ao Diaconato",
+      "data": "24/05/26, 09:00",
+      "duracao_min": 180,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=_7aedMPoEFA",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "28",
+      "curso": "Curso de Habilitação ao Diaconato",
+      "titulo": "🔴 AO VIVO | Aula 4 | Introdução a Bibliologia - Curso de Habilitação ao Diaconato",
+      "data": "27/06/26, 09:00",
+      "duracao_min": 240,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=ID69tw9nyqE",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "30",
+      "curso": "Curso de Habilitação ao Diaconato",
+      "titulo": "Aula 4 - Curso de Habilitação ao Diaconato",
+      "data": "25/07/26, 09:00",
+      "duracao_min": 120,
+      "status_origem": "programada",
+      "url": "https://www.youtube.com/watch?v=F8IjPqPa5H8",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "33",
+      "curso": "Curso de Habilitação ao Diaconato",
+      "titulo": "Aula 5 - Curso de Habilitação ao Diaconato",
+      "data": "22/08/26, 09:10",
+      "duracao_min": 120,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=Qf3uGeqbHyQ",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "35",
+      "curso": "Curso de Habilitação ao Diaconato",
+      "titulo": "Aula 6 - Curso de Habilitação ao Diaconato",
+      "data": "26/09/26, 12:00",
+      "duracao_min": 120,
+      "status_origem": "programada",
+      "url": "https://www.youtube.com/watch?v=BIQLKczLq_I",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "15",
+      "curso": "Liderança Cristã Ministerial",
+      "titulo": "Aula 1 - Aula Inaugural de Liderança Cristã Ministerial",
+      "data": "18/04/26, 09:00",
+      "duracao_min": 190,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=Ie4ZBHm7N7E",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "19",
+      "curso": "Liderança Cristã Ministerial",
+      "titulo": "Aula 2 - Liderança Crista Ministerial",
+      "data": "02/05/26, 09:00",
+      "duracao_min": 240,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=QCL50RV1p60",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "23",
+      "curso": "Liderança Cristã Ministerial",
+      "titulo": "Aula 3 - Liderança Crista Ministerial",
+      "data": "06/06/26, 09:00",
+      "duracao_min": 180,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=thhLP7ZRBtU",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "29",
+      "curso": "Liderança Cristã Ministerial",
+      "titulo": "Aula 4 - Liderança Crista Ministerial",
+      "data": "04/07/26, 09:04",
+      "duracao_min": 120,
+      "status_origem": "programada",
+      "url": "https://www.youtube.com/watch?v=PeIct3D7T-Y",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "31",
+      "curso": "Liderança Cristã Ministerial",
+      "titulo": "Aula 5 - Liderança Crista Ministerial",
+      "data": "01/08/26, 09:00",
+      "duracao_min": 120,
+      "status_origem": "programada",
+      "url": "https://www.youtube.com/watch?v=8NqXaBR17QM",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "34",
+      "curso": "Liderança Cristã Ministerial",
+      "titulo": "Aula 6 - Liderança Cristã Ministerial",
+      "data": "05/09/26, 09:00",
+      "duracao_min": 120,
+      "status_origem": "programada",
+      "url": "https://www.youtube.com/watch?v=HXXv1r4_luY",
+      "disciplina_codigo": null,
+      "disciplina_confirmada": "pendente"
+    },
+    {
+      "id": "20",
+      "curso": "Médio em Teologia",
+      "titulo": "🔴 AO VIVO | A História do Povo Hebreu | Seminário Médio em Teologia | CETSADP - 15.05.2026",
+      "data": "17/05/26, 09:00",
+      "duracao_min": 180,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=S7s27o1xXps",
+      "disciplina_codigo": "TEO-M02-12",
+      "disciplina_confirmada": "associacao_tematicamente_consistente_com_Historia_do_Povo_Hebreu"
+    },
+    {
+      "id": "26",
+      "curso": "Médio em Teologia",
+      "titulo": "Aula 2 | Seminário Médio em Teologia",
+      "data": "20/06/26, 09:00",
+      "duracao_min": 180,
+      "status_origem": "encerrada",
+      "url": "https://www.youtube.com/watch?v=NOsvbWaaaus",
+      "disciplina_codigo": "TEO-M02-12",
+      "disciplina_confirmada": "confirmada pela transcrição: aula 2 de História e Cultura Judaica"
+    },
+    {
+      "id": "32",
+      "curso": "Médio em Teologia",
+      "titulo": "Aula 4 - Seminario Medio em Teologia",
+      "data": "15/08/26, 12:00",
+      "duracao_min": 120,
+      "status_origem": "programada",
+      "url": "https://www.youtube.com/watch?v=5Osxg5CvQ2w",
+      "disciplina_codigo": "TEO-M01-01",
+      "disciplina_confirmada": "confirmada pela transcrição: Teologia Bíblica do Antigo Testamento"
+    },
+    {
+      "id": "36",
+      "curso": "Médio em Teologia",
+      "titulo": "Aula 5 | Seminário Médio em Teologia",
+      "data": "17/10/26, 09:00",
+      "duracao_min": 180,
+      "status_origem": "programada",
+      "url": "https://www.youtube.com/watch?v=pQ8aokW5-Ls",
+      "disciplina_codigo": "TEO-M01-02",
+      "disciplina_confirmada": "confirmada pela transcrição: Teologia Bíblica do Novo Testamento"
+    }
+  ],
+  "materiais": [
+    {
+      "titulo": "Slides - Primeiros Socorros",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/1PubcGQVJWZBBrseHldHGCrvPV9xHdq2t/view?usp=sharing",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Atividades práticas · Primeiros Socorros",
+      "classificacao": "sugestao"
+    },
+    {
+      "titulo": "Apostila - Primeiros Socorros",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/1Z8fiidtLfvyqrpn8oyJG6tJ1pNEMrqXI/view?usp=sharing",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Atividades práticas · Primeiros Socorros",
+      "classificacao": "sugestao"
+    },
+    {
+      "titulo": "EMENTA -  HISTÓRIA E CULTURA JUDAICA",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/1zZlhfQqFAt7RoUxV9B3yaZ6_jhRVsQKa/view?usp=sharing",
+      "curso": "Curso Médio em Teologia",
+      "disciplina_codigo": "TEO-M02-12",
+      "categoria": "Ementa da disciplina",
+      "classificacao": "disciplina"
+    },
+    {
+      "titulo": "HISTÓRIA E CULTURA JUDAICA - SEMINARIO MEDIO EM TEOLOGIA 16-06-2026",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/11KUqDpLwoGcE5JLzqh3kLxUIWJ1LvVv7/view?usp=sharing",
+      "curso": "Curso Médio em Teologia",
+      "disciplina_codigo": "TEO-M02-12",
+      "categoria": "Material da disciplina (aula exata não identificada)",
+      "classificacao": "disciplina"
+    },
+    {
+      "titulo": "Três Eixos de Sustentação da Igreja",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/1qpEqfZ5TtNd9MJU_qD7YTmH6WYOQjbHb/view?usp=sharing",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Núcleo Comum · História/Identidade da Igreja",
+      "classificacao": "sugestao"
+    },
+    {
+      "titulo": "Declaração de Fé das ADs no Brasil",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/168FOenWxwhDUhXklEm8yixPpa5LN1TvY/view?usp=sharing",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Núcleo Comum · Doutrina",
+      "classificacao": "sugestao"
+    },
+    {
+      "titulo": "Breve história dos avivamentos mundiais na igreja",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/1CQT5bC5RIxbLq6MZasw67TxEZZRxbWxJ/view?usp=sharing",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Núcleo Comum · História da Igreja",
+      "classificacao": "sugestao"
+    },
+    {
+      "titulo": "A igreja, sua identidade, missão e desafios",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/1e8oApj3sfMzd_Sh7g8hv5GV6RoCc5Dp6/view?usp=sharing",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Núcleo Comum · Igreja",
+      "classificacao": "sugestao"
+    },
+    {
+      "titulo": "Manual Diaconato",
+      "tipo": "docx",
+      "url": "https://docs.google.com/document/d/1i7bqUbNOC3Lt5U1T7Zz58_0Ca6ZcTgW7/edit?usp=sharing&ouid=113984147351799838889&rtpof=true&sd=true",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Manual geral do curso",
+      "classificacao": "curso"
+    },
+    {
+      "titulo": "jkhj",
+      "tipo": "pdf",
+      "url": "kjhkhj",
+      "curso": null,
+      "disciplina_codigo": null,
+      "categoria": "Link inválido",
+      "classificacao": "invalido"
+    },
+    {
+      "titulo": "Aula Inaugural",
+      "tipo": "pdf",
+      "url": "https://drive.google.com/file/d/1K9Vh8mcvDl1lGvXLt3e7lkDzEW32Fus0/view?usp=sharing",
+      "curso": null,
+      "disciplina_codigo": null,
+      "categoria": "Curso não identificado no título",
+      "classificacao": "pendente"
+    },
+    {
+      "titulo": "Curso de Habilitação ao Diaconato",
+      "tipo": "video",
+      "url": "https://www.youtube.com/watch?v=6fWxoqD0uDU",
+      "curso": "Habilitação ao Diaconato",
+      "disciplina_codigo": null,
+      "categoria": "Vídeo geral do curso (aula exata desconhecida)",
+      "classificacao": "curso"
+    }
+  ]
+}
