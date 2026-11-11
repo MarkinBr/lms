@@ -65,7 +65,7 @@ class AcervoDidatico extends Model
                     'curso_id' => 'Defina o curso antes de disponibilizar o material aos alunos.',
                 ]);
             }
-            if ($item->publicado && $item->classificacao === 'pendente') {
+            if ($item->publicado && in_array($item->classificacao, ['pendente', 'sugestao'], true)) {
                 throw ValidationException::withMessages([
                     'classificacao' => 'Classifique o material antes da publicação.',
                 ]);
