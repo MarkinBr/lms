@@ -2,7 +2,7 @@
   "fonte": "CETSADP_VIDEOS_E_MATERIAIS.json",
   "extraidoEm": "2026-11-11T00:53:39.937Z",
   "timezone": "America/Sao_Paulo",
-  "aviso": "Metadados exportados do painel administrativo. URLs e conteúdos não foram verificados fora do painel. As associações curriculares sem indicação explícita ficam pendentes. Seis materiais não indicam o curso no título e foram agrupados em Diaconato apenas como sugestão temática, não publicada.",
+  "aviso": "Metadados exportados do painel administrativo. URLs e conteúdos não foram verificados fora do painel. As associações curriculares sem indicação explícita ficam pendentes. Seis materiais não indicam o curso no título e foram agrupados em Diaconato apenas como sugestão temática, não publicada. As transcrições fornecidas em 11/11/2026 identificaram explicitamente a disciplina dos encontros 26, 32 e 36; não corrigir cargas horárias com base nas falas, que divergem do LMS.",
   "videos": [
     {
       "id": "14",
@@ -166,8 +166,8 @@
       "duracao_min": 180,
       "status_origem": "encerrada",
       "url": "https://www.youtube.com/watch?v=NOsvbWaaaus",
-      "disciplina_codigo": null,
-      "disciplina_confirmada": "pendente"
+      "disciplina_codigo": "TEO-M02-12",
+      "disciplina_confirmada": "confirmada pela transcrição: aula 2 de História e Cultura Judaica"
     },
     {
       "id": "32",
@@ -177,8 +177,8 @@
       "duracao_min": 120,
       "status_origem": "programada",
       "url": "https://www.youtube.com/watch?v=5Osxg5CvQ2w",
-      "disciplina_codigo": null,
-      "disciplina_confirmada": "pendente"
+      "disciplina_codigo": "TEO-M01-01",
+      "disciplina_confirmada": "confirmada pela transcrição: Teologia Bíblica do Antigo Testamento"
     },
     {
       "id": "36",
@@ -188,8 +188,8 @@
       "duracao_min": 180,
       "status_origem": "programada",
       "url": "https://www.youtube.com/watch?v=pQ8aokW5-Ls",
-      "disciplina_codigo": null,
-      "disciplina_confirmada": "pendente"
+      "disciplina_codigo": "TEO-M01-02",
+      "disciplina_confirmada": "confirmada pela transcrição: Teologia Bíblica do Novo Testamento"
     }
   ],
   "materiais": [
