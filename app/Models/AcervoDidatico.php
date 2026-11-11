@@ -28,6 +28,10 @@ class AcervoDidatico extends Model
     protected static function booted(): void
     {
         static::saving(function (self $item): void {
+            if (blank($item->chave_importacao)) {
+                $item->chave_importacao = hash('sha256', 'manual|'.$item->titulo.'|'.$item->url);
+            }
+
             $url = filter_var($item->url, FILTER_VALIDATE_URL);
             $scheme = $url ? strtolower((string) parse_url($url, PHP_URL_SCHEME)) : '';
             if ($scheme !== 'https') {
@@ -59,6 +63,17 @@ class AcervoDidatico extends Model
             if ($item->publicado && ! $item->curso_id) {
                 throw ValidationException::withMessages([
                     'curso_id' => 'Defina o curso antes de disponibilizar o material aos alunos.',
+                ]);
+            }
+            if ($item->publicado && $item->classificacao === 'pendente') {
+                throw ValidationException::withMessages([
+                    'classificacao' => 'Classifique o material antes da publicação.',
+                ]);
+            }
+
+            if ($item->publicado && $item->classificacao === 'disciplina' && ! $item->disciplina_id) {
+                throw ValidationException::withMessages([
+                    'disciplina_id' => 'Informe a disciplina correspondente antes de publicar.',
                 ]);
             }
         });
