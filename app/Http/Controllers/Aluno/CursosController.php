@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Aluno;
 
 use App\Http\Controllers\Controller;
+use App\Models\AcervoDidatico;
 use App\Models\AulaAoVivo;
 use App\Models\Curso;
 use App\Models\Matricula;
@@ -134,6 +135,24 @@ class CursosController extends Controller
         $progresso = $totalAulas > 0 ? (int) round(($aulasConcluidas / $totalAulas) * 100) : 0;
         $modulos = $curso->modulos;
 
+        // A matrícula ativa já foi verificada no início do método.
+        // Gravações gerais não devem ser apresentadas como aulas de uma
+        // disciplina sem a confirmação do vínculo curricular.
+        $gravacoes = AulaAoVivo::query()
+            ->where('curso_id', $curso->id)
+            ->where('gravacao_disponivel', true)
+            ->where('status', AulaAoVivo::STATUS_REALIZADA)
+            ->whereNotNull('gravacao_url')
+            ->orderByDesc('data_hora')
+            ->get();
+
+        $materiaisCurso = AcervoDidatico::query()
+            ->where('curso_id', $curso->id)
+            ->where('publicado', true)
+            ->orderBy('categoria')
+            ->orderBy('titulo')
+            ->get();
+
         return view('aluno.cursos.show', compact(
             'curso',
             'matricula',
@@ -141,7 +160,9 @@ class CursosController extends Controller
             'totalModulos',
             'totalAulas',
             'aulasConcluidas',
-            'progresso'
+            'progresso',
+            'gravacoes',
+            'materiaisCurso'
         ));
     }
 }
