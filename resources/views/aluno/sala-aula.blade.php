@@ -387,7 +387,7 @@
             <div class="lg:col-span-2 space-y-6">
                 <!-- Video Player -->
                 <div class="video-player-wrapper" id="custom-video-wrapper">
-                    @if($aula->tipo_conteudo === 'video' && $aula->video_url)
+                    @if(in_array($aula->tipo_conteudo, ['video', 'misto'], true) && $aula->video_url)
                         @php
                             // Detectar tipo de vídeo
                             $videoType = 'direct'; // direct, youtube, vimeo
@@ -653,17 +653,40 @@
                             </div>
 
                             @php
-                                $materiais = json_decode($aula->materiais_complementares ?? '[]') ?: [];
+                                // Aula::materiais já é um array via cast no model.
+                                // Preservar materiais legados e anexos privados sem duplicar links.
+                                $materiais = [];
+                                $materialLegado = $aula->materiais_complementares ?? null;
+                                if (is_string($materialLegado)) {
+                                    $materialLegado = json_decode($materialLegado, true) ?: [];
+                                }
+                                foreach (array_merge(
+                                    is_array($materialLegado) ? $materialLegado : [],
+                                    is_array($aula->materiais) ? $aula->materiais : []
+                                ) as $item) {
+                                    $item = (array) $item;
+                                    $url = $item['url'] ?? null;
+                                    if (!is_string($url) || !filter_var($url, FILTER_VALIDATE_URL)
+                                        || strtolower((string) parse_url($url, PHP_URL_SCHEME)) !== 'https') {
+                                        continue;
+                                    }
+                                    if (!collect($materiais)->contains(fn ($m) => $m->url === $url)) {
+                                        $materiais[] = (object) [
+                                            'url' => $url,
+                                            'titulo' => $item['titulo'] ?? 'Material de estudo',
+                                            'tipo' => $item['tipo'] ?? 'Link',
+                                        ];
+                                    }
+                                }
                                 if ($aula->permite_download) {
                                     foreach ($aula->anexos ?? [] as $indice => $anexo) {
                                         if (!is_array($anexo) || !is_string($anexo['caminho'] ?? null)) {
                                             continue;
                                         }
-
                                         $materiais[] = (object) [
                                             'url' => route('aluno.aula.material', ['aula' => $aula->id, 'indice' => $indice]),
                                             'titulo' => $anexo['nome'] ?? 'Material de apoio',
-                                            'tipo' => 'Anexo',
+                                            'tipo' => 'Anexo privado',
                                         ];
                                     }
                                 }
@@ -673,7 +696,7 @@
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">📚 Materiais Complementares</h4>
                                 <div class="space-y-3">
                                     @foreach($materiais as $material)
-                                    <a href="{{ $material->url }}" target="_blank" class="interactive-card flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400">
+                                    <a href="{{ $material->url }}" target="_blank" rel="noopener noreferrer" class="interactive-card flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400">
                                         <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg mr-4">
                                             <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
