@@ -54,6 +54,7 @@ class CetsadpAcervoCatalogoTest extends TestCase
         );
         $this->assertCount(1, $videos->filter(fn ($item) => filled($item['disciplina_codigo'])));
 
+        $this->assertCount(6, collect($dados['materiais'])->where('classificacao', 'sugestao'));
         $this->assertCount(1, collect($dados['materiais'])->where('classificacao', 'pendente'));
         $this->assertCount(1, collect($dados['materiais'])->where('classificacao', 'invalido'));
     }
