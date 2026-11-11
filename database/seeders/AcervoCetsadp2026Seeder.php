@@ -154,6 +154,10 @@ class AcervoCetsadp2026Seeder extends Seeder
 
             $this->vincularJudaica($dados, $cursos->get('Curso Médio em Teologia'));
         });
+
+        // Cada vídeo passa a constar também na disciplina comprovada por
+        // transcrição, sem substituir o vínculo histórico do encontro geral.
+        $this->call(VincularTranscricoesTeologia2026Seeder::class);
     }
 
     private function vincularJudaica(array $dados, ?Curso $curso): void
