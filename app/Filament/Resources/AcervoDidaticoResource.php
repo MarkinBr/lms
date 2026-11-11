@@ -60,6 +60,7 @@ class AcervoDidaticoResource extends Resource
                         ->label('Situação da classificação')
                         ->options([
                             'pendente' => 'Pendente — identificar curso',
+                            'sugestao' => 'Associação temática sugerida — confirmar',
                             'curso' => 'Identificado no curso — falta aula exata',
                             'disciplina' => 'Identificado na disciplina',
                         ])
@@ -110,6 +111,7 @@ class AcervoDidaticoResource extends Resource
                 Tables\Filters\TernaryFilter::make('publicado')->label('Publicado'),
                 Tables\Filters\SelectFilter::make('classificacao')->options([
                     'pendente' => 'Pendente',
+                    'sugestao' => 'Sugestão a validar',
                     'curso' => 'Somente curso',
                     'disciplina' => 'Disciplina',
                 ]),
